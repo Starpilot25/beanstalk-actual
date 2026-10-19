@@ -75,13 +75,20 @@ LINES = {
     "thin": "Use thin, delicate outlines.",
     "bold": "Use thick, confident outlines.",
 }
+EYEWEAR = {
+    # "auto" deliberately never says the word "glasses": naming them, even as "keep the glasses",
+    # makes image models draw glasses on people who don't wear any.
+    "auto": "Draw the eyes exactly as they appear in the photo. Add no accessories that are not clearly visible in the photo.",
+    "none": "The person's eyes are bare and fully visible, with nothing over or around them - no frames, no lenses, no eyewear of any kind.",
+    "glasses": "The person wears eyeglasses: keep the same frame shape, thickness and color as in the photo.",
+}
 QUALITIES = {"low", "medium"}  # "high" deliberately left out to protect the budget
 
 IDENTITY_RULES = (
     "IDENTITY IS THE TOP PRIORITY. The character must be instantly recognizable as the "
     "person in the reference photo: keep the same face shape, jawline, eye shape and spacing, "
     "eye color, nose shape, mouth and lips, eyebrows, ears, skin tone, hairline, hair color, "
-    "hair texture, hair length and hairstyle, facial hair, glasses, freckles, moles, and any "
+    "hair texture, hair length and hairstyle, facial hair, freckles, moles, and any "
     "other distinctive marks exactly as in the photo. Do not change apparent age, gender, "
     "body type, or ethnicity. Do not beautify, smooth away features, or swap in a generic face."
 )
@@ -173,9 +180,10 @@ def read_settings(form):
         "palette": form.get("palette", "vivid"),
         "lines": form.get("lines", "none"),
         "quality": form.get("quality", "low"),
+        "eyewear": form.get("eyewear", "auto"),
     }
     if (s["style"] not in STYLES or s["exaggeration"] not in EXAGGERATION or s["palette"] not in PALETTES
-            or s["lines"] not in LINES or s["quality"] not in QUALITIES):
+            or s["lines"] not in LINES or s["quality"] not in QUALITIES or s["eyewear"] not in EYEWEAR):
         raise ValueError("Invalid cartoon setting.")
     return s
 
@@ -194,7 +202,7 @@ def read_scene_opts(form):
 
 def style_sentence(s):
     return (f"Art style: {STYLES[s['style']]}, {PALETTES[s['palette']]}. "
-            f"{EXAGGERATION[s['exaggeration']]} {LINES[s['lines']]}").strip()
+            f"{EXAGGERATION[s['exaggeration']]} {LINES[s['lines']]} {EYEWEAR[s['eyewear']]}").strip()
 
 
 def cartoon_prompt(s):

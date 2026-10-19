@@ -215,6 +215,14 @@
           </div>
         </fieldset>
 
+        <fieldset><legend>Glasses</legend>
+          <div class="chips">
+            <input type="radio" name="eyewear" id="g1" value="auto" checked><label for="g1">Match my photo</label>
+            <input type="radio" name="eyewear" id="g2" value="none"><label for="g2">I don't wear glasses</label>
+            <input type="radio" name="eyewear" id="g3" value="glasses"><label for="g3">I wear glasses</label>
+          </div>
+        </fieldset>
+
         <div class="pair-fields">
           <fieldset><legend>Outlines</legend>
             <div class="chips">
@@ -334,7 +342,7 @@ const scenes = {planting:null, climbing:null};   // {image, caption, checklist}
 
 const val = n => document.querySelector(`input[name="${n}"]:checked`).value;
 function settings(fd){
-  for (const k of ["style","exaggeration","palette","lines","quality","time","expression","outfit"]) fd.append(k, val(k));
+  for (const k of ["style","exaggeration","palette","lines","quality","eyewear","time","expression","outfit"]) fd.append(k, val(k));
   return fd;
 }
 function steps(n){ document.querySelectorAll(".step").forEach(el => el.classList.toggle("grown", +el.dataset.step <= n)); }
