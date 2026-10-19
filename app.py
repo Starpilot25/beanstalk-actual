@@ -23,7 +23,7 @@ from openai import OpenAI
 from PIL import Image, ImageOps
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # generated scenes are sent back for the check step
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1-mini")
 CHECK_MODEL = os.environ.get("CHECK_MODEL", "gpt-4.1-mini")
@@ -416,7 +416,7 @@ def check():
 
 @app.errorhandler(413)
 def too_big(_):
-    return error("Image too large — keep uploads under about 10 MB.", 413)
+    return error("That request was too large. Try a smaller photo (under about 10 MB).", 413)
 
 
 if __name__ == "__main__":

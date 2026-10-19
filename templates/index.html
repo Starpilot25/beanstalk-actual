@@ -360,8 +360,26 @@ async function post(url, body, json){
 }
 
 /* ---------- photo input: click, drag-drop, camera ---------- */
-function setPhoto(file){
+/* Shrink photos in the browser (max 1024px JPEG) so uploads stay small and fast.
+   The server works at 1024px anyway, so no quality is lost. */
+function shrink(file, max = 1024){
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => resolve(b ? new File([b], "photo.jpg", {type:"image/jpeg"}) : file), "image/jpeg", .9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+async function setPhoto(file){
   if (!file || !file.type.startsWith("image/")) return;
+  file = await shrink(file);
   photoFile = file; cartoonB64 = null;
   stopCam();
   $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(file)}">`;
