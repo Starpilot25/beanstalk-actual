@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Into the Beanstalk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f0e1; --card:#fffaf0; --ink:#2b2a22; --muted:#6d6957;
+    --leaf:#3f7a3a; --leaf-dark:#2c5a29; --line:#e2d8bf; --soil:#7a5634; --err:#a5321f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif}
+  header{padding:48px 20px 24px;text-align:center}
+  h1{font-family:Fraunces,Georgia,serif;font-size:clamp(2rem,5vw,3.2rem);margin:0;color:var(--leaf-dark);letter-spacing:-.01em}
+  header p{color:var(--muted);margin:.5rem auto 0;max-width:36rem}
+  main{max-width:1040px;margin:0 auto;padding:0 16px 64px;display:grid;gap:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  h2{font-family:Fraunces,Georgia,serif;font-size:1.3rem;margin:0 0 14px}
+  h2 .n{display:inline-grid;place-items:center;width:1.7em;height:1.7em;border-radius:50%;background:var(--leaf);color:#fff;font:600 .8rem Inter;margin-right:.5rem;vertical-align:.15em}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media (max-width:760px){.row{grid-template-columns:1fr}}
+  label{display:block;font-weight:600;font-size:.88rem;margin:12px 0 4px}
+  select,input[type=file]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  button{font:600 1rem Inter,sans-serif;padding:12px 18px;border:0;border-radius:10px;background:var(--leaf);color:#fff;cursor:pointer;margin-top:16px;width:100%}
+  button:hover:not(:disabled){background:var(--leaf-dark)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .frame{aspect-ratio:1;border:2px dashed var(--line);border-radius:12px;display:grid;place-items:center;overflow:hidden;background:#fff;color:var(--muted);font-size:.9rem;text-align:center;padding:8px}
+  .frame img{width:100%;height:100%;object-fit:contain}
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pair small{display:block;text-align:center;color:var(--muted);margin-top:4px}
+  .scenes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media (max-width:760px){.scenes{grid-template-columns:1fr}}
+  figure{margin:0}
+  figure .frame{aspect-ratio:auto;min-height:260px}
+  figcaption{margin-top:10px;padding:10px 12px;border-left:3px solid var(--soil);background:#f3ead6;border-radius:0 8px 8px 0;font-size:.9rem}
+  figcaption b{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soil);margin-bottom:2px}
+  .status{min-height:1.4em;margin-top:8px;font-size:.88rem;color:var(--muted)}
+  .status.err{color:var(--err)}
+  .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--leaf);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 8px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  footer{text-align:center;color:var(--muted);font-size:.8rem;padding-bottom:32px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Into the Beanstalk</h1>
+  <p>Upload a photo, turn yourself into a cartoon, and step into Jack and the Beanstalk.</p>
+</header>
+
+<main>
+  <section class="card row">
+    <div>
+      <h2><span class="n">1</span>Your photo &amp; cartoon settings</h2>
+      <label for="photo">Photo (face clearly visible, good light)</label>
+      <input id="photo" type="file" accept="image/jpeg,image/png,image/webp">
+      <div class="grid2">
+        <div>
+          <label for="style">Style</label>
+          <select id="style">
+            <option value="storybook3d">3D animated</option>
+            <option value="flat">Flat vector</option>
+            <option value="watercolor">Watercolor picture book</option>
+            <option value="comic">Comic ink</option>
+          </select>
+        </div>
+        <div>
+          <label for="exaggeration">Exaggeration</label>
+          <select id="exaggeration">
+            <option value="subtle">Subtle</option>
+            <option value="moderate" selected>Moderate</option>
+            <option value="strong">Strong caricature</option>
+          </select>
+        </div>
+        <div>
+          <label for="palette">Colors</label>
+          <select id="palette">
+            <option value="vivid">Vivid</option>
+            <option value="pastel">Pastel</option>
+            <option value="earthy">Earthy fairy-tale</option>
+          </select>
+        </div>
+        <div>
+          <label for="quality">Quality</label>
+          <select id="quality">
+            <option value="low">Low (cheapest)</option>
+            <option value="medium">Medium</option>
+          </select>
+        </div>
+      </div>
+      <button id="cartoonBtn" disabled>Cartoonify me</button>
+      <div class="status" id="cartoonStatus"></div>
+    </div>
+    <div class="pair">
+      <div><div class="frame" id="photoFrame">Your photo</div><small>Original</small></div>
+      <div><div class="frame" id="cartoonFrame">Your cartoon</div><small>Cartoon</small></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">2</span>Step into the story</h2>
+    <div class="scenes">
+      {% for id, spec in scenes.items() %}
+      <figure>
+        <div class="frame" id="frame-{{ id }}">{{ "Scene 1 — planting the seeds" if id == "planting" else "Scene 2 — climbing the beanstalk" }}</div>
+        <button class="sceneBtn" data-scene="{{ id }}" disabled>
+          {{ "Generate: Jack plants the seeds" if id == "planting" else "Generate: Jack climbs the beanstalk" }}
+        </button>
+        <div class="status" id="status-{{ id }}"></div>
+        <figcaption id="cap-{{ id }}" hidden><b>Scene specification sent</b><span></span></figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+<footer>MCON 368 · Images generated with OpenAI gpt-image-1-mini. Photos are not stored.</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let photoFile = null, cartoonB64 = null;
+
+function settings(fd){
+  for (const k of ["style","exaggeration","palette","quality"]) fd.append(k, $(k).value);
+  return fd;
+}
+function busy(frame, msg){ frame.innerHTML = `<div><div class="spin"></div>${msg}</div>`; }
+function show(frame, b64){ frame.innerHTML = `<img alt="" src="data:image/png;base64,${b64}">`; }
+function setStatus(el, msg, isErr){ el.textContent = msg || ""; el.classList.toggle("err", !!isErr); }
+
+async function post(url, fd){
+  const r = await fetch(url, {method:"POST", body:fd});
+  let data; try { data = await r.json(); } catch { data = {error:`Server error (${r.status})`}; }
+  if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
+  return data;
+}
+
+$("photo").addEventListener("change", e => {
+  photoFile = e.target.files[0] || null;
+  cartoonB64 = null;
+  $("cartoonFrame").textContent = "Your cartoon";
+  document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = true);
+  $("cartoonBtn").disabled = !photoFile;
+  if (photoFile) $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(photoFile)}">`;
+});
+
+$("cartoonBtn").addEventListener("click", async () => {
+  const btn = $("cartoonBtn"), st = $("cartoonStatus");
+  btn.disabled = true; setStatus(st, "");
+  busy($("cartoonFrame"), "Drawing you… (~20–60s)");
+  const fd = settings(new FormData()); fd.append("photo", photoFile);
+  try {
+    const d = await post("/api/cartoonify", fd);
+    cartoonB64 = d.image; show($("cartoonFrame"), cartoonB64);
+    document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = false);
+    setStatus(st, "Done. Changed a setting? Click again to redo the cartoon.");
+  } catch (err) {
+    $("cartoonFrame").textContent = "Your cartoon"; setStatus(st, err.message, true);
+  } finally { btn.disabled = false; }
+});
+
+document.querySelectorAll(".sceneBtn").forEach(btn => btn.addEventListener("click", async () => {
+  const id = btn.dataset.scene, frame = $("frame-"+id), st = $("status-"+id), cap = $("cap-"+id);
+  btn.disabled = true; setStatus(st, ""); cap.hidden = true;
+  busy(frame, "Painting the scene… (~30–90s)");
+  const fd = settings(new FormData());
+  fd.append("photo", photoFile); fd.append("cartoon", cartoonB64); fd.append("scene", id);
+  try {
+    const d = await post("/api/scene", fd);
+    show(frame, d.image);
+    cap.querySelector("span").textContent = d.caption; cap.hidden = false;
+  } catch (err) {
+    frame.textContent = "Something went wrong."; setStatus(st, err.message, true);
+  } finally { btn.disabled = false; }
+}));
+</script>
+</body>
+</html>

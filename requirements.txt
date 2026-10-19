@@ -1,0 +1,4 @@
+flask==3.1.*
+gunicorn==23.*
+openai>=1.99
+pillow>=11
