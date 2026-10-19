@@ -342,37 +342,65 @@ def scene():
     return jsonify({"image": b64, "caption": spec, "checklist": checklist})
 
 
+LIKENESS_ITEMS = [
+    "Hair color matches",
+    "Hair length and style match",
+    "Skin tone matches",
+    "Glasses match (present in both or absent in both)",
+    "Facial hair matches (present in both or absent in both)",
+    "Face shape and proportions are similar",
+    "Eyebrows, eyes, nose and mouth have similar shapes",
+    "Apparent age range matches",
+]
+
+
+def data_url(png_bytes):
+    return "data:image/png;base64," + base64.b64encode(png_bytes).decode()
+
+
 @app.post("/api/check")
 def check():
-    """One vision call: grade the generated image against its own caption's checklist."""
+    """ONE vision call that grades a generated scene on both production requirements:
+    (1) likeness: does the character share the visible features of the person in the photo?
+    (2) fidelity: is every element of the caption visible?"""
     if rate_limited():
         return error("Hourly limit reached — try again later.", 429)
-    data = request.get_json(silent=True) or {}
     try:
-        img = to_png(decode_b64(data.get("image"), "image"), "scene.png", max_side=768)[1]
-        spec = str(data.get("caption", ""))[:2000]
-        items = [str(x)[:200] for x in (data.get("checklist") or [])][:15]
+        photo = uploaded_photo()[1]
+        scene_png = to_png(decode_b64(request.form.get("image"), "image"), "scene.png", max_side=1024)[1]
+        photo = to_png(photo, "photo.png", max_side=768)[1]
+        spec = str(request.form.get("caption", ""))[:2000]
+        items = [str(x)[:200] for x in json.loads(request.form.get("checklist") or "[]")][:15]
         if not spec or not items:
             raise ValueError("Nothing to check.")
-    except ValueError as e:
-        return error(str(e))
-    numbered = "\n".join(f"{i + 1}. {t}" for i, t in enumerate(items))
+    except (ValueError, json.JSONDecodeError) as e:
+        return error(str(e) or "Bad check request.")
+    scene_list = "\n".join(f"S{i + 1}. {t}" for i, t in enumerate(items))
+    like_list = "\n".join(f"L{i + 1}. {t}" for i, t in enumerate(LIKENESS_ITEMS))
     instructions = (
-        "You are a strict QA reviewer for a storybook illustration. The caption it must match is:\n"
-        f"\"{spec}\"\n\nFor each checklist item, decide whether it is clearly visible in the image.\n"
-        f"{numbered}\n\n"
-        'Reply with JSON only: {"items":[{"item":"<text>","pass":true|false,"note":"<max 12 words>"}],'
-        '"verdict":"<one sentence overall>"}'
+        "You are a strict QA reviewer for a personalized storybook app. Image 1 is the user's own photo, "
+        "which they uploaded so their likeness could be drawn as the cartoon character Jack. Image 2 is "
+        "the generated illustration. Do not identify anyone; only compare visible features.\n\n"
+        "PART A - scene fidelity. The illustration must match this caption:\n"
+        f"\"{spec}\"\nFor each item, is it clearly visible in image 2?\n{scene_list}\n\n"
+        "PART B - likeness. Compare the main character in image 2 with the person in image 1, allowing "
+        "for cartoon stylization.\n"
+        f"{like_list}\n\n"
+        "Also give likeness_score 1-10: would a friend of the person in image 1 recognize them as the "
+        "character in image 2?\n\n"
+        'Reply with JSON only: {"items":[{"item":"<S text>","pass":true,"note":"<max 12 words>"}],'
+        '"likeness":[{"item":"<L text>","pass":true,"note":"<max 12 words>"}],'
+        '"likeness_score":7,"verdict":"<one sentence overall>"}'
     )
     try:
         resp = client().chat.completions.create(
             model=CHECK_MODEL,
             response_format={"type": "json_object"},
-            max_tokens=700,
+            max_tokens=1100,
             messages=[{"role": "user", "content": [
                 {"type": "text", "text": instructions},
-                {"type": "image_url", "image_url": {
-                    "url": "data:image/png;base64," + base64.b64encode(img).decode(), "detail": "low"}},
+                {"type": "image_url", "image_url": {"url": data_url(photo), "detail": "high"}},
+                {"type": "image_url", "image_url": {"url": data_url(scene_png), "detail": "high"}},
             ]}],
         )
         result = json.loads(resp.choices[0].message.content)

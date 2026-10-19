@@ -9,16 +9,16 @@ Upload a photo → cartoonify it (style, exaggeration, colors, quality) → plac
 - Cartoon settings: 8 art styles, exaggeration, color palette, outline weight, draft/fine quality
 - Scene options: time of day, Jack's mood, outfit (incl. "my own clothes"), optional extra element per scene
 - Caption = the full scene specification sent (options are written into it)
-- **AI fidelity check**: one click sends the generated scene to a vision model (`CHECK_MODEL`, default `gpt-4.1-mini`), which grades every element of the caption ✓/✗
+- **AI fidelity check**: one click sends the generated scene to a vision model (`CHECK_MODEL`, default `gpt-4.1-mini`), which compares it with the uploaded photo (likeness score + feature checklist) and grades every element of the caption ✓/✗; results copy straight into TESTING.md
 - Download each scene, or a combined captioned **storybook page** (built in the browser, no API call)
 - Live cost estimate, generation timer, full-screen image viewer, works on phones
 
 ## How it meets the rules
 - **Key in env var only:** read from `OPENAI_API_KEY`. `.env` is git-ignored; `render.yaml` marks the key `sync: false` so its value lives only in Render's dashboard.
 - **No loops around the API call:** every button click makes exactly one API call. The SDK's automatic retries are disabled (`max_retries=0`) since those are a hidden retry loop.
-- **Caption = scene spec:** the caption shown is the same `SCENES[...]` string inserted into the prompt.
+- **Caption = scene spec:** the caption shown is the same string `build_scene()` inserts into the prompt, including the user's scene options.
 - **Same person across scenes:** both scene calls send the cartoon *and* the original photo as references.
-- Basic guardrails: 30 generations/hour per IP (change with `HOURLY_LIMIT`), uploads resized to ≤1024px, photos never stored.
+- Basic guardrails: 40 requests/hour per IP (change with `HOURLY_LIMIT`), uploads resized to ≤1024px, photos never stored.
 
 ## Run locally
 ```bash
