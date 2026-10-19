@@ -5,176 +5,409 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Into the Beanstalk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#f6f0e1; --card:#fffaf0; --ink:#2b2a22; --muted:#6d6957;
-    --leaf:#3f7a3a; --leaf-dark:#2c5a29; --line:#e2d8bf; --soil:#7a5634; --err:#a5321f;
+    --leaf:#3f7a3a; --leaf-dark:#2c5a29; --leaf-soft:#e3eedc; --line:#e2d8bf;
+    --soil:#7a5634; --err:#a5321f; --ok:#2f7a2c; --sky:#dfeaf2;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif}
-  header{padding:48px 20px 24px;text-align:center}
+  body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+  header{padding:44px 16px 10px;text-align:center;position:relative}
+  header svg{display:block;margin:0 auto 6px}
   h1{font-family:Fraunces,Georgia,serif;font-size:clamp(2rem,5vw,3.2rem);margin:0;color:var(--leaf-dark);letter-spacing:-.01em}
-  header p{color:var(--muted);margin:.5rem auto 0;max-width:36rem}
-  main{max-width:1040px;margin:0 auto;padding:0 16px 64px;display:grid;gap:20px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
-  h2{font-family:Fraunces,Georgia,serif;font-size:1.3rem;margin:0 0 14px}
+  header p{color:var(--muted);margin:.4rem auto 0;max-width:38rem}
+  .steps{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+  .steps span{font-size:.78rem;padding:4px 10px;border-radius:99px;background:#efe6cf;color:var(--muted)}
+  .steps span.on{background:var(--leaf);color:#fff}
+  main{max-width:1100px;margin:0 auto;padding:12px 16px 64px;display:grid;gap:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+  h2{font-family:Fraunces,Georgia,serif;font-size:1.35rem;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:.88rem;margin:0 0 14px}
   h2 .n{display:inline-grid;place-items:center;width:1.7em;height:1.7em;border-radius:50%;background:var(--leaf);color:#fff;font:600 .8rem Inter;margin-right:.5rem;vertical-align:.15em}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-  @media (max-width:760px){.row{grid-template-columns:1fr}}
-  label{display:block;font-weight:600;font-size:.88rem;margin:12px 0 4px}
-  select,input[type=file]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-  button{font:600 1rem Inter,sans-serif;padding:12px 18px;border:0;border-radius:10px;background:var(--leaf);color:#fff;cursor:pointer;margin-top:16px;width:100%}
+  .row{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:start}
+  @media (max-width:820px){.row{grid-template-columns:1fr}}
+  .lbl{display:block;font-weight:600;font-size:.82rem;margin:14px 0 6px;color:var(--ink)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips input{position:absolute;opacity:0;pointer-events:none}
+  .chips label{padding:6px 11px;border:1px solid var(--line);border-radius:99px;background:#fff;cursor:pointer;font-size:.84rem;user-select:none;transition:.12s}
+  .chips label:hover{border-color:var(--leaf)}
+  .chips input:checked+label{background:var(--leaf);border-color:var(--leaf);color:#fff}
+  .chips input:focus-visible+label{outline:2px solid var(--leaf-dark);outline-offset:2px}
+  .drop{border:2px dashed #cdbf9c;border-radius:12px;padding:16px;text-align:center;background:#fff;cursor:pointer;transition:.15s}
+  .drop.over{border-color:var(--leaf);background:var(--leaf-soft)}
+  .drop b{color:var(--leaf-dark)}
+  .drop small{display:block;color:var(--muted);margin-top:4px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{font:600 .95rem Inter,sans-serif;padding:11px 16px;border:0;border-radius:10px;background:var(--leaf);color:#fff;cursor:pointer}
   button:hover:not(:disabled){background:var(--leaf-dark)}
   button:disabled{opacity:.45;cursor:not-allowed}
-  .frame{aspect-ratio:1;border:2px dashed var(--line);border-radius:12px;display:grid;place-items:center;overflow:hidden;background:#fff;color:var(--muted);font-size:.9rem;text-align:center;padding:8px}
-  .frame img{width:100%;height:100%;object-fit:contain}
+  button.ghost{background:#fff;color:var(--leaf-dark);border:1px solid var(--line)}
+  button.ghost:hover:not(:disabled){background:var(--leaf-soft)}
+  button.wide{width:100%;margin-top:16px;padding:13px}
+  .frame{aspect-ratio:1;border:1px solid var(--line);border-radius:12px;display:grid;place-items:center;overflow:hidden;background:#fff;color:var(--muted);font-size:.88rem;text-align:center;padding:6px;position:relative}
+  .frame img,.frame video{width:100%;height:100%;object-fit:contain;border-radius:8px}
+  .frame img{cursor:zoom-in}
   .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .pair small{display:block;text-align:center;color:var(--muted);margin-top:4px}
-  .scenes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media (max-width:760px){.scenes{grid-template-columns:1fr}}
+  .pair small{display:block;text-align:center;color:var(--muted);margin-top:4px;font-size:.8rem}
+  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:0 18px;margin-bottom:6px}
+  @media (max-width:820px){.opts{grid-template-columns:1fr}}
+  .scenes{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:10px}
+  @media (max-width:820px){.scenes{grid-template-columns:1fr}}
   figure{margin:0}
-  figure .frame{aspect-ratio:auto;min-height:260px}
-  figcaption{margin-top:10px;padding:10px 12px;border-left:3px solid var(--soil);background:#f3ead6;border-radius:0 8px 8px 0;font-size:.9rem}
-  figcaption b{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soil);margin-bottom:2px}
-  .status{min-height:1.4em;margin-top:8px;font-size:.88rem;color:var(--muted)}
+  figure h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-style:italic;margin:0 0 8px;font-size:1.1rem}
+  figure .frame{aspect-ratio:3/2;background:linear-gradient(var(--sky),#fff)}
+  figure.tall .frame{aspect-ratio:2/3;max-height:640px;margin:0 auto}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:.85rem;margin-top:8px;color:var(--muted)}
+  figcaption{margin-top:10px;padding:10px 12px;border-left:3px solid var(--soil);background:#f3ead6;border-radius:0 8px 8px 0;font-size:.88rem}
+  figcaption b{display:block;font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--soil);margin-bottom:2px}
+  .tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tools button{padding:7px 11px;font-size:.82rem}
+  .check{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;font-size:.84rem}
+  .check ul{list-style:none;margin:6px 0 0;padding:0}
+  .check li{display:flex;gap:8px;padding:3px 0;border-top:1px dashed #eee5cf}
+  .check li:first-child{border-top:0}
+  .check .p{color:var(--ok);font-weight:700}
+  .check .f{color:var(--err);font-weight:700}
+  .check .note{color:var(--muted)}
+  .score{font-weight:600}
+  .status{min-height:1.3em;margin-top:6px;font-size:.84rem;color:var(--muted)}
   .status.err{color:var(--err)}
   .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--leaf);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 8px}
   @keyframes s{to{transform:rotate(360deg)}}
-  footer{text-align:center;color:var(--muted);font-size:.8rem;padding-bottom:32px}
+  .elapsed{font-variant-numeric:tabular-nums}
+  .bookbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .bookbar p{margin:0;color:var(--muted);font-size:.85rem}
+  .cost{font-size:.8rem;color:var(--muted);margin-top:6px}
+  .lightbox{position:fixed;inset:0;background:rgba(20,18,10,.85);display:none;place-items:center;z-index:9;padding:20px;cursor:zoom-out}
+  .lightbox img{max-width:100%;max-height:100%;border-radius:10px}
+  .lightbox.on{display:grid}
+  footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 16px 32px}
 </style>
 </head>
 <body>
 <header>
+  <svg width="44" height="54" viewBox="0 0 44 54" aria-hidden="true"><path d="M22 54C22 40 14 36 18 26S28 14 22 0" stroke="#3f7a3a" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M19 36c-8-1-12-6-12-10 6 0 11 4 12 10zM24 20c7-1 11-5 11-9-6 0-10 4-11 9z" fill="#5c9a4f"/></svg>
   <h1>Into the Beanstalk</h1>
-  <p>Upload a photo, turn yourself into a cartoon, and step into Jack and the Beanstalk.</p>
+  <p>Turn yourself into a cartoon, then step into the story of Jack and the Beanstalk.</p>
+  <div class="steps"><span id="st1" class="on">1 · Photo</span><span id="st2">2 · Cartoon</span><span id="st3">3 · Scenes</span><span id="st4">4 · Storybook</span></div>
 </header>
 
 <main>
+  <!-- STEP 1 -->
   <section class="card row">
     <div>
-      <h2><span class="n">1</span>Your photo &amp; cartoon settings</h2>
-      <label for="photo">Photo (face clearly visible, good light)</label>
-      <input id="photo" type="file" accept="image/jpeg,image/png,image/webp">
-      <div class="grid2">
+      <h2><span class="n">1</span>You, as a cartoon</h2>
+      <p class="sub">Best results: one person, face toward the camera, good light, nothing covering the face.</p>
+
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload a photo">
+        <b>Drop a photo here</b> or click to choose
+        <small>JPG · PNG · WEBP</small>
+        <input id="file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      </div>
+      <div class="btnrow"><button class="ghost" id="camBtn" type="button">📷 Use camera</button><button class="ghost" id="snapBtn" type="button" hidden>Take photo</button></div>
+
+      <span class="lbl">Art style</span>
+      <div class="chips" data-name="style">
+        <input type="radio" name="style" id="s1" value="storybook3d" checked><label for="s1">3D animated</label>
+        <input type="radio" name="style" id="s2" value="watercolor"><label for="s2">Watercolor</label>
+        <input type="radio" name="style" id="s3" value="flat"><label for="s3">Flat vector</label>
+        <input type="radio" name="style" id="s4" value="comic"><label for="s4">Comic ink</label>
+        <input type="radio" name="style" id="s5" value="anime"><label for="s5">Anime</label>
+        <input type="radio" name="style" id="s6" value="clay"><label for="s6">Claymation</label>
+        <input type="radio" name="style" id="s7" value="papercut"><label for="s7">Paper cut-out</label>
+        <input type="radio" name="style" id="s8" value="vintage"><label for="s8">Vintage storybook</label>
+      </div>
+
+      <span class="lbl">Exaggeration</span>
+      <div class="chips">
+        <input type="radio" name="exaggeration" id="e1" value="subtle"><label for="e1">Subtle</label>
+        <input type="radio" name="exaggeration" id="e2" value="moderate" checked><label for="e2">Moderate</label>
+        <input type="radio" name="exaggeration" id="e3" value="strong"><label for="e3">Caricature</label>
+      </div>
+
+      <span class="lbl">Colors</span>
+      <div class="chips">
+        <input type="radio" name="palette" id="p1" value="vivid" checked><label for="p1">Vivid</label>
+        <input type="radio" name="palette" id="p2" value="pastel"><label for="p2">Pastel</label>
+        <input type="radio" name="palette" id="p3" value="earthy"><label for="p3">Earthy</label>
+        <input type="radio" name="palette" id="p4" value="moonlit"><label for="p4">Moonlit</label>
+      </div>
+
+      <div class="opts" style="grid-template-columns:1fr 1fr">
         <div>
-          <label for="style">Style</label>
-          <select id="style">
-            <option value="storybook3d">3D animated</option>
-            <option value="flat">Flat vector</option>
-            <option value="watercolor">Watercolor picture book</option>
-            <option value="comic">Comic ink</option>
-          </select>
+          <span class="lbl">Outlines</span>
+          <div class="chips">
+            <input type="radio" name="lines" id="l1" value="none" checked><label for="l1">Style default</label>
+            <input type="radio" name="lines" id="l2" value="thin"><label for="l2">Thin</label>
+            <input type="radio" name="lines" id="l3" value="bold"><label for="l3">Bold</label>
+          </div>
         </div>
         <div>
-          <label for="exaggeration">Exaggeration</label>
-          <select id="exaggeration">
-            <option value="subtle">Subtle</option>
-            <option value="moderate" selected>Moderate</option>
-            <option value="strong">Strong caricature</option>
-          </select>
-        </div>
-        <div>
-          <label for="palette">Colors</label>
-          <select id="palette">
-            <option value="vivid">Vivid</option>
-            <option value="pastel">Pastel</option>
-            <option value="earthy">Earthy fairy-tale</option>
-          </select>
-        </div>
-        <div>
-          <label for="quality">Quality</label>
-          <select id="quality">
-            <option value="low">Low (cheapest)</option>
-            <option value="medium">Medium</option>
-          </select>
+          <span class="lbl">Quality</span>
+          <div class="chips">
+            <input type="radio" name="quality" id="q1" value="low" checked><label for="q1">Draft</label>
+            <input type="radio" name="quality" id="q2" value="medium"><label for="q2">Fine</label>
+          </div>
         </div>
       </div>
-      <button id="cartoonBtn" disabled>Cartoonify me</button>
+
+      <button class="wide" id="cartoonBtn" disabled>Cartoonify me</button>
       <div class="status" id="cartoonStatus"></div>
+      <div class="cost" id="cost"></div>
     </div>
-    <div class="pair">
-      <div><div class="frame" id="photoFrame">Your photo</div><small>Original</small></div>
-      <div><div class="frame" id="cartoonFrame">Your cartoon</div><small>Cartoon</small></div>
+    <div>
+      <div class="pair">
+        <div><div class="frame" id="photoFrame">Your photo</div><small>Original</small></div>
+        <div><div class="frame" id="cartoonFrame">Your cartoon</div><small>Cartoon</small></div>
+      </div>
     </div>
   </section>
 
+  <!-- STEP 2 -->
   <section class="card">
     <h2><span class="n">2</span>Step into the story</h2>
+    <p class="sub">These choices are written into each scene's specification — the caption under each picture is exactly what was sent.</p>
+
+    <div class="opts">
+      <div>
+        <span class="lbl">Time of day</span>
+        <div class="chips">
+          <input type="radio" name="time" id="t1" value="morning" checked><label for="t1">Sunny morning</label>
+          <input type="radio" name="time" id="t2" value="golden"><label for="t2">Golden hour</label>
+          <input type="radio" name="time" id="t3" value="dawn"><label for="t3">Misty dawn</label>
+          <input type="radio" name="time" id="t4" value="storm"><label for="t4">Stormy</label>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Jack's mood</span>
+        <div class="chips">
+          <input type="radio" name="expression" id="x1" value="hopeful" checked><label for="x1">Hopeful</label>
+          <input type="radio" name="expression" id="x2" value="excited"><label for="x2">Excited</label>
+          <input type="radio" name="expression" id="x3" value="determined"><label for="x3">Determined</label>
+          <input type="radio" name="expression" id="x4" value="nervous"><label for="x4">Nervous</label>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Outfit</span>
+        <div class="chips">
+          <input type="radio" name="outfit" id="o1" value="peasant" checked><label for="o1">Classic Jack</label>
+          <input type="radio" name="outfit" id="o2" value="overalls"><label for="o2">Overalls</label>
+          <input type="radio" name="outfit" id="o3" value="own"><label for="o3">My own clothes</label>
+          <input type="radio" name="outfit" id="o4" value="royal"><label for="o4">Velvet cloak</label>
+        </div>
+      </div>
+    </div>
+
     <div class="scenes">
-      {% for id, spec in scenes.items() %}
-      <figure>
-        <div class="frame" id="frame-{{ id }}">{{ "Scene 1 — planting the seeds" if id == "planting" else "Scene 2 — climbing the beanstalk" }}</div>
-        <button class="sceneBtn" data-scene="{{ id }}" disabled>
-          {{ "Generate: Jack plants the seeds" if id == "planting" else "Generate: Jack climbs the beanstalk" }}
-        </button>
-        <div class="status" id="status-{{ id }}"></div>
-        <figcaption id="cap-{{ id }}" hidden><b>Scene specification sent</b><span></span></figcaption>
+      <figure id="fig-planting">
+        <h3>I. Jack plants the magic beans</h3>
+        <div class="frame" id="frame-planting">Scene 1 appears here</div>
+        <label class="toggle"><input type="checkbox" id="extra-planting"> Add Jack's mother watching from the doorway</label>
+        <button class="wide sceneBtn" data-scene="planting" disabled>Generate scene 1</button>
+        <div class="status" id="status-planting"></div>
+        <figcaption id="cap-planting" hidden><b>Scene specification sent</b><span></span></figcaption>
+        <div class="tools" id="tools-planting" hidden>
+          <button class="ghost dl" data-scene="planting">⬇ Download</button>
+          <button class="ghost chk" data-scene="planting">✓ Check it matches the caption</button>
+        </div>
+        <div class="check" id="check-planting" hidden></div>
       </figure>
-      {% endfor %}
+
+      <figure id="fig-climbing" class="tall">
+        <h3>II. Jack climbs the beanstalk</h3>
+        <div class="frame" id="frame-climbing">Scene 2 appears here</div>
+        <label class="toggle"><input type="checkbox" id="extra-climbing"> Show the giant's castle in the clouds</label>
+        <button class="wide sceneBtn" data-scene="climbing" disabled>Generate scene 2</button>
+        <div class="status" id="status-climbing"></div>
+        <figcaption id="cap-climbing" hidden><b>Scene specification sent</b><span></span></figcaption>
+        <div class="tools" id="tools-climbing" hidden>
+          <button class="ghost dl" data-scene="climbing">⬇ Download</button>
+          <button class="ghost chk" data-scene="climbing">✓ Check it matches the caption</button>
+        </div>
+        <div class="check" id="check-climbing" hidden></div>
+      </figure>
+    </div>
+
+    <div class="bookbar">
+      <p>Both scenes done? Save them as a single captioned storybook page.</p>
+      <button id="bookBtn" disabled>📖 Download storybook page</button>
     </div>
   </section>
 </main>
-<footer>MCON 368 · Images generated with OpenAI gpt-image-1-mini. Photos are not stored.</footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<footer>MCON 368 · Images by OpenAI gpt-image-1-mini · Photos are processed in memory and never stored.</footer>
 
 <script>
 const $ = id => document.getElementById(id);
-let photoFile = null, cartoonB64 = null;
+const COST = {low:{sq:.005, wide:.006}, medium:{sq:.011, wide:.015}};
+let photoFile = null, cartoonB64 = null, stream = null;
+const scenes = {planting:null, climbing:null};   // {image, caption, checklist}
 
+const val = n => document.querySelector(`input[name="${n}"]:checked`).value;
 function settings(fd){
-  for (const k of ["style","exaggeration","palette","quality"]) fd.append(k, $(k).value);
+  for (const k of ["style","exaggeration","palette","lines","quality","time","expression","outfit"]) fd.append(k, val(k));
   return fd;
 }
-function busy(frame, msg){ frame.innerHTML = `<div><div class="spin"></div>${msg}</div>`; }
-function show(frame, b64){ frame.innerHTML = `<img alt="" src="data:image/png;base64,${b64}">`; }
-function setStatus(el, msg, isErr){ el.textContent = msg || ""; el.classList.toggle("err", !!isErr); }
+function steps(n){ for (let i=1;i<=4;i++) $("st"+i).classList.toggle("on", i<=n); }
+function updateCost(){
+  const q = COST[val("quality")];
+  $("cost").textContent = `Est. cost: cartoon ≈ $${q.sq.toFixed(3)}, each scene ≈ $${q.wide.toFixed(3)} (plus a little for the input photos).`;
+}
+document.querySelectorAll('input[name="quality"]').forEach(r => r.addEventListener("change", updateCost)); updateCost();
 
-async function post(url, fd){
-  const r = await fetch(url, {method:"POST", body:fd});
+function busy(frame, msg){
+  const t0 = Date.now();
+  frame.innerHTML = `<div><div class="spin"></div>${msg}<br><span class="elapsed">0s</span></div>`;
+  const el = frame.querySelector(".elapsed");
+  const id = setInterval(() => { if (!el.isConnected) return clearInterval(id); el.textContent = Math.round((Date.now()-t0)/1000)+"s"; }, 1000);
+}
+function show(frame, src){ frame.innerHTML = `<img alt="" src="${src}">`; }
+function setStatus(el, msg, isErr){ el.textContent = msg || ""; el.classList.toggle("err", !!isErr); }
+async function post(url, body, json){
+  const r = await fetch(url, json ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {method:"POST", body});
   let data; try { data = await r.json(); } catch { data = {error:`Server error (${r.status})`}; }
   if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
   return data;
 }
 
-$("photo").addEventListener("change", e => {
-  photoFile = e.target.files[0] || null;
-  cartoonB64 = null;
+/* ---------- photo input: click, drag-drop, camera ---------- */
+function setPhoto(file){
+  if (!file || !file.type.startsWith("image/")) return;
+  photoFile = file; cartoonB64 = null;
+  stopCam();
+  $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(file)}">`;
   $("cartoonFrame").textContent = "Your cartoon";
+  $("cartoonBtn").disabled = false;
   document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = true);
-  $("cartoonBtn").disabled = !photoFile;
-  if (photoFile) $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(photoFile)}">`;
-});
+  steps(1);
+}
+const drop = $("drop");
+drop.addEventListener("click", () => $("file").click());
+drop.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); $("file").click(); }});
+$("file").addEventListener("change", e => setPhoto(e.target.files[0]));
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setPhoto(e.dataTransfer.files[0]));
 
+$("camBtn").addEventListener("click", async () => {
+  if (stream) return stopCam();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user", width:{ideal:1024}}});
+    $("photoFrame").innerHTML = `<video autoplay playsinline muted style="transform:scaleX(-1)"></video>`;
+    $("photoFrame").querySelector("video").srcObject = stream;
+    $("snapBtn").hidden = false; $("camBtn").textContent = "Cancel camera";
+  } catch { setStatus($("cartoonStatus"), "Couldn't open the camera — upload a photo instead.", true); }
+});
+$("snapBtn").addEventListener("click", () => {
+  const v = $("photoFrame").querySelector("video"); if (!v) return;
+  const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+  const x = c.getContext("2d"); x.translate(c.width,0); x.scale(-1,1); x.drawImage(v,0,0);
+  c.toBlob(b => setPhoto(new File([b], "camera.jpg", {type:"image/jpeg"})), "image/jpeg", .92);
+});
+function stopCam(){
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; $("snapBtn").hidden = true; $("camBtn").textContent = "📷 Use camera";
+}
+
+/* ---------- cartoonify (one API call per click) ---------- */
 $("cartoonBtn").addEventListener("click", async () => {
   const btn = $("cartoonBtn"), st = $("cartoonStatus");
   btn.disabled = true; setStatus(st, "");
-  busy($("cartoonFrame"), "Drawing you… (~20–60s)");
+  busy($("cartoonFrame"), "Drawing you…");
   const fd = settings(new FormData()); fd.append("photo", photoFile);
   try {
     const d = await post("/api/cartoonify", fd);
-    cartoonB64 = d.image; show($("cartoonFrame"), cartoonB64);
+    cartoonB64 = d.image; show($("cartoonFrame"), "data:image/png;base64," + cartoonB64);
     document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = false);
-    setStatus(st, "Done. Changed a setting? Click again to redo the cartoon.");
-  } catch (err) {
-    $("cartoonFrame").textContent = "Your cartoon"; setStatus(st, err.message, true);
-  } finally { btn.disabled = false; }
+    setStatus(st, "Done! Not quite you? Try “Subtle” exaggeration and click again.");
+    btn.textContent = "Redo cartoon"; steps(2);
+  } catch (err) { $("cartoonFrame").textContent = "Your cartoon"; setStatus(st, err.message, true); }
+  finally { btn.disabled = false; }
 });
 
+/* ---------- scenes (one API call per click) ---------- */
 document.querySelectorAll(".sceneBtn").forEach(btn => btn.addEventListener("click", async () => {
   const id = btn.dataset.scene, frame = $("frame-"+id), st = $("status-"+id), cap = $("cap-"+id);
-  btn.disabled = true; setStatus(st, ""); cap.hidden = true;
-  busy(frame, "Painting the scene… (~30–90s)");
+  btn.disabled = true; setStatus(st, ""); cap.hidden = true; $("tools-"+id).hidden = true; $("check-"+id).hidden = true;
+  busy(frame, "Painting the scene… (usually 30–90s)");
   const fd = settings(new FormData());
   fd.append("photo", photoFile); fd.append("cartoon", cartoonB64); fd.append("scene", id);
+  fd.append("extra", $("extra-"+id).checked ? "1" : "0");
   try {
     const d = await post("/api/scene", fd);
-    show(frame, d.image);
+    scenes[id] = d;
+    show(frame, "data:image/png;base64," + d.image);
     cap.querySelector("span").textContent = d.caption; cap.hidden = false;
-  } catch (err) {
-    frame.textContent = "Something went wrong."; setStatus(st, err.message, true);
-  } finally { btn.disabled = false; }
+    $("tools-"+id).hidden = false; btn.textContent = "Regenerate";
+    steps(3);
+    if (scenes.planting && scenes.climbing) { $("bookBtn").disabled = false; steps(4); }
+  } catch (err) { frame.textContent = "Something went wrong."; setStatus(st, err.message, true); }
+  finally { btn.disabled = false; }
 }));
+
+/* ---------- AI fidelity check (one API call per click) ---------- */
+document.querySelectorAll(".chk").forEach(btn => btn.addEventListener("click", async () => {
+  const id = btn.dataset.scene, box = $("check-"+id), s = scenes[id];
+  btn.disabled = true; box.hidden = false; box.innerHTML = "<div class='spin'></div>Checking every element of the caption…";
+  try {
+    const d = await post("/api/check", {image:s.image, caption:s.caption, checklist:s.checklist}, true);
+    const items = d.items || [], ok = items.filter(i => i.pass).length;
+    box.innerHTML = `<div class="score">${ok}/${items.length} caption elements found</div>` +
+      (d.verdict ? `<div class="note">${esc(d.verdict)}</div>` : "") +
+      "<ul>" + items.map(i => `<li><span class="${i.pass?'p':'f'}">${i.pass?'✓':'✗'}</span><span>${esc(i.item)}${i.note?` <span class="note">— ${esc(i.note)}</span>`:""}</span></li>`).join("") + "</ul>";
+  } catch (err) { box.innerHTML = `<span class="f">${esc(err.message)}</span>`; }
+  finally { btn.disabled = false; }
+}));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- downloads ---------- */
+function download(href, name){ const a = document.createElement("a"); a.href = href; a.download = name; a.click(); }
+document.querySelectorAll(".dl").forEach(b => b.addEventListener("click", () =>
+  download("data:image/png;base64," + scenes[b.dataset.scene].image, `jack-${b.dataset.scene}.png`)));
+
+const loadImg = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
+function wrap(ctx, text, x, y, maxW, lh){
+  const words = text.split(" "); let line = "";
+  for (const w of words){ const t = line ? line+" "+w : w;
+    if (ctx.measureText(t).width > maxW && line){ ctx.fillText(line, x, y); y += lh; line = w; } else line = t; }
+  ctx.fillText(line, x, y); return y + lh;
+}
+$("bookBtn").addEventListener("click", async () => {
+  await document.fonts.ready;
+  const [a, b, c] = await Promise.all([loadImg("data:image/png;base64,"+scenes.planting.image),
+    loadImg("data:image/png;base64,"+scenes.climbing.image), loadImg("data:image/png;base64,"+cartoonB64)]);
+  const W = 2400, H = 2150, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d");
+  x.fillStyle = "#f6f0e1"; x.fillRect(0,0,W,H);
+  x.strokeStyle = "#7a5634"; x.lineWidth = 6; x.strokeRect(40,40,W-80,H-80);
+  x.fillStyle = "#2c5a29"; x.font = "700 92px Fraunces, Georgia, serif"; x.textAlign = "center";
+  x.fillText("Jack and the Beanstalk", W/2, 175);
+  x.save(); x.beginPath(); x.arc(W/2, 285, 70, 0, Math.PI*2); x.clip(); x.drawImage(c, W/2-70, 215, 140, 140); x.restore();
+  x.font = "italic 500 40px Fraunces, Georgia, serif"; x.fillStyle = "#6d6957"; x.fillText("starring you", W/2, 400);
+  // left: planting (3:2), right: climbing (2:3)
+  const lw = 1300, lh = lw*2/3, rx = 100+lw+80, rw = W-rx-100;
+  const rh = Math.min(rw*1.5, 1100), rw2 = rh/1.5;   // keep 2:3 aspect
+  x.drawImage(a, 100, 460, lw, lh);
+  x.drawImage(b, rx+(rw-rw2)/2, 460, rw2, rh);
+  x.textAlign = "left"; x.fillStyle = "#7a5634"; x.font = "600 30px Inter, sans-serif";
+  x.fillText("I. PLANTING THE SEEDS", 100, 460+lh+60);
+  x.fillStyle = "#2b2a22"; x.font = "30px Inter, sans-serif";
+  wrap(x, scenes.planting.caption, 100, 460+lh+105, lw, 42);
+  const by = 460+rh;
+  x.fillStyle = "#7a5634"; x.font = "600 30px Inter, sans-serif"; x.fillText("II. CLIMBING THE BEANSTALK", rx, by+60);
+  x.fillStyle = "#2b2a22"; x.font = "26px Inter, sans-serif"; wrap(x, scenes.climbing.caption, rx, by+100, rw, 36);
+  download(cv.toDataURL("image/png"), "my-beanstalk-storybook.png");
+});
+
+/* ---------- lightbox ---------- */
+document.addEventListener("click", e => {
+  if (e.target.matches(".frame img")) { $("lightbox").querySelector("img").src = e.target.src; $("lightbox").classList.add("on"); }
+});
+$("lightbox").addEventListener("click", () => $("lightbox").classList.remove("on"));
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("lightbox").classList.remove("on"); });
 </script>
 </body>
 </html>
