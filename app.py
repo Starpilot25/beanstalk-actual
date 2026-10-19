@@ -24,6 +24,9 @@ from PIL import Image, ImageOps
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # generated scenes are sent back for the check step
+# Flask 3.1+ caps non-file form fields at 500 KB by default; the cartoon and the generated
+# scene are sent back as base64 text fields (2-5 MB), so raise that cap too.
+app.config["MAX_FORM_MEMORY_SIZE"] = 32 * 1024 * 1024
 
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1-mini")
 CHECK_MODEL = os.environ.get("CHECK_MODEL", "gpt-4.1-mini")
