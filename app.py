@@ -265,14 +265,19 @@ def rate_limited():
 
 def call_edit(images, prompt, quality, size):
     """Exactly one image-edit call. No retries, no loops."""
+    extra = {}
+    # input_fidelity="high" preserves faces better, but gpt-image-1-mini rejects it.
+    # It is only sent to models that support it (e.g. IMAGE_MODEL=gpt-image-1).
+    if "mini" not in IMAGE_MODEL:
+        extra["input_fidelity"] = "high"
     result = client().images.edit(
         model=IMAGE_MODEL,
         image=images,
         prompt=prompt,
-        input_fidelity="high",  # preserves facial features from the reference images
         quality=quality,
         size=size,
         n=1,
+        **extra,
     )
     return result.data[0].b64_json
 
