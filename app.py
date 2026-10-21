@@ -56,7 +56,7 @@ STYLES = {
     "flat": "a clean flat-vector cartoon with simple geometric shapes and crisp, even outlines",
     "watercolor": "a hand-painted watercolor picture-book illustration with delicate ink linework",
     "comic": "a bold comic-book illustration with strong black ink lines and cel shading",
-    "anime": "a cel-shaded Japanese anime illustration with clean lines and expressive eyes",
+    "anime": "a cel-shaded Japanese anime illustration with clean lines, keeping the person's real eye shape and size",
     "clay": "a handmade stop-motion plasticine figure with visible clay texture, tiny fingerprints and soft studio lighting",
     "papercut": "a layered paper-cutout collage illustration with textured paper and soft drop shadows",
     "vintage": "a 1950s golden-age children's book illustration with gouache texture and limited print colors",
@@ -89,10 +89,13 @@ QUALITIES = {"low", "medium"}  # "high" deliberately left out to protect the bud
 IDENTITY_RULES = (
     "IDENTITY IS THE TOP PRIORITY. The character must be instantly recognizable as the "
     "person in the reference photo: keep the same face shape, jawline, eye shape and spacing, "
-    "eye color, nose shape, mouth and lips, eyebrows, ears, skin tone, hairline, hair color, "
-    "hair texture, hair length and hairstyle, facial hair, freckles, moles, and any "
-    "other distinctive marks exactly as in the photo. Do not change apparent age, gender, "
-    "body type, or ethnicity. Do not beautify, smooth away features, or swap in a generic face."
+    "nose shape, mouth and lips, eyebrows, ears, skin tone, hairline, hair color, hair texture, "
+    "hair length and hairstyle, facial hair, freckles and moles as in the photo. Keep the same "
+    "apparent age, gender, body type and ethnicity, and keep the face's real proportions rather "
+    "than a generic cartoon face. Treat dim light, shadows, grain and the camera's flat expression "
+    "as photo conditions, not features: draw clear, smooth, evenly lit skin and a fresh, rested "
+    "look true to the person's real age. Use the eye color "
+    "clearly visible in the photo; if it is not clearly visible, use a natural dark eye color."
 )
 
 # ---------------------------------------------------------------------------
@@ -211,7 +214,8 @@ def cartoon_prompt(s):
     return (
         "Turn the person in this photo into a cartoon character portrait. "
         f"{style_sentence(s)} {IDENTITY_RULES} "
-        "Head-and-shoulders, facing the viewer, neutral friendly expression, plain light background, no text."
+        "Head-and-shoulders, facing the viewer, with a relaxed, friendly expression and a slight natural smile, "
+        "soft even lighting, plain light background, no text."
     )
 
 
