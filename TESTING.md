@@ -30,6 +30,15 @@ Add which test person it was in the Scene column (e.g. "Planting – #3 glasses/
 
 The AI check is a helper, not the final word: always look at the image yourself too, and note anything it got wrong.
 
+## Changes from classmate feedback (Oct 21)
+| Feedback | Change |
+|---|---|
+| Cartoon didn't look like me; remaking it got worse (Shaul, Reuven) | Default model `gpt-image-1` with high input fidelity; default exaggeration Subtle; new **Fix my cartoon** box revises the current cartoon from your notes instead of starting over |
+| Climbing scene: two noses, half a face in the beanstalk, didn't match the cartoon (Shaul) | Scene prompt now requires one head/one face, body in front of the vines, and treats the cartoon as the design source (photo only as a feature reference); climbing pose changed to a side view with the face in three-quarter view |
+| Picked 3D animated, got claymation (Yosef) | 3D style rewritten as a glossy CGI render; clay style made distinctly handmade. Wording is positive-only, because naming "clay" can pull results toward it |
+| Too many options (Shaul, Reuven) | Only style + glasses (step 1) and mood + outfit (step 2) are shown; the rest is under More options |
+| Download/Check buttons visible before a scene existed | Fixed (`[hidden]` was overridden by CSS) |
+
 ## Common fixes
 - Face too generic / wrong person → set exaggeration to Subtle, use a sharper photo, strengthen `IDENTITY_RULES` with the feature that drifted (e.g. "keep the glasses").
 - Face too small in the climbing scene → it's a tall shot; add "Jack's face fills at least a tenth of the frame" to `scene_prompt`.

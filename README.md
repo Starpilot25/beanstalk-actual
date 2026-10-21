@@ -2,12 +2,13 @@
 
 Upload a photo → cartoonify it (style, exaggeration, colors, quality) → place the cartoon you into two Jack and the Beanstalk scenes. Each scene image is captioned with the exact scene specification sent to the model.
 
-**Model:** OpenAI `gpt-image-1-mini` via the image-edit endpoint. The original photo is sent with every scene as a face reference. (`input_fidelity="high"` is added automatically if you switch `IMAGE_MODEL` to a model that supports it, such as `gpt-image-1`; the mini model rejects it.) At low quality a full run (1 cartoon + 2 scenes) costs roughly 2–4 cents.
+**Model:** OpenAI `gpt-image-1` via the image-edit endpoint with `input_fidelity="high"`, which keeps faces close to the photo. Classmate testing with `gpt-image-1-mini` showed weak likeness and face artifacts, so the default was raised. Set `IMAGE_MODEL=gpt-image-1-mini` for the cheapest option (input fidelity is skipped automatically, since mini rejects it). At Draft quality a full run (1 cartoon + 2 scenes) costs roughly 20–30 cents.
 
 ## Features
 - Upload, drag-and-drop, or take a photo with the webcam
-- Cartoon settings: 8 art styles, exaggeration, color palette, outline weight, draft/fine quality
-- Scene options: time of day, Jack's mood, outfit (incl. "my own clothes"), optional extra element per scene
+- Cartoon settings: art style and glasses up front; exaggeration (default Subtle), colors, outlines and quality under **More options**
+- **Fix my cartoon**: describe what's off ("my face is thinner") and the current cartoon is revised against the photo, in one API call
+- Scene options: Jack's mood and outfit (incl. "my own clothes") up front; time of day and Surprise me under **More options**; optional extra element per scene
 - Caption = the full scene specification sent (options are written into it)
 - **AI fidelity check**: one click sends the generated scene to a vision model (`CHECK_MODEL`, default `gpt-4.1-mini`), which compares it with the uploaded photo (likeness score + feature checklist) and grades every element of the caption ✓/✗; results copy straight into TESTING.md
 - Download each scene, or a combined captioned **storybook page** (built in the browser, no API call)

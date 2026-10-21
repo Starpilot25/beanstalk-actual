@@ -18,6 +18,7 @@
     --story:"Young Serif", Georgia, serif;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   html{scroll-behavior:smooth}
   body{margin:0;background:var(--sky);color:var(--ink);font:400 16px/1.55 var(--display);font-variation-settings:"wdth" 100;-webkit-font-smoothing:antialiased}
   img{display:block}
@@ -72,7 +73,7 @@
   .chips input:checked+label{background:var(--stalk);border-color:var(--stalk);color:#fff}
   .chips input:focus-visible+label{outline:3px solid var(--bean);outline-offset:2px}
   .pair-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
-  .opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px;margin-bottom:28px}
+  .opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
   @media (max-width:860px){ .opts{grid-template-columns:1fr} }
 
   /* ---------- buttons ---------- */
@@ -137,7 +138,19 @@
   .report .big.low{color:var(--err)}
   .verdict{margin:10px 0 0;color:var(--ink-soft)}
   .copied{font-size:.85rem;color:var(--stalk);margin-left:6px}
-  .surprise{display:flex;justify-content:flex-end;margin:-8px 0 8px}
+  .surprise{margin-top:14px}
+  .more{margin-top:20px;border-top:1.5px solid #e3ede6;padding-top:6px}
+  .more summary{cursor:pointer;font-weight:650;color:var(--stalk);padding:8px 0;list-style:none;display:flex;align-items:center;gap:10px;width:max-content}
+  .more summary::-webkit-details-marker{display:none}
+  .more summary::before{content:"";width:7px;height:7px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:rotate(-45deg);transition:transform .2s}
+  .more[open] summary::before{transform:rotate(45deg)}
+  .more > fieldset:first-of-type{margin-top:6px}
+  .scene-more{margin:8px 0 28px}
+  .fix{margin-top:14px;padding:16px;border-radius:16px;background:var(--leaf-pale)}
+  .fix label{display:block;font-weight:650;margin-bottom:8px}
+  .fix textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid #cfe0d4;border-radius:12px;resize:vertical;background:#fff}
+  .fix textarea:focus-visible{outline:3px solid var(--stalk);outline-offset:1px}
+  .fix button{margin-top:10px}
   /* hero beanstalk grows once on load */
   .hero .stalk{stroke-dasharray:420;stroke-dashoffset:420;animation:grow 1.6s .2s cubic-bezier(.3,.7,.2,1) forwards}
   .hero .leaves path{opacity:0;transform-box:fill-box;transform-origin:center;animation:pop .5s forwards}
@@ -198,22 +211,7 @@
           </div>
         </fieldset>
 
-        <fieldset><legend>How cartoony?</legend>
-          <div class="chips">
-            <input type="radio" name="exaggeration" id="e1" value="subtle"><label for="e1">Subtle</label>
-            <input type="radio" name="exaggeration" id="e2" value="moderate" checked><label for="e2">Moderate</label>
-            <input type="radio" name="exaggeration" id="e3" value="strong"><label for="e3">Full caricature</label>
-          </div>
-        </fieldset>
 
-        <fieldset><legend>Colors</legend>
-          <div class="chips">
-            <input type="radio" name="palette" id="p1" value="vivid" checked><label for="p1">Vivid</label>
-            <input type="radio" name="palette" id="p2" value="pastel"><label for="p2">Pastel</label>
-            <input type="radio" name="palette" id="p3" value="earthy"><label for="p3">Earthy</label>
-            <input type="radio" name="palette" id="p4" value="moonlit"><label for="p4">Moonlit</label>
-          </div>
-        </fieldset>
 
         <fieldset><legend>Glasses</legend>
           <div class="chips">
@@ -223,6 +221,24 @@
           </div>
         </fieldset>
 
+
+        <details class="more">
+          <summary>More options</summary>
+        <fieldset><legend>How cartoony?</legend>
+          <div class="chips">
+            <input type="radio" name="exaggeration" id="e1" value="subtle" checked><label for="e1">Subtle</label>
+            <input type="radio" name="exaggeration" id="e2" value="moderate"><label for="e2">Moderate</label>
+            <input type="radio" name="exaggeration" id="e3" value="strong"><label for="e3">Full caricature</label>
+          </div>
+        </fieldset>
+        <fieldset><legend>Colors</legend>
+          <div class="chips">
+            <input type="radio" name="palette" id="p1" value="vivid" checked><label for="p1">Vivid</label>
+            <input type="radio" name="palette" id="p2" value="pastel"><label for="p2">Pastel</label>
+            <input type="radio" name="palette" id="p3" value="earthy"><label for="p3">Earthy</label>
+            <input type="radio" name="palette" id="p4" value="moonlit"><label for="p4">Moonlit</label>
+          </div>
+        </fieldset>
         <div class="pair-fields">
           <fieldset><legend>Outlines</legend>
             <div class="chips">
@@ -238,9 +254,15 @@
             </div>
           </fieldset>
         </div>
+        </details>
 
         <button class="go wide" id="cartoonBtn" disabled>Make my cartoon</button>
         <div class="status" id="cartoonStatus"></div>
+        <div class="fix" id="fixBox" hidden>
+          <label for="fixNotes">Doesn't look quite like you? Say what to change.</label>
+          <textarea id="fixNotes" rows="2" maxlength="240" placeholder="For example: my face is thinner, my hair is darker and curlier, smaller nose"></textarea>
+          <button class="go" id="fixBtn" type="button">Fix my cartoon</button>
+        </div>
         <div class="cost" id="cost"></div>
       </div>
 
@@ -258,16 +280,7 @@
       <h2>Step into the story</h2>
       <p class="lede">Your choices are written into each scene's description. The text under each picture is exactly what was sent to the image model.</p>
 
-      <div class="surprise"><button class="quiet" id="surpriseBtn" type="button">Surprise me</button></div>
       <div class="opts">
-        <fieldset><legend>Time of day</legend>
-          <div class="chips">
-            <input type="radio" name="time" id="t1" value="morning" checked><label for="t1">Sunny morning</label>
-            <input type="radio" name="time" id="t2" value="golden"><label for="t2">Golden hour</label>
-            <input type="radio" name="time" id="t3" value="dawn"><label for="t3">Misty dawn</label>
-            <input type="radio" name="time" id="t4" value="storm"><label for="t4">Storm rolling in</label>
-          </div>
-        </fieldset>
         <fieldset><legend>Jack's mood</legend>
           <div class="chips">
             <input type="radio" name="expression" id="x1" value="hopeful" checked><label for="x1">Hopeful</label>
@@ -285,6 +298,18 @@
           </div>
         </fieldset>
       </div>
+      <details class="more scene-more">
+        <summary>More options</summary>
+        <fieldset><legend>Time of day</legend>
+          <div class="chips">
+            <input type="radio" name="time" id="t1" value="morning" checked><label for="t1">Sunny morning</label>
+            <input type="radio" name="time" id="t2" value="golden"><label for="t2">Golden hour</label>
+            <input type="radio" name="time" id="t3" value="dawn"><label for="t3">Misty dawn</label>
+            <input type="radio" name="time" id="t4" value="storm"><label for="t4">Storm rolling in</label>
+          </div>
+        </fieldset>
+        <div class="surprise"><button class="quiet" id="surpriseBtn" type="button">Surprise me</button></div>
+      </details>
 
       <div class="scenes">
         <figure class="scene" id="fig-planting">
@@ -332,11 +357,11 @@
 </main>
 
 <div class="lightbox" id="lightbox"><img alt=""></div>
-<footer>MCON 368. Images are made with OpenAI gpt-image-1-mini. Photos are used only to make your pictures and are never stored.</footer>
+<footer>MCON 368. Images are made with OpenAI image models. Photos are used only to make your pictures and are never stored.</footer>
 
 <script>
 const $ = id => document.getElementById(id);
-const COST = {low:{sq:.005, wide:.006}, medium:{sq:.011, wide:.015}};
+const COST = {low:{sq:[.03,.07], wide:[.06,.12]}, medium:{sq:[.06,.10], wide:[.10,.18]}};  // gpt-image-1, high input fidelity, rough
 let photoFile = null, cartoonB64 = null, stream = null;
 const scenes = {planting:null, climbing:null};   // {image, caption, checklist}
 
@@ -348,7 +373,7 @@ function settings(fd){
 function steps(n){ document.querySelectorAll(".step").forEach(el => el.classList.toggle("grown", +el.dataset.step <= n)); }
 function updateCost(){
   const q = COST[val("quality")];
-  $("cost").textContent = `Est. cost: cartoon ≈ $${q.sq.toFixed(3)}, each scene ≈ $${q.wide.toFixed(3)} (plus a little for the input photos).`;
+  $("cost").textContent = `Roughly $${q.sq[0].toFixed(2)}–${q.sq[1].toFixed(2)} per cartoon and $${q.wide[0].toFixed(2)}–${q.wide[1].toFixed(2)} per scene.`;
 }
 document.querySelectorAll('input[name="quality"]').forEach(r => r.addEventListener("change", updateCost)); updateCost();
 
@@ -392,7 +417,7 @@ async function setPhoto(file){
   stopCam();
   $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(file)}">`;
   $("cartoonFrame").textContent = "Your cartoon";
-  $("cartoonBtn").disabled = false;
+  $("cartoonBtn").disabled = false; $("cartoonBtn").textContent = "Make my cartoon"; $("cartoonBtn").classList.replace("quiet","go"); $("fixBox").hidden = true;
   document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = true);
   steps(1);
 }
@@ -424,20 +449,30 @@ function stopCam(){
   stream = null; $("snapBtn").hidden = true; $("camBtn").textContent = "Use my camera";
 }
 
-/* ---------- cartoonify (one API call per click) ---------- */
-$("cartoonBtn").addEventListener("click", async () => {
-  const btn = $("cartoonBtn"), st = $("cartoonStatus");
-  btn.disabled = true; setStatus(st, "");
-  busy($("cartoonFrame"), "Drawing you");
+/* ---------- cartoon: make new, or fix the current one (one API call per click) ---------- */
+async function runCartoon(notes){
+  const btn = $("cartoonBtn"), fix = $("fixBtn"), st = $("cartoonStatus");
+  btn.disabled = fix.disabled = true; setStatus(st, "");
+  const before = $("cartoonFrame").innerHTML;
+  busy($("cartoonFrame"), notes ? "Fixing your cartoon" : "Drawing you");
   const fd = settings(new FormData()); fd.append("photo", photoFile);
+  if (notes) { fd.append("notes", notes); fd.append("previous", cartoonB64); }
   try {
     const d = await post("/api/cartoonify", fd);
     cartoonB64 = d.image; show($("cartoonFrame"), "data:image/png;base64," + cartoonB64);
     document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = false);
-    setStatus(st, "Doesn’t look like you? Choose “Subtle” and remake it.");
-    btn.textContent = "Remake my cartoon"; steps(2);
-  } catch (err) { $("cartoonFrame").textContent = "Your cartoon"; setStatus(st, err.message, true); }
-  finally { btn.disabled = false; }
+    $("fixBox").hidden = false; $("fixNotes").value = "";
+    btn.textContent = "Start a new cartoon"; btn.classList.replace("go","quiet"); steps(2);
+    setStatus(st, notes ? "Updated. Keep fixing, or move on to the scenes." : "");
+  } catch (err) {
+    $("cartoonFrame").innerHTML = cartoonB64 ? before : "Your cartoon"; setStatus(st, err.message, true);
+  } finally { btn.disabled = fix.disabled = false; }
+}
+$("cartoonBtn").addEventListener("click", () => runCartoon(""));
+$("fixBtn").addEventListener("click", () => {
+  const notes = $("fixNotes").value.trim();
+  if (!notes) { setStatus($("cartoonStatus"), "Type what should change, like “my hair is shorter”.", true); $("fixNotes").focus(); return; }
+  runCartoon(notes);
 });
 
 /* ---------- scenes (one API call per click) ---------- */

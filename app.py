@@ -28,7 +28,9 @@ app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # generated scenes are sent
 # scene are sent back as base64 text fields (2-5 MB), so raise that cap too.
 app.config["MAX_FORM_MEMORY_SIZE"] = 32 * 1024 * 1024
 
-IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1-mini")
+# gpt-image-1 supports input_fidelity="high", which keeps faces much closer to the photo.
+# Set IMAGE_MODEL=gpt-image-1-mini in the environment for the cheapest (but less faithful) option.
+IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1")
 CHECK_MODEL = os.environ.get("CHECK_MODEL", "gpt-4.1-mini")
 
 # max_retries=0: the SDK silently retries failed calls by default, which would be a hidden
@@ -50,18 +52,18 @@ def client():
 # Cartoon settings (whitelisted values -> prompt fragments)
 # ---------------------------------------------------------------------------
 STYLES = {
-    "storybook3d": "a polished 3D animated-feature-film character with soft rounded forms and warm cinematic lighting",
+    "storybook3d": "a smooth, glossy computer-generated 3D render in the style of a modern CGI animated feature film, with clean digital surfaces, soft subsurface skin shading, crisp hair strands and cinematic lighting",
     "flat": "a clean flat-vector cartoon with simple geometric shapes and crisp, even outlines",
     "watercolor": "a hand-painted watercolor picture-book illustration with delicate ink linework",
     "comic": "a bold comic-book illustration with strong black ink lines and cel shading",
     "anime": "a cel-shaded Japanese anime illustration with clean lines and expressive eyes",
-    "clay": "a stop-motion claymation figure with visible sculpted clay texture and soft studio lighting",
+    "clay": "a handmade stop-motion plasticine figure with visible clay texture, tiny fingerprints and soft studio lighting",
     "papercut": "a layered paper-cutout collage illustration with textured paper and soft drop shadows",
     "vintage": "a 1950s golden-age children's book illustration with gouache texture and limited print colors",
 }
 EXAGGERATION = {
     "subtle": "Keep proportions close to real life; stylize only lightly.",
-    "moderate": "Slightly larger head and eyes, moderately simplified features.",
+    "moderate": "Slightly larger eyes and gently simplified shapes, but the face keeps its real proportions.",
     "strong": "Playful caricature: big head and big expressive eyes, while keeping every recognizable feature.",
 }
 PALETTES = {
@@ -151,16 +153,16 @@ def build_scene(scene_id, opts):
             checklist.append("Jack's mother in the cottage doorway")
     else:
         spec = (
-            f"Jack, wearing {outfit_desc}, climbs hand over hand up an enormous twisting green "
-            f"beanstalk {time_txt}, both hands gripping a thick vine and one foot braced on a broad "
-            f"leaf. He looks up toward the clouds just above him with {expr}; his tiny thatched "
-            "cottage and fields are far below."
+            f"Jack, wearing {outfit_desc}, climbs an enormous twisting green beanstalk {time_txt}, "
+            "seen from the side at his own height. Both hands grip a thick vine and one foot is braced "
+            f"on a broad leaf. He glances up toward the clouds just above him with {expr}, his whole "
+            "face clearly visible in three-quarter view. His tiny thatched cottage and fields are far below."
         )
         checklist = [
             "an enormous green beanstalk",
             "Jack is climbing it, gripping the vine with both hands",
             "one foot on a broad leaf",
-            "Jack is looking upward",
+            "Jack is glancing upward, face clearly visible",
             "clouds just above Jack",
             "a tiny cottage and fields far below",
             f"lighting/time: {opts['time']}",
@@ -213,12 +215,23 @@ def cartoon_prompt(s):
     )
 
 
+def fix_prompt(notes, s):
+    return (
+        "Image 1 is a cartoon portrait of the person in image 2 (a real photo). Revise image 1 so it "
+        "looks more like the person in image 2, applying this feedback from the person themself: "
+        f"\"{notes}\". Keep the same art style, pose, framing and background as image 1, and change "
+        f"only what the feedback and the photo call for. {style_sentence(s)} {IDENTITY_RULES} No text."
+    )
+
+
 def scene_prompt(spec, s):
     return (
-        "Image 1 is a cartoon character; image 2 is the real photo of the same person. "
-        "Draw this exact character as Jack in a Jack and the Beanstalk storybook illustration. "
-        f"{style_sentence(s)} Match the character design in image 1 and the real facial features "
-        f"in image 2. {IDENTITY_RULES} "
+        "Image 1 is a cartoon character; image 2 is a real photo of the same person. "
+        "Draw the character from image 1 as Jack in a Jack and the Beanstalk storybook illustration: "
+        "same face, same hair, same art style as image 1. Use image 2 only to double-check facial "
+        f"features - never paste, overlay or blend it into the picture. {style_sentence(s)} {IDENTITY_RULES} "
+        "Draw exactly ONE Jack with ONE normal head and ONE face (one nose, two eyes, one mouth). "
+        "His whole body stays in front of the beanstalk and is never merged with leaves or vines. "
         "Jack's face must be clearly visible, unobstructed, turned at least partly toward the viewer, "
         "and large enough to recognize (not a tiny distant figure). "
         f"SCENE - depict every element of this description exactly, and nothing that contradicts it: {spec} "
@@ -327,10 +340,20 @@ def cartoonify():
     try:
         photo = uploaded_photo()
         s = read_settings(request.form)
+        notes = " ".join(str(request.form.get("notes", "")).split())[:240]
+        previous = request.form.get("previous")
+        if notes and not previous:
+            raise ValueError("Make a cartoon first, then describe what to fix.")
+        if notes:
+            images = [to_png(decode_b64(previous, "previous cartoon"), "cartoon.png"), photo]
+            prompt = fix_prompt(notes.replace('"', "'"), s)
+        else:
+            images, prompt = photo, cartoon_prompt(s)
     except ValueError as e:
         return error(str(e))
     try:
-        return jsonify({"image": call_edit(photo, cartoon_prompt(s), s["quality"], "1024x1024")})
+        # One API call either way: a fresh cartoon, or a revision of the current one.
+        return jsonify({"image": call_edit(images, prompt, s["quality"], "1024x1024")})
     except Exception as e:
         return api_error(e)
 
