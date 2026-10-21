@@ -28,9 +28,9 @@ app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # generated scenes are sent
 # scene are sent back as base64 text fields (2-5 MB), so raise that cap too.
 app.config["MAX_FORM_MEMORY_SIZE"] = 32 * 1024 * 1024
 
-# gpt-image-1 supports input_fidelity="high", which keeps faces much closer to the photo.
-# Set IMAGE_MODEL=gpt-image-1-mini in the environment for the cheapest (but less faithful) option.
-IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1")
+# Default: the cheap mini model (about 2 cents for a full run). Set IMAGE_MODEL=gpt-image-1 for
+# stronger likeness (adds input_fidelity="high"), at roughly 10x the cost.
+IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1-mini")
 CHECK_MODEL = os.environ.get("CHECK_MODEL", "gpt-4.1-mini")
 
 # max_retries=0: the SDK silently retries failed calls by default, which would be a hidden
@@ -110,8 +110,8 @@ TIMES = {
     "storm": "under dark gathering storm clouds",
 }
 EXPRESSIONS = {
-    "hopeful": "a hopeful, curious smile",
-    "excited": "a wide, excited grin",
+    "hopeful": "a hopeful, curious look",
+    "excited": "an excited, bright-eyed smile",
     "determined": "a determined, focused look",
     "nervous": "a nervous, wide-eyed look",
 }
@@ -139,7 +139,8 @@ def build_scene(scene_id, opts):
             f"Jack, wearing {outfit_desc}, kneels in a freshly dug garden row beside his small "
             f"thatched cottage {time_txt}. With {expr}, he presses three glowing magic beans into "
             "the dark soil with his fingertips. A small open cloth pouch lies by his knee and a "
-            "watering can stands nearby. No beanstalk has grown yet - only bare soil."
+            "watering can stands nearby. The garden row is bare, freshly turned soil, and behind the "
+            "cottage the land is low and open under a wide sky."
         )
         checklist = [
             "Jack is kneeling",
@@ -148,7 +149,7 @@ def build_scene(scene_id, opts):
             "a small thatched cottage",
             "an open cloth pouch near Jack",
             "a watering can",
-            "NO beanstalk anywhere in the image",
+            "no tall plant or beanstalk yet - the garden is bare soil and open sky",
             f"lighting/time: {opts['time']}",
             f"Jack {outfit_check}",
         ]
@@ -229,18 +230,21 @@ def fix_prompt(notes, s):
     )
 
 
-def scene_prompt(spec, s):
+def scene_prompt(spec, s, scene_id):
+    climbing_rule = ("His whole body stays in front of the vine, clearly separate from the leaves. "
+                     if scene_id == "climbing" else "")
     return (
         "Image 1 is a cartoon character; image 2 is a real photo of the same person. "
-        "Draw the character from image 1 as Jack in a Jack and the Beanstalk storybook illustration: "
+        "Draw the character from image 1 as Jack in a fairy-tale storybook illustration: "
         "same face, same hair, same art style as image 1. Use image 2 only to double-check facial "
         f"features - never paste, overlay or blend it into the picture. {style_sentence(s)} {IDENTITY_RULES} "
         "Draw exactly ONE Jack with ONE normal head and ONE face (one nose, two eyes, one mouth). "
-        "His whole body stays in front of the beanstalk and is never merged with leaves or vines. "
-        "Jack's face must be clearly visible, unobstructed, turned at least partly toward the viewer, "
-        "and large enough to recognize (not a tiny distant figure). "
-        f"SCENE - depict every element of this description exactly, and nothing that contradicts it: {spec} "
-        "Frame the shot wide enough to include every scene element. No text, captions, or speech bubbles."
+        "Jack has normal adult human proportions: a full-length body with long legs and arms in natural "
+        f"proportion to his head. {climbing_rule}"
+        "Jack's face is clearly visible, unobstructed, turned at least partly toward the viewer, "
+        "and large enough in the frame to recognize. "
+        f"SCENE - depict every element of this description exactly: {spec} "
+        "Frame the shot wide enough to include every scene element. Plain picture with no lettering."
     )
 
 
@@ -330,7 +334,7 @@ def api_error(e):
 # ---------------------------------------------------------------------------
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", cheap="mini" in IMAGE_MODEL)
 
 
 @app.get("/healthz")
@@ -379,7 +383,7 @@ def scene():
         return error(str(e))
     size = "1024x1536" if scene_id == "climbing" else "1536x1024"
     try:
-        b64 = call_edit([cartoon, photo], scene_prompt(spec, s), s["quality"], size)
+        b64 = call_edit([cartoon, photo], scene_prompt(spec, s, scene_id), s["quality"], size)
     except Exception as e:
         return api_error(e)
     # The caption is the scene specification exactly as sent to the model.

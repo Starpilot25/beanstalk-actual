@@ -361,7 +361,9 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const COST = {low:{sq:[.03,.07], wide:[.06,.12]}, medium:{sq:[.06,.10], wide:[.10,.18]}};  // gpt-image-1, high input fidelity, rough
+const COST = {{ 'true' if cheap else 'false' }}
+  ? {low:{sq:[.005,.01], wide:[.007,.012]}, medium:{sq:[.012,.02], wide:[.016,.025]}}   // gpt-image-1-mini
+  : {low:{sq:[.03,.07], wide:[.06,.12]}, medium:{sq:[.06,.10], wide:[.10,.18]}};       // gpt-image-1, high fidelity
 let photoFile = null, cartoonB64 = null, stream = null;
 const scenes = {planting:null, climbing:null};   // {image, caption, checklist}
 
@@ -373,7 +375,8 @@ function settings(fd){
 function steps(n){ document.querySelectorAll(".step").forEach(el => el.classList.toggle("grown", +el.dataset.step <= n)); }
 function updateCost(){
   const q = COST[val("quality")];
-  $("cost").textContent = `Roughly $${q.sq[0].toFixed(2)}–${q.sq[1].toFixed(2)} per cartoon and $${q.wide[0].toFixed(2)}–${q.wide[1].toFixed(2)} per scene.`;
+  const f = n => n < .01 ? (n*100).toFixed(1) + "¢" : (n*100).toFixed(0) + "¢";
+  $("cost").textContent = `Roughly ${f(q.sq[0])}–${f(q.sq[1])} per cartoon and ${f(q.wide[0])}–${f(q.wide[1])} per scene.`;
 }
 document.querySelectorAll('input[name="quality"]').forEach(r => r.addEventListener("change", updateCost)); updateCost();
 

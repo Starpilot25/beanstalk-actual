@@ -2,7 +2,7 @@
 
 Upload a photo → cartoonify it (style, exaggeration, colors, quality) → place the cartoon you into two Jack and the Beanstalk scenes. Each scene image is captioned with the exact scene specification sent to the model.
 
-**Model:** OpenAI `gpt-image-1` via the image-edit endpoint with `input_fidelity="high"`, which keeps faces close to the photo. Classmate testing with `gpt-image-1-mini` showed weak likeness and face artifacts, so the default was raised. Set `IMAGE_MODEL=gpt-image-1-mini` for the cheapest option (input fidelity is skipped automatically, since mini rejects it). At Draft quality a full run (1 cartoon + 2 scenes) costs roughly 20–30 cents.
+**Model:** OpenAI `gpt-image-1-mini` via the image-edit endpoint (about 2¢ for a full run: 1 cartoon + 2 scenes at Draft quality). The original photo is sent with every scene as a face reference. For stronger likeness set `IMAGE_MODEL=gpt-image-1` in Render: it adds `input_fidelity="high"` automatically, but costs roughly 20–30¢ per run. The cost line on the page adjusts to the model in use.
 
 ## Features
 - Upload, drag-and-drop, or take a photo with the webcam
