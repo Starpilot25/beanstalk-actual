@@ -52,7 +52,7 @@ def client():
 # Cartoon settings (whitelisted values -> prompt fragments)
 # ---------------------------------------------------------------------------
 STYLES = {
-    "storybook3d": "a smooth, glossy computer-generated 3D render in the style of a modern CGI animated feature film, with clean digital surfaces, soft subsurface skin shading, crisp hair strands and cinematic lighting",
+    "storybook3d": "a computer-generated 3D character render with clean digital surfaces, soft skin shading, crisp hair strands and gentle cinematic lighting, with true-to-life facial proportions",
     "flat": "a clean flat-vector cartoon with simple geometric shapes and crisp, even outlines",
     "watercolor": "a hand-painted watercolor picture-book illustration with delicate ink linework",
     "comic": "a bold comic-book illustration with strong black ink lines and cel shading",
@@ -92,9 +92,10 @@ IDENTITY_RULES = (
     "nose shape, mouth and lips, eyebrows, ears, skin tone, hairline, hair color, hair texture, "
     "hair length and hairstyle, facial hair, freckles and moles as in the photo. Keep the same "
     "apparent age, gender, body type and ethnicity, and keep the face's real proportions rather "
-    "than a generic cartoon face. Treat dim light, shadows, grain and the camera's flat expression "
-    "as photo conditions, not features: draw clear, smooth, evenly lit skin and a fresh, rested "
-    "look true to the person's real age. Use the eye color "
+    "than a generic cartoon face. Stylize the rendering (lines, shading, colors), not the anatomy: "
+    "eye size, eyelids, cheeks, mouth width and head shape stay true to the photo. Treat dim light, "
+    "shadows and grain as photo conditions, not features, and use the person's natural skin color "
+    "under soft even light. Use the eye color "
     "clearly visible in the photo; if it is not clearly visible, use a natural dark eye color."
 )
 
@@ -214,8 +215,8 @@ def cartoon_prompt(s):
     return (
         "Turn the person in this photo into a cartoon character portrait. "
         f"{style_sentence(s)} {IDENTITY_RULES} "
-        "Head-and-shoulders, facing the viewer, with a relaxed, friendly expression and a slight natural smile, "
-        "soft even lighting, plain light background, no text."
+        "Head-and-shoulders, facing the viewer, with a calm, natural resting expression: relaxed eyes "
+        "and a relaxed mouth. Soft even lighting, plain light background, no text."
     )
 
 
