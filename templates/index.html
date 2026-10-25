@@ -3,410 +3,245 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Into the Beanstalk</title>
-<meta name="description" content="Turn yourself into a cartoon and star in Jack and the Beanstalk.">
+<title>Jack and the Beanstalk</title>
+<meta name="description" content="A picture book of Jack and the Beanstalk starring your child.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Young+Serif&display=swap" rel="stylesheet">
 <style>
   :root{
-    --sky:#d9eef6; --sky-deep:#b9dceb; --cloud:#ffffff; --ink:#17251b; --ink-soft:#4c5d51;
+    --sky:#d9eef6; --sky-deep:#b9dceb; --cloud:#fff; --ink:#17251b; --ink-soft:#4c5d51;
     --stalk:#24613a; --stalk-dark:#174428; --leaf:#7db54a; --leaf-pale:#e6f2d6;
-    --bean:#e8a33d; --bean-dark:#c9831f; --soil:#4b3221; --soil-pale:#efe4d8; --err:#b0361f;
+    --bean:#e8a33d; --bean-dark:#c9831f; --line:#cfe0d4; --err:#b0361f;
     --vine-w:72px;
-    --display:"Bricolage Grotesque", system-ui, sans-serif;
+    --ui:"Bricolage Grotesque", system-ui, sans-serif;
     --story:"Young Serif", Georgia, serif;
   }
   *{box-sizing:border-box}
   [hidden]{display:none!important}
-  html{scroll-behavior:smooth}
-  body{margin:0;background:var(--sky);color:var(--ink);font:400 16px/1.55 var(--display);font-variation-settings:"wdth" 100;-webkit-font-smoothing:antialiased}
-  img{display:block}
+  body{margin:0;background:var(--sky);color:var(--ink);font:400 16px/1.55 var(--ui);-webkit-font-smoothing:antialiased}
   :focus-visible{outline:3px solid var(--stalk);outline-offset:3px}
 
-  /* ---------- hero ---------- */
-  .hero{max-width:1180px;margin:0 auto;padding:56px 24px 24px calc(24px + var(--vine-w));display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:end;position:relative}
-  .hero h1{font-size:clamp(2.8rem,8vw,6.2rem);line-height:.92;font-weight:800;letter-spacing:-.035em;font-variation-settings:"wdth" 78,"opsz" 96;margin:0;color:var(--stalk-dark);max-width:9ch}
-  .hero p{font-size:1.15rem;color:var(--ink-soft);max-width:34ch;margin:22px 0 0}
-  .hero svg{width:100%;height:auto;max-height:340px}
-  @media (max-width:760px){ .hero{grid-template-columns:1fr;padding-top:36px} .hero svg{display:none} }
+  .hero{max-width:1120px;margin:0 auto;padding:52px 24px 22px calc(24px + var(--vine-w))}
+  .hero h1{font-size:clamp(2.6rem,7vw,5.4rem);line-height:.92;font-weight:800;letter-spacing:-.035em;font-variation-settings:"wdth" 78,"opsz" 96;margin:0;color:var(--stalk-dark);max-width:11ch}
+  .hero p{font-size:1.12rem;color:var(--ink-soft);max-width:40ch;margin:18px 0 0}
 
-  /* ---------- the vine (progress spine) ---------- */
-  main{max-width:1180px;margin:0 auto;padding:0 24px 72px}
-  .step{position:relative;padding-left:var(--vine-w);padding-bottom:40px}
-  .step::before{ /* unreached vine: faint dashed */
-    content:"";position:absolute;left:calc(var(--vine-w)/2 - 2px);top:0;bottom:0;width:4px;
-    background:repeating-linear-gradient(to bottom,var(--sky-deep) 0 10px,transparent 10px 18px);border-radius:2px}
-  .step::after{ /* grown vine */
-    content:"";position:absolute;left:calc(var(--vine-w)/2 - 3px);top:0;width:6px;height:0;background:var(--stalk);border-radius:3px;transition:height .9s cubic-bezier(.3,.7,.2,1)}
+  main{max-width:1120px;margin:0 auto;padding:0 24px 72px}
+  .step{position:relative;padding-left:var(--vine-w);padding-bottom:36px}
+  .step::before{content:"";position:absolute;left:calc(var(--vine-w)/2 - 2px);top:0;bottom:0;width:4px;
+    background:repeating-linear-gradient(to bottom,var(--sky-deep) 0 10px,transparent 10px 18px)}
+  .step::after{content:"";position:absolute;left:calc(var(--vine-w)/2 - 3px);top:0;width:6px;height:0;background:var(--stalk);border-radius:3px;transition:height .9s cubic-bezier(.3,.7,.2,1)}
   .step.grown::after{height:100%}
   .step:last-child::before,.step:last-child::after{bottom:auto;height:48px}
   .step.grown:last-child::after{height:48px}
   .leaf{position:absolute;left:calc(var(--vine-w)/2 - 22px);top:4px;width:44px;height:44px;z-index:1;display:grid;place-items:center;
-    font:800 1.05rem var(--display);color:var(--stalk);background:var(--cloud);border:3px solid var(--sky-deep);border-radius:50% 4px 50% 4px;transform:rotate(-45deg);transition:background .4s,border-color .4s,color .4s}
+    font:800 1.05rem var(--ui);color:var(--stalk);background:var(--cloud);border:3px solid var(--sky-deep);border-radius:50% 4px 50% 4px;transform:rotate(-45deg);transition:background .4s,border-color .4s}
   .leaf span{transform:rotate(45deg)}
   .step.grown .leaf{background:var(--leaf);border-color:var(--stalk);color:var(--stalk-dark)}
-  @media (max-width:760px){ :root{--vine-w:44px} .leaf{width:34px;height:34px;left:calc(var(--vine-w)/2 - 17px);font-size:.9rem} main,.hero{padding-left:14px;padding-right:14px} .hero{padding-left:calc(14px + var(--vine-w))} }
+  @media (max-width:760px){ :root{--vine-w:44px} .leaf{width:34px;height:34px;left:calc(var(--vine-w)/2 - 17px);font-size:.9rem} main{padding:0 14px 60px} .hero{padding:34px 14px 18px calc(14px + var(--vine-w))} }
 
   .panel{background:var(--cloud);border-radius:28px;padding:30px;box-shadow:0 2px 0 var(--sky-deep)}
   @media (max-width:760px){ .panel{padding:20px;border-radius:20px} }
-  h2{font-size:clamp(1.6rem,3.4vw,2.2rem);line-height:1.05;font-weight:750;letter-spacing:-.02em;font-variation-settings:"wdth" 85,"opsz" 48;margin:6px 0 6px;color:var(--stalk-dark)}
-  .lede{color:var(--ink-soft);margin:0 0 22px;max-width:62ch}
-
-  .two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px;align-items:start}
+  h2{font-size:clamp(1.5rem,3.2vw,2.1rem);line-height:1.05;font-weight:750;letter-spacing:-.02em;font-variation-settings:"wdth" 85;margin:6px 0 6px;color:var(--stalk-dark)}
+  .lede{color:var(--ink-soft);margin:0 0 20px;max-width:60ch}
+  .two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:32px;align-items:start}
   @media (max-width:860px){ .two{grid-template-columns:1fr} }
 
-  /* ---------- inputs ---------- */
-  .drop{display:flex;align-items:center;gap:16px;border:2px dashed var(--leaf);border-radius:18px;padding:18px 20px;background:var(--leaf-pale);cursor:pointer;transition:background .15s,border-color .15s}
+  .drop{display:flex;align-items:center;gap:16px;border:2px dashed var(--leaf);border-radius:18px;padding:16px 20px;background:var(--leaf-pale);cursor:pointer}
   .drop:hover,.drop.over{background:#d8ebc0;border-color:var(--stalk)}
-  .drop .bean{flex:none;width:40px;height:52px}
-  .drop b{display:block;font-size:1.05rem;color:var(--stalk-dark)}
+  .drop svg{flex:none;width:36px;height:46px}
+  .drop b{display:block;color:var(--stalk-dark)}
   .drop small{color:var(--ink-soft)}
-  .after-drop{display:flex;gap:8px;margin-top:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
-  fieldset{border:0;margin:20px 0 0;padding:0;min-width:0}
-  legend{font-weight:650;font-size:.95rem;margin-bottom:8px;padding:0}
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chips input{position:absolute;opacity:0;pointer-events:none}
-  .chips label{padding:7px 13px;border:1.5px solid #cfe0d4;border-radius:999px;background:var(--cloud);cursor:pointer;font-size:.92rem;user-select:none;transition:background .12s,border-color .12s,color .12s}
-  .chips label:hover{border-color:var(--stalk)}
-  .chips input:checked+label{background:var(--stalk);border-color:var(--stalk);color:#fff}
-  .chips input:focus-visible+label{outline:3px solid var(--bean);outline-offset:2px}
-  .pair-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
-  .opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
-  @media (max-width:860px){ .opts{grid-template-columns:1fr} }
+  label.f{display:block;font-weight:650;font-size:.95rem;margin:18px 0 6px}
+  label.f small{font-weight:400;color:var(--ink-soft)}
+  input[type=text],textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+  textarea{resize:vertical}
+  .grid-name{display:grid;grid-template-columns:1fr 110px;gap:12px}
 
-  /* ---------- buttons ---------- */
-  button{font:700 1rem var(--display);border:0;border-radius:14px;cursor:pointer;padding:12px 18px;transition:background .15s,transform .1s}
+  button{font:700 1rem var(--ui);border:0;border-radius:14px;cursor:pointer;padding:12px 18px}
   button:active:not(:disabled){transform:translateY(1px)}
   button:disabled{opacity:.4;cursor:not-allowed}
   .go{background:var(--bean);color:var(--ink);box-shadow:0 3px 0 var(--bean-dark)}
   .go:hover:not(:disabled){background:#f0b452}
-  .go.wide{width:100%;margin-top:22px;padding:15px;font-size:1.08rem}
-  .quiet{background:var(--cloud);color:var(--stalk-dark);border:1.5px solid #cfe0d4;padding:9px 14px;font-size:.92rem}
+  .go.wide{width:100%;margin-top:20px;padding:15px;font-size:1.06rem}
+  .quiet{background:#fff;color:var(--stalk-dark);border:1.5px solid var(--line);padding:9px 14px;font-size:.92rem}
   .quiet:hover:not(:disabled){border-color:var(--stalk);background:var(--leaf-pale)}
 
-  /* ---------- portraits ---------- */
-  .portraits{display:grid;grid-template-columns:1fr 1fr;gap:14px;position:sticky;top:20px}
+  .portraits{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .portraits figure{margin:0}
   .portraits figcaption{font-size:.88rem;color:var(--ink-soft);margin-top:8px;text-align:center}
-  .frame{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:var(--sky);display:grid;place-items:center;text-align:center;color:var(--ink-soft);font-size:.92rem;padding:10px}
+  .frame{position:relative;border-radius:18px;overflow:hidden;background:var(--sky);display:grid;place-items:center;text-align:center;color:var(--ink-soft);font-size:.92rem;padding:10px}
   .frame img,.frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .frame img{cursor:zoom-in}
-  #cartoonFrame{background:var(--leaf-pale)}
+  .tall{aspect-ratio:2/3}
+  #heroFrame{background:var(--leaf-pale)}
   .spin{width:34px;height:34px;margin:0 auto 10px;border-radius:50% 4px 50% 4px;background:var(--leaf);animation:sprout 1.2s ease-in-out infinite}
   @keyframes sprout{0%,100%{transform:rotate(-45deg) scale(.7)}50%{transform:rotate(-45deg) scale(1)}}
   .elapsed{font-variant-numeric:tabular-nums;display:block;margin-top:2px;font-weight:650}
-  .status{min-height:1.4em;margin-top:10px;font-size:.92rem;color:var(--ink-soft)}
+  .status{min-height:1.4em;margin-top:8px;font-size:.92rem;color:var(--ink-soft)}
   .status.err{color:var(--err);font-weight:600}
-  .cost{font-size:.84rem;color:var(--ink-soft);margin-top:4px}
 
-  /* ---------- scenes ---------- */
-  .scenes{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:28px;align-items:start}
-  @media (max-width:860px){ .scenes{grid-template-columns:1fr} }
-  .scene{margin:0}
-  .scene h3{font:400 1.35rem/1.2 var(--story);margin:0 0 12px;color:var(--ink)}
-  .scene .frame{aspect-ratio:3/2;border-radius:18px}
-  #fig-planting .frame{background:linear-gradient(to bottom,var(--sky) 0 62%,var(--soil) 62%);color:var(--ink-soft)}
-  #fig-climbing .frame{aspect-ratio:2/3;background:linear-gradient(to top,var(--sky-deep),var(--sky) 60%,#fff)}
-  .scene .frame img{object-fit:cover}
-  .toggle{display:flex;align-items:center;gap:10px;font-size:.92rem;margin-top:12px;cursor:pointer}
-  .toggle input{width:18px;height:18px;accent-color:var(--stalk)}
-  .story{margin-top:14px;padding:16px 18px;background:var(--soil-pale);border-radius:14px}
-  .story p{font:400 1.02rem/1.65 var(--story);margin:0;color:#3a2a1c}
-  .story small{display:block;font-size:.8rem;color:#7a6450;margin-bottom:6px}
-  .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .check{margin-top:12px;border:1.5px solid #cfe0d4;border-radius:14px;padding:14px 16px;font-size:.92rem}
-  .check ul{list-style:none;margin:8px 0 0;padding:0}
-  .check li{display:grid;grid-template-columns:22px 1fr;gap:6px;padding:4px 0}
-  .check .p{color:var(--stalk);font-weight:800}
-  .check .f{color:var(--err);font-weight:800}
-  .check .note{color:var(--ink-soft)}
-  .score{font-weight:750;font-size:1.05rem}
-  .meter{height:8px;border-radius:4px;background:var(--leaf-pale);margin:8px 0 4px;overflow:hidden}
-  .meter i{display:block;height:100%;background:var(--leaf)}
+  .change{display:flex;gap:8px;margin-top:12px}
+  .change input{flex:1;min-width:0}
 
-  /* ---------- storybook ---------- */
+  /* book pages */
+  .pages{display:grid;gap:30px}
+  .bookpage h3{font:400 1.25rem/1.2 var(--story);margin:0 0 10px}
+  .bookpage h3 span{color:var(--ink-soft);font-size:.95rem}
+  .art{position:relative;aspect-ratio:3/2;border-radius:14px;overflow:hidden;background:linear-gradient(#e9f3f7,#cfe5ee);display:grid;place-items:center;color:var(--ink-soft)}
+  .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .art .words{position:absolute;left:0;right:0;padding:4% 10%;text-align:center;font:400 clamp(1rem,2.6vw,1.75rem)/1.3 var(--story);z-index:1;text-wrap:balance}
+  .art .words.bottom{bottom:0;padding-bottom:6%}
+  .art .words.top{top:0;padding-top:5%}
+  .art .fade{position:absolute;left:0;right:0;height:40%;z-index:1;pointer-events:none}
+  .art .fade.bottom{bottom:0}
+  .art .fade.top{top:0}
+  .art.light .fade.bottom{background:linear-gradient(to top,rgba(14,16,22,.62),rgba(14,16,22,0))}
+  .art.light .fade.top{background:linear-gradient(to bottom,rgba(14,16,22,.62),rgba(14,16,22,0))}
+  .art.dark .fade.top{background:linear-gradient(to bottom,rgba(255,255,255,.55),rgba(255,255,255,0))}
+  .art.dark .fade.bottom{background:linear-gradient(to top,rgba(255,255,255,.55),rgba(255,255,255,0))}
+  .art.light .words{color:#fffaf0;text-shadow:1px 1px 2px rgba(0,0,0,.45)}
+  .art.dark .words{color:var(--ink)}
+  .art .placeholder{position:relative;z-index:2;background:rgba(255,255,255,.85);padding:8px 14px;border-radius:10px}
+  .page-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+
   .book{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;background:var(--stalk-dark);color:#e9f3df;border-radius:28px;padding:30px}
   .book h2{color:#fff;margin:0 0 4px}
   .book p{margin:0;color:#bcd3b4;max-width:46ch}
+  .book .status{color:#ffd7cc}
 
-  .report{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
-  @media (max-width:560px){ .report{grid-template-columns:1fr} }
-  .report h4{margin:0;font-size:.95rem;font-weight:700}
-  .report .big{font:800 1.9rem/1 var(--display);font-variation-settings:"wdth" 80;color:var(--stalk-dark);margin:6px 0 2px}
-  .report .big.low{color:var(--err)}
-  .verdict{margin:10px 0 0;color:var(--ink-soft)}
-  .copied{font-size:.85rem;color:var(--stalk);margin-left:6px}
-  .surprise{margin-top:14px}
-  .more{margin-top:20px;border-top:1.5px solid #e3ede6;padding-top:6px}
-  .more summary{cursor:pointer;font-weight:650;color:var(--stalk);padding:8px 0;list-style:none;display:flex;align-items:center;gap:10px;width:max-content}
-  .more summary::-webkit-details-marker{display:none}
-  .more summary::before{content:"";width:7px;height:7px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:rotate(-45deg);transition:transform .2s}
-  .more[open] summary::before{transform:rotate(45deg)}
-  .more > fieldset:first-of-type{margin-top:6px}
-  .scene-more{margin:8px 0 28px}
-  .fix{margin-top:14px;padding:16px;border-radius:16px;background:var(--leaf-pale)}
-  .fix label{display:block;font-weight:650;margin-bottom:8px}
-  .fix textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid #cfe0d4;border-radius:12px;resize:vertical;background:#fff}
-  .fix textarea:focus-visible{outline:3px solid var(--stalk);outline-offset:1px}
-  .fix button{margin-top:10px}
-  /* hero beanstalk grows once on load */
-  .hero .stalk{stroke-dasharray:420;stroke-dashoffset:420;animation:grow 1.6s .2s cubic-bezier(.3,.7,.2,1) forwards}
-  .hero .leaves path{opacity:0;transform-box:fill-box;transform-origin:center;animation:pop .5s forwards}
-  .hero .leaves path:nth-child(1){animation-delay:.6s}.hero .leaves path:nth-child(2){animation-delay:.9s}
-  .hero .leaves path:nth-child(3){animation-delay:1.2s}.hero .leaves path:nth-child(4){animation-delay:1.45s}
-  .hero .castle{opacity:0;animation:pop .6s 1.7s forwards}
-  @keyframes grow{to{stroke-dashoffset:0}}
-  @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
-  @media (prefers-reduced-motion:reduce){ .hero .stalk{stroke-dashoffset:0} .hero .leaves path,.hero .castle{opacity:1} }
-  .lightbox{position:fixed;inset:0;background:rgba(15,32,20,.88);display:none;place-items:center;z-index:9;padding:24px;cursor:zoom-out}
-  .lightbox img{max-width:100%;max-height:100%;border-radius:14px}
-  .lightbox.on{display:grid}
-  footer{max-width:1180px;margin:0 auto;padding:0 24px 40px calc(24px + var(--vine-w));color:var(--ink-soft);font-size:.86rem}
-  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} html{scroll-behavior:auto} }
+  footer{max-width:1120px;margin:0 auto;padding:0 24px 40px calc(24px + var(--vine-w));color:var(--ink-soft);font-size:.86rem}
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
 </head>
 <body>
 <header class="hero">
-  <div>
-    <h1>Plant yourself in the story.</h1>
-    <p>Upload a photo, become a cartoon, and play Jack — from the first magic bean to the climb into the clouds.</p>
-  </div>
-  <svg viewBox="0 0 300 340" aria-hidden="true">
-    <ellipse cx="210" cy="58" rx="74" ry="30" fill="#fff"/><ellipse cx="170" cy="66" rx="48" ry="24" fill="#fff"/><ellipse cx="250" cy="70" rx="40" ry="20" fill="#fff"/>
-    <g class="castle"><rect x="196" y="22" width="16" height="30" rx="2" fill="#b9dceb"/><rect x="216" y="12" width="20" height="40" rx="2" fill="#b9dceb"/><path d="M196 22l8-10 8 10M216 12l10-12 10 12" fill="#b9dceb"/></g>
-    <path class="stalk" d="M120 340C120 290 70 270 96 220S180 170 150 120 200 70 196 60" stroke="#24613a" stroke-width="9" fill="none" stroke-linecap="round"/>
-    <g class="leaves" fill="#7db54a"><path d="M100 262c-30 2-48-16-50-32 22-4 44 10 50 32z"/><path d="M118 188c26-8 40-30 36-46-20 4-34 22-36 46z"/><path d="M150 128c-26-4-40-22-40-38 20 0 36 16 40 38z"/><path d="M170 90c22-6 34-24 32-38-18 4-30 18-32 38z"/></g>
-    <path d="M30 340h240" stroke="#4b3221" stroke-width="18" stroke-linecap="round"/>
-  </svg>
+  <h1>Jack and the Beanstalk, starring your child.</h1>
+  <p>Upload one photo. Your child becomes Jack on every page, and the book downloads as a PDF.</p>
 </header>
 
 <main>
-  <!-- 1: photo + cartoon -->
+  <!-- 1 -->
   <section class="step" id="sec-1" data-step="1">
     <div class="leaf"><span>1</span></div>
     <div class="panel two">
       <div>
-        <h2>Start with your face</h2>
-        <p class="lede">One person, facing the camera, in good light. Nothing covering the face — glasses are fine.</p>
+        <h2>Who is Jack?</h2>
+        <p class="lede">One clear photo of your child, facing the camera in good light.</p>
 
         <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo">
-          <svg class="bean" viewBox="0 0 40 52" aria-hidden="true"><path d="M20 2C8 2 4 16 8 28s2 22 12 22 16-8 14-22S32 2 20 2z" fill="#e8a33d"/><path d="M16 10c-4 6-4 14-2 20" stroke="#fff6" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 2C8 2 4 16 8 28s2 22 12 22 16-8 14-22S32 2 20 2z" fill="#e8a33d"/></svg>
           <div><b>Drop a photo here, or click to choose one</b><small>JPG, PNG or WEBP</small></div>
           <input id="file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
         </div>
-        <div class="after-drop"><button class="quiet" id="camBtn" type="button">Use my camera</button><button class="go" id="snapBtn" type="button" hidden>Take the photo</button></div>
+        <div class="row"><button class="quiet" id="camBtn" type="button">Use my camera</button><button class="go" id="snapBtn" type="button" hidden>Take the photo</button></div>
 
-        <fieldset><legend>Art style</legend>
-          <div class="chips">
-            <input type="radio" name="style" id="s1" value="storybook3d" checked><label for="s1">3D animated</label>
-            <input type="radio" name="style" id="s2" value="watercolor"><label for="s2">Watercolor</label>
-            <input type="radio" name="style" id="s3" value="flat"><label for="s3">Flat vector</label>
-            <input type="radio" name="style" id="s4" value="comic"><label for="s4">Comic ink</label>
-            <input type="radio" name="style" id="s5" value="anime"><label for="s5">Anime</label>
-            <input type="radio" name="style" id="s6" value="clay"><label for="s6">Claymation</label>
-            <input type="radio" name="style" id="s7" value="papercut"><label for="s7">Paper cut-out</label>
-            <input type="radio" name="style" id="s8" value="vintage"><label for="s8">Vintage storybook</label>
-          </div>
-        </fieldset>
-
-
-
-        <fieldset><legend>Glasses</legend>
-          <div class="chips">
-            <input type="radio" name="eyewear" id="g1" value="auto" checked><label for="g1">Match my photo</label>
-            <input type="radio" name="eyewear" id="g2" value="none"><label for="g2">I don't wear glasses</label>
-            <input type="radio" name="eyewear" id="g3" value="glasses"><label for="g3">I wear glasses</label>
-          </div>
-        </fieldset>
-
-
-        <details class="more">
-          <summary>More options</summary>
-        <fieldset><legend>How cartoony?</legend>
-          <div class="chips">
-            <input type="radio" name="exaggeration" id="e1" value="subtle" checked><label for="e1">Subtle</label>
-            <input type="radio" name="exaggeration" id="e2" value="moderate"><label for="e2">Moderate</label>
-            <input type="radio" name="exaggeration" id="e3" value="strong"><label for="e3">Full caricature</label>
-          </div>
-        </fieldset>
-        <fieldset><legend>Colors</legend>
-          <div class="chips">
-            <input type="radio" name="palette" id="p1" value="vivid" checked><label for="p1">Vivid</label>
-            <input type="radio" name="palette" id="p2" value="pastel"><label for="p2">Pastel</label>
-            <input type="radio" name="palette" id="p3" value="earthy"><label for="p3">Earthy</label>
-            <input type="radio" name="palette" id="p4" value="moonlit"><label for="p4">Moonlit</label>
-          </div>
-        </fieldset>
-        <div class="pair-fields">
-          <fieldset><legend>Outlines</legend>
-            <div class="chips">
-              <input type="radio" name="lines" id="l1" value="none" checked><label for="l1">Style default</label>
-              <input type="radio" name="lines" id="l2" value="thin"><label for="l2">Thin</label>
-              <input type="radio" name="lines" id="l3" value="bold"><label for="l3">Bold</label>
-            </div>
-          </fieldset>
-          <fieldset><legend>Quality</legend>
-            <div class="chips">
-              <input type="radio" name="quality" id="q1" value="low" checked><label for="q1">Draft</label>
-              <input type="radio" name="quality" id="q2" value="medium"><label for="q2">Fine</label>
-            </div>
-          </fieldset>
+        <div class="grid-name">
+          <div><label class="f" for="name">Child's name</label><input type="text" id="name" maxlength="40" autocomplete="off"></div>
+          <div><label class="f" for="age">Age <small>(optional)</small></label><input type="text" id="age" maxlength="20" autocomplete="off"></div>
         </div>
-        </details>
+        <label class="f" for="likes">Things they love <small>(optional)</small></label>
+        <input type="text" id="likes" maxlength="300" placeholder="Soccer, dinosaurs, pancakes">
+        <label class="f" for="about">About them <small>(optional, for the last page)</small></label>
+        <textarea id="about" rows="3" maxlength="600" placeholder="A few sentences in their own words, or yours."></textarea>
 
-        <button class="go wide" id="cartoonBtn" disabled>Make my cartoon</button>
-        <div class="status" id="cartoonStatus"></div>
-        <div class="fix" id="fixBox" hidden>
-          <label for="fixNotes">Doesn't look quite like you? Say what to change.</label>
-          <textarea id="fixNotes" rows="2" maxlength="240" placeholder="For example: my face is thinner, my hair is darker and curlier, smaller nose"></textarea>
-          <button class="go" id="fixBtn" type="button">Fix my cartoon</button>
+        <button class="go wide" id="heroBtn" disabled>Turn them into Jack</button>
+        <div class="status" id="heroStatus"></div>
+        <div class="change" id="heroChange" hidden>
+          <input type="text" id="heroChangeText" maxlength="240" placeholder="Not quite right? e.g. “hair is curlier”, “face is rounder”" aria-label="What to change about Jack">
+          <button class="quiet" data-adjust="hero" type="button">Change it</button>
         </div>
-        <div class="cost" id="cost"></div>
       </div>
-
       <div class="portraits">
-        <figure><div class="frame" id="photoFrame">Your photo</div><figcaption>Photo</figcaption></figure>
-        <figure><div class="frame" id="cartoonFrame">Your cartoon</div><figcaption>Cartoon</figcaption></figure>
+        <figure><div class="frame tall" id="photoFrame">Photo</div><figcaption>Photo</figcaption></figure>
+        <figure><div class="frame tall" id="heroFrame">Jack</div><figcaption>Jack, used on every page</figcaption></figure>
       </div>
     </div>
   </section>
 
-  <!-- 2: scenes -->
+  <!-- 2 -->
   <section class="step" id="sec-2" data-step="2">
     <div class="leaf"><span>2</span></div>
     <div class="panel">
-      <h2>Step into the story</h2>
-      <p class="lede">Your choices are written into each scene's description. The text under each picture is exactly what was sent to the image model.</p>
-
-      <div class="opts">
-        <fieldset><legend>Jack's mood</legend>
-          <div class="chips">
-            <input type="radio" name="expression" id="x1" value="hopeful" checked><label for="x1">Hopeful</label>
-            <input type="radio" name="expression" id="x2" value="excited"><label for="x2">Excited</label>
-            <input type="radio" name="expression" id="x3" value="determined"><label for="x3">Determined</label>
-            <input type="radio" name="expression" id="x4" value="nervous"><label for="x4">Nervous</label>
+      <h2>Paint the pages</h2>
+      <p class="lede">Each page is painted from the same picture of Jack. The words are added by the book, not the painter, so they stay sharp.</p>
+      <div class="pages">
+        {% for p in pages %}
+        <figure class="bookpage" style="margin:0">
+          <h3>{{ p.title }} <span>· page {{ p.n }}</span></h3>
+          <div class="art {{ p.text_color }}" id="art-{{ p.n }}">
+            <div class="fade {{ p.zone }}"></div>
+            <div class="words {{ p.zone }}">{{ p.text }}</div>
+            <div class="placeholder" id="ph-{{ p.n }}">Page {{ p.n }} appears here</div>
           </div>
-        </fieldset>
-        <fieldset><legend>Outfit</legend>
-          <div class="chips">
-            <input type="radio" name="outfit" id="o1" value="peasant" checked><label for="o1">Classic Jack</label>
-            <input type="radio" name="outfit" id="o2" value="overalls"><label for="o2">Overalls</label>
-            <input type="radio" name="outfit" id="o3" value="own"><label for="o3">My own clothes</label>
-            <input type="radio" name="outfit" id="o4" value="royal"><label for="o4">Velvet cloak</label>
+          <div class="page-tools">
+            <button class="go pageBtn" data-n="{{ p.n }}" disabled>Paint page {{ p.n }}</button>
+            <span class="status" id="st-{{ p.n }}"></span>
           </div>
-        </fieldset>
-      </div>
-      <details class="more scene-more">
-        <summary>More options</summary>
-        <fieldset><legend>Time of day</legend>
-          <div class="chips">
-            <input type="radio" name="time" id="t1" value="morning" checked><label for="t1">Sunny morning</label>
-            <input type="radio" name="time" id="t2" value="golden"><label for="t2">Golden hour</label>
-            <input type="radio" name="time" id="t3" value="dawn"><label for="t3">Misty dawn</label>
-            <input type="radio" name="time" id="t4" value="storm"><label for="t4">Storm rolling in</label>
+          <div class="change" id="chg-{{ p.n }}" hidden>
+            <input type="text" id="chgText-{{ p.n }}" maxlength="240" placeholder="Change one thing, e.g. “make the cow whiter”" aria-label="What to change on page {{ p.n }}">
+            <button class="quiet" data-adjust="{{ p.n }}" type="button">Change it</button>
           </div>
-        </fieldset>
-        <div class="surprise"><button class="quiet" id="surpriseBtn" type="button">Surprise me</button></div>
-      </details>
-
-      <div class="scenes">
-        <figure class="scene" id="fig-planting">
-          <h3>Jack plants the magic beans</h3>
-          <div class="frame" id="frame-planting">The planting scene will appear here</div>
-          <label class="toggle"><input type="checkbox" id="extra-planting"> Jack's mother watches from the doorway</label>
-          <button class="go wide sceneBtn" data-scene="planting" disabled>Paint the planting scene</button>
-          <div class="status" id="status-planting"></div>
-          <div class="story" id="cap-planting" hidden><small>Scene description sent</small><p><span></span></p></div>
-          <div class="tools" id="tools-planting" hidden>
-            <button class="quiet dl" data-scene="planting">Download</button>
-            <button class="quiet chk" data-scene="planting">Check likeness and scene</button>
-          </div>
-          <div class="check" id="check-planting" hidden></div>
         </figure>
-
-        <figure class="scene" id="fig-climbing">
-          <h3>Jack climbs the beanstalk</h3>
-          <div class="frame" id="frame-climbing">The climbing scene will appear here</div>
-          <label class="toggle"><input type="checkbox" id="extra-climbing"> The giant's castle peeks through the clouds</label>
-          <button class="go wide sceneBtn" data-scene="climbing" disabled>Paint the climbing scene</button>
-          <div class="status" id="status-climbing"></div>
-          <div class="story" id="cap-climbing" hidden><small>Scene description sent</small><p><span></span></p></div>
-          <div class="tools" id="tools-climbing" hidden>
-            <button class="quiet dl" data-scene="climbing">Download</button>
-            <button class="quiet chk" data-scene="climbing">Check likeness and scene</button>
-          </div>
-          <div class="check" id="check-climbing" hidden></div>
-        </figure>
+        {% endfor %}
       </div>
     </div>
   </section>
 
-  <!-- 3: storybook -->
-  <section class="step" id="sec-3" data-step="4">
+  <!-- 3 -->
+  <section class="step" id="sec-3" data-step="3">
     <div class="leaf"><span>3</span></div>
     <div class="book">
       <div>
-        <h2>Take home your storybook page</h2>
-        <p>Both scenes, their descriptions, and your cartoon portrait on one page you can print or share.</p>
+        <h2>Download the book</h2>
+        <p>All the pages in order, with an About Me page for <span id="nameEcho">your child</span> at the end.</p>
+        <div class="status" id="pdfStatus"></div>
       </div>
-      <button class="go" id="bookBtn" disabled>Download storybook page</button>
+      <button class="go" id="pdfBtn" disabled>Download PDF</button>
     </div>
   </section>
 </main>
-
-<div class="lightbox" id="lightbox"><img alt=""></div>
-<footer>MCON 368. Images are made with OpenAI image models. Photos are used only to make your pictures and are never stored.</footer>
+<footer>MCON 368. Pictures by OpenAI image models{{ " (gpt-image-1-mini, about 1¢ each)" if cheap else "" }}. Photos are used only to make the pictures and are never stored.</footer>
 
 <script>
 const $ = id => document.getElementById(id);
-const COST = {{ 'true' if cheap else 'false' }}
-  ? {low:{sq:[.005,.01], wide:[.007,.012]}, medium:{sq:[.012,.02], wide:[.016,.025]}}   // gpt-image-1-mini
-  : {low:{sq:[.03,.07], wide:[.06,.12]}, medium:{sq:[.06,.10], wide:[.10,.18]}};       // gpt-image-1, high fidelity
-let photoFile = null, cartoonB64 = null, stream = null;
-const scenes = {planting:null, climbing:null};   // {image, caption, checklist}
+const PAGE_NUMS = [{% for p in pages %}{{ p.n }}{{ "," if not loop.last }}{% endfor %}];
+let photoFile = null, heroB64 = null, stream = null;
+const pages = {};   // n -> base64 jpeg
 
-const val = n => document.querySelector(`input[name="${n}"]:checked`).value;
-function settings(fd){
-  for (const k of ["style","exaggeration","palette","lines","quality","eyewear","time","expression","outfit"]) fd.append(k, val(k));
-  return fd;
+function steps(){
+  const done = PAGE_NUMS.every(n => pages[n]);
+  const n = done ? 3 : heroB64 ? 2 : photoFile ? 1 : 0;
+  document.querySelectorAll(".step").forEach(el => el.classList.toggle("grown", +el.dataset.step <= n));
+  document.querySelectorAll(".pageBtn").forEach(b => b.disabled = !heroB64);
+  $("pdfBtn").disabled = !done;
 }
-function steps(n){ document.querySelectorAll(".step").forEach(el => el.classList.toggle("grown", +el.dataset.step <= n)); }
-function updateCost(){
-  const q = COST[val("quality")];
-  const f = n => n < .01 ? (n*100).toFixed(1) + "¢" : (n*100).toFixed(0) + "¢";
-  $("cost").textContent = `Roughly ${f(q.sq[0])}–${f(q.sq[1])} per cartoon and ${f(q.wide[0])}–${f(q.wide[1])} per scene.`;
-}
-document.querySelectorAll('input[name="quality"]').forEach(r => r.addEventListener("change", updateCost)); updateCost();
-
-function busy(frame, msg){
-  const t0 = Date.now();
-  frame.innerHTML = `<div><div class="spin"></div>${msg}<br><span class="elapsed">0s</span></div>`;
-  const el = frame.querySelector(".elapsed");
-  const id = setInterval(() => { if (!el.isConnected) return clearInterval(id); el.textContent = Math.round((Date.now()-t0)/1000)+"s"; }, 1000);
-}
-function show(frame, src){ frame.innerHTML = `<img alt="" src="${src}">`; }
 function setStatus(el, msg, isErr){ el.textContent = msg || ""; el.classList.toggle("err", !!isErr); }
-async function post(url, body, json){
-  const r = await fetch(url, json ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {method:"POST", body});
-  let data; try { data = await r.json(); } catch { data = {error:`Server error (${r.status})`}; }
-  if (!r.ok) throw new Error(data.error || `Request failed (${r.status})`);
-  return data;
+function busy(el, msg){
+  const t0 = Date.now();
+  el.innerHTML = `<div><div class="spin"></div>${msg}<span class="elapsed">0s</span></div>`;
+  const e = el.querySelector(".elapsed");
+  const id = setInterval(() => { if (!e.isConnected) return clearInterval(id); e.textContent = Math.round((Date.now()-t0)/1000)+"s"; }, 1000);
 }
+async function post(url, body, asJson){
+  const r = await fetch(url, asJson ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {method:"POST", body});
+  if (r.ok && (r.headers.get("Content-Type")||"").includes("pdf")) return r.blob();
+  let d; try { d = await r.json(); } catch { d = {error:`Server error (${r.status})`}; }
+  if (!r.ok) throw new Error(d.error || `Request failed (${r.status})`);
+  return d;
+}
+const src = b64 => "data:image/jpeg;base64," + b64;
 
-/* ---------- photo input: click, drag-drop, camera ---------- */
-/* Shrink photos in the browser (max 1024px JPEG) so uploads stay small and fast.
-   The server works at 1024px anyway, so no quality is lost. */
+/* ---------- photo ---------- */
 function shrink(file, max = 1024){
   return new Promise(resolve => {
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
       const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement("canvas");
-      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
+      c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
       c.toBlob(b => resolve(b ? new File([b], "photo.jpg", {type:"image/jpeg"}) : file), "image/jpeg", .9);
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
@@ -415,14 +250,9 @@ function shrink(file, max = 1024){
 }
 async function setPhoto(file){
   if (!file || !file.type.startsWith("image/")) return;
-  file = await shrink(file);
-  photoFile = file; cartoonB64 = null;
-  stopCam();
-  $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(file)}">`;
-  $("cartoonFrame").textContent = "Your cartoon";
-  $("cartoonBtn").disabled = false; $("cartoonBtn").textContent = "Make my cartoon"; $("cartoonBtn").classList.replace("quiet","go"); $("fixBox").hidden = true;
-  document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = true);
-  steps(1);
+  photoFile = await shrink(file); stopCam();
+  $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(photoFile)}">`;
+  $("heroBtn").disabled = false; steps();
 }
 const drop = $("drop");
 drop.addEventListener("click", () => $("file").click());
@@ -431,7 +261,6 @@ $("file").addEventListener("change", e => setPhoto(e.target.files[0]));
 ["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => setPhoto(e.dataTransfer.files[0]));
-
 $("camBtn").addEventListener("click", async () => {
   if (stream) return stopCam();
   try {
@@ -439,7 +268,7 @@ $("camBtn").addEventListener("click", async () => {
     $("photoFrame").innerHTML = `<video autoplay playsinline muted style="transform:scaleX(-1)"></video>`;
     $("photoFrame").querySelector("video").srcObject = stream;
     $("snapBtn").hidden = false; $("camBtn").textContent = "Turn off camera";
-  } catch { setStatus($("cartoonStatus"), "Couldn't open the camera — upload a photo instead.", true); }
+  } catch { setStatus($("heroStatus"), "Couldn't open the camera. Upload a photo instead.", true); }
 });
 $("snapBtn").addEventListener("click", () => {
   const v = $("photoFrame").querySelector("video"); if (!v) return;
@@ -447,146 +276,76 @@ $("snapBtn").addEventListener("click", () => {
   const x = c.getContext("2d"); x.translate(c.width,0); x.scale(-1,1); x.drawImage(v,0,0);
   c.toBlob(b => setPhoto(new File([b], "camera.jpg", {type:"image/jpeg"})), "image/jpeg", .92);
 });
-function stopCam(){
-  if (stream) stream.getTracks().forEach(t => t.stop());
-  stream = null; $("snapBtn").hidden = true; $("camBtn").textContent = "Use my camera";
-}
+function stopCam(){ if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $("snapBtn").hidden = true; $("camBtn").textContent = "Use my camera"; }
+$("name").addEventListener("input", () => $("nameEcho").textContent = $("name").value.trim() || "your child");
 
-/* ---------- cartoon: make new, or fix the current one (one API call per click) ---------- */
-async function runCartoon(notes){
-  const btn = $("cartoonBtn"), fix = $("fixBtn"), st = $("cartoonStatus");
-  btn.disabled = fix.disabled = true; setStatus(st, "");
-  const before = $("cartoonFrame").innerHTML;
-  busy($("cartoonFrame"), notes ? "Fixing your cartoon" : "Drawing you");
-  const fd = settings(new FormData()); fd.append("photo", photoFile);
-  if (notes) { fd.append("notes", notes); fd.append("previous", cartoonB64); }
+/* ---------- Jack (one API call per click) ---------- */
+$("heroBtn").addEventListener("click", async () => {
+  const btn = $("heroBtn"), st = $("heroStatus");
+  btn.disabled = true; setStatus(st, ""); busy($("heroFrame"), "Making Jack");
+  const fd = new FormData(); fd.append("photo", photoFile);
   try {
-    const d = await post("/api/cartoonify", fd);
-    cartoonB64 = d.image; show($("cartoonFrame"), "data:image/png;base64," + cartoonB64);
-    document.querySelectorAll(".sceneBtn").forEach(b => b.disabled = false);
-    $("fixBox").hidden = false; $("fixNotes").value = "";
-    btn.textContent = "Start a new cartoon"; btn.classList.replace("go","quiet"); steps(2);
-    setStatus(st, notes ? "Updated. Keep fixing, or move on to the scenes." : "");
-  } catch (err) {
-    $("cartoonFrame").innerHTML = cartoonB64 ? before : "Your cartoon"; setStatus(st, err.message, true);
-  } finally { btn.disabled = fix.disabled = false; }
-}
-$("cartoonBtn").addEventListener("click", () => runCartoon(""));
-$("fixBtn").addEventListener("click", () => {
-  const notes = $("fixNotes").value.trim();
-  if (!notes) { setStatus($("cartoonStatus"), "Type what should change, like “my hair is shorter”.", true); $("fixNotes").focus(); return; }
-  runCartoon(notes);
+    const d = await post("/api/hero", fd);
+    heroB64 = d.image; $("heroFrame").innerHTML = `<img alt="Your child as Jack" src="${src(heroB64)}">`;
+    $("heroChange").hidden = false; btn.textContent = "Start Jack over";
+    const made = PAGE_NUMS.filter(n => pages[n]).length;
+    setStatus(st, made ? "Jack changed, so repaint the pages to match." : "");
+  } catch (err) { $("heroFrame").textContent = "Jack"; setStatus(st, err.message, true); }
+  finally { btn.disabled = false; steps(); }
 });
 
-/* ---------- scenes (one API call per click) ---------- */
-document.querySelectorAll(".sceneBtn").forEach(btn => btn.addEventListener("click", async () => {
-  const id = btn.dataset.scene, frame = $("frame-"+id), st = $("status-"+id), cap = $("cap-"+id);
-  btn.disabled = true; setStatus(st, ""); cap.hidden = true; $("tools-"+id).hidden = true; $("check-"+id).hidden = true;
-  busy(frame, "Painting, usually 30–90 seconds");
-  const fd = settings(new FormData());
-  fd.append("photo", photoFile); fd.append("cartoon", cartoonB64); fd.append("scene", id);
-  fd.append("extra", $("extra-"+id).checked ? "1" : "0");
+/* ---------- pages (one API call per click) ---------- */
+function showPage(n){
+  const art = $("art-"+n);
+  art.querySelector("img")?.remove(); $("ph-"+n).hidden = true;
+  art.insertAdjacentHTML("afterbegin", `<img alt="Page ${n}" src="${src(pages[n])}">`);
+}
+document.querySelectorAll(".pageBtn").forEach(btn => btn.addEventListener("click", async () => {
+  const n = btn.dataset.n, st = $("st-"+n), ph = $("ph-"+n);
+  btn.disabled = true; setStatus(st, "");
+  $("art-"+n).querySelector("img")?.remove(); ph.hidden = false;
+  const old = ph.innerHTML; busy(ph, `Painting page ${n}`);
+  const fd = new FormData(); fd.append("n", n); fd.append("hero", heroB64);
   try {
-    const d = await post("/api/scene", fd);
-    scenes[id] = d;
-    show(frame, "data:image/png;base64," + d.image);
-    cap.querySelector("span").textContent = d.caption; cap.hidden = false;
-    $("tools-"+id).hidden = false; btn.textContent = "Paint it again";
-    steps(3);
-    if (scenes.planting && scenes.climbing) { $("bookBtn").disabled = false; steps(4); }
-  } catch (err) { frame.textContent = "No picture this time"; setStatus(st, err.message, true); }
+    const d = await post("/api/page", fd);
+    pages[n] = d.image; ph.innerHTML = old; showPage(n);
+    $("chg-"+n).hidden = false; btn.textContent = `Paint page ${n} again`;
+  } catch (err) { ph.innerHTML = old; if (pages[n]) showPage(n); setStatus(st, err.message, true); }
+  finally { btn.disabled = false; steps(); }
+}));
+
+/* ---------- change one thing (edit endpoint, one API call per click) ---------- */
+document.querySelectorAll("[data-adjust]").forEach(btn => btn.addEventListener("click", async () => {
+  const target = btn.dataset.adjust, isHero = target === "hero";
+  const input = isHero ? $("heroChangeText") : $("chgText-"+target);
+  const st = isHero ? $("heroStatus") : $("st-"+target);
+  const change = input.value.trim();
+  if (!change) { setStatus(st, "Type what to change first.", true); input.focus(); return; }
+  btn.disabled = true; setStatus(st, "Changing it…");
+  const fd = new FormData(); fd.append("target", target); fd.append("change", change);
+  fd.append("image", isHero ? heroB64 : pages[target]); fd.append("hero", heroB64);
+  try {
+    const d = await post("/api/adjust", fd);
+    if (isHero) { heroB64 = d.image; $("heroFrame").innerHTML = `<img alt="Your child as Jack" src="${src(heroB64)}">`; }
+    else { pages[target] = d.image; showPage(target); }
+    input.value = ""; setStatus(st, "Changed.");
+  } catch (err) { setStatus(st, err.message, true); }
   finally { btn.disabled = false; }
 }));
 
-/* ---------- quality check: likeness + scene fidelity (one API call per click) ---------- */
-const lastReport = {};
-const li = i => `<li><span class="${i.pass?'p':'f'}">${i.pass?'✓':'✗'}</span><span>${esc(i.item)}${i.note?` <span class="note">— ${esc(i.note)}</span>`:""}</span></li>`;
-document.querySelectorAll(".chk").forEach(btn => btn.addEventListener("click", async () => {
-  const id = btn.dataset.scene, box = $("check-"+id), s = scenes[id];
-  btn.disabled = true; box.hidden = false; box.innerHTML = "<div class='spin'></div>Comparing the picture with your photo and the description";
-  const fd = new FormData();
-  fd.append("photo", photoFile); fd.append("image", s.image); fd.append("caption", s.caption); fd.append("checklist", JSON.stringify(s.checklist));
+/* ---------- PDF (no API call) ---------- */
+$("pdfBtn").addEventListener("click", async () => {
+  const st = $("pdfStatus"), name = $("name").value.trim();
+  if (!name) { setStatus(st, "Add the child's name in step 1 first.", true); $("name").focus(); return; }
+  $("pdfBtn").disabled = true; setStatus(st, "Making the PDF…");
   try {
-    const d = await post("/api/check", fd);
-    const items = d.items || [], like = d.likeness || [];
-    const ok = items.filter(i => i.pass).length, lok = like.filter(i => i.pass).length;
-    const score = Number(d.likeness_score) || 0;
-    lastReport[id] = {ok, total:items.length, lok, ltotal:like.length, score,
-      misses:[...items, ...like].filter(i => !i.pass).map(i => i.item)};
-    box.innerHTML = `<div class="report">
-        <div><h4>Looks like you</h4><div class="big ${score<6?'low':''}">${score}/10</div>
-          <div class="meter"><i style="width:${score*10}%"></i></div><ul>${like.map(li).join("")}</ul></div>
-        <div><h4>Matches the description</h4><div class="big ${ok<items.length-1?'low':''}">${ok}/${items.length}</div>
-          <div class="meter"><i style="width:${items.length?ok/items.length*100:0}%"></i></div><ul>${items.map(li).join("")}</ul></div>
-      </div>` +
-      (d.verdict ? `<p class="verdict">${esc(d.verdict)}</p>` : "") +
-      `<div class="tools"><button class="quiet" data-copy="${id}">Copy as a test-log row</button><span class="copied" hidden>Copied</span></div>`;
-  } catch (err) { box.innerHTML = `<span class="f">${esc(err.message)}</span>`; }
-  finally { btn.disabled = false; }
-}));
-document.addEventListener("click", async e => {
-  const id = e.target.dataset && e.target.dataset.copy; if (!id) return;
-  const r = lastReport[id], label = id === "planting" ? "Planting" : "Climbing";
-  const opts = `${val("style")}, ${val("exaggeration")}, ${val("time")}, ${val("expression")}, ${val("outfit")}`;
-  const row = `| ${new Date().toLocaleString()} | ${label} | ${opts} | ${r.score}/10 (${r.lok}/${r.ltotal}) | ${r.ok}/${r.total} | ${r.misses.join("; ") || "none"} |`;
-  try { await navigator.clipboard.writeText(row); e.target.nextElementSibling.hidden = false; }
-  catch { prompt("Copy this row:", row); }
+    const blob = await post("/api/pdf", {name, age:$("age").value, likes:$("likes").value, about:$("about").value, hero:heroB64, pages}, true);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "JackAndTheBeanstalk.pdf"; a.click();
+    setStatus(st, "");
+  } catch (err) { setStatus(st, err.message, true); }
+  finally { $("pdfBtn").disabled = false; }
 });
-
-/* ---------- surprise me (no API call) ---------- */
-$("surpriseBtn").addEventListener("click", () => {
-  for (const n of ["time","expression","outfit"]) {
-    const r = document.querySelectorAll(`input[name="${n}"]`); r[Math.floor(Math.random()*r.length)].checked = true;
-  }
-  for (const c of ["extra-planting","extra-climbing"]) $(c).checked = Math.random() < .5;
-});
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-
-/* ---------- downloads ---------- */
-function download(href, name){ const a = document.createElement("a"); a.href = href; a.download = name; a.click(); }
-document.querySelectorAll(".dl").forEach(b => b.addEventListener("click", () =>
-  download("data:image/png;base64," + scenes[b.dataset.scene].image, `jack-${b.dataset.scene}.png`)));
-
-const loadImg = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
-function wrap(ctx, text, x, y, maxW, lh){
-  const words = text.split(" "); let line = "";
-  for (const w of words){ const t = line ? line+" "+w : w;
-    if (ctx.measureText(t).width > maxW && line){ ctx.fillText(line, x, y); y += lh; line = w; } else line = t; }
-  ctx.fillText(line, x, y); return y + lh;
-}
-$("bookBtn").addEventListener("click", async () => {
-  await document.fonts.ready;
-  const [a, b, c] = await Promise.all([loadImg("data:image/png;base64,"+scenes.planting.image),
-    loadImg("data:image/png;base64,"+scenes.climbing.image), loadImg("data:image/png;base64,"+cartoonB64)]);
-  const W = 2400, H = 2150, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-  const x = cv.getContext("2d");
-  x.fillStyle = "#d9eef6"; x.fillRect(0,0,W,H);
-  x.fillStyle = "#ffffff"; x.beginPath(); x.roundRect(40,40,W-80,H-80,48); x.fill();
-  x.fillStyle = "#174428"; x.font = "800 96px 'Bricolage Grotesque', sans-serif"; x.textAlign = "center";
-  x.fillText("Jack and the Beanstalk", W/2, 175);
-  x.save(); x.beginPath(); x.arc(W/2, 285, 70, 0, Math.PI*2); x.clip(); x.drawImage(c, W/2-70, 215, 140, 140); x.restore();
-  x.font = "40px 'Young Serif', Georgia, serif"; x.fillStyle = "#4c5d51"; x.fillText("starring you", W/2, 400);
-  // left: planting (3:2), right: climbing (2:3)
-  const lw = 1300, lh = lw*2/3, rx = 100+lw+80, rw = W-rx-100;
-  const rh = Math.min(rw*1.5, 1100), rw2 = rh/1.5;   // keep 2:3 aspect
-  x.drawImage(a, 100, 460, lw, lh);
-  x.drawImage(b, rx+(rw-rw2)/2, 460, rw2, rh);
-  x.textAlign = "left"; x.fillStyle = "#24613a"; x.font = "700 38px 'Bricolage Grotesque', sans-serif";
-  x.fillText("Jack plants the magic beans", 100, 460+lh+60);
-  x.fillStyle = "#3a2a1c"; x.font = "29px 'Young Serif', Georgia, serif";
-  wrap(x, scenes.planting.caption, 100, 460+lh+105, lw, 42);
-  const by = 460+rh;
-  x.fillStyle = "#24613a"; x.font = "700 38px 'Bricolage Grotesque', sans-serif"; x.fillText("Jack climbs the beanstalk", rx, by+60);
-  x.fillStyle = "#3a2a1c"; x.font = "25px 'Young Serif', Georgia, serif"; wrap(x, scenes.climbing.caption, rx, by+100, rw, 36);
-  download(cv.toDataURL("image/png"), "my-beanstalk-storybook.png");
-});
-
-/* ---------- lightbox ---------- */
-document.addEventListener("click", e => {
-  if (e.target.matches(".frame img")) { $("lightbox").querySelector("img").src = e.target.src; $("lightbox").classList.add("on"); }
-});
-$("lightbox").addEventListener("click", () => $("lightbox").classList.remove("on"));
-document.addEventListener("keydown", e => { if (e.key === "Escape") $("lightbox").classList.remove("on"); });
+steps();
 </script>
 </body>
 </html>
