@@ -6,7 +6,7 @@ Upload one photo → the child becomes Jack → paint pages 1–3 → download `
 ## How it works
 | Step | Endpoint | API calls |
 |---|---|---|
-| Turn the child into Jack (character sheet: face close-up + full body) | `POST /api/hero` | 1 image edit (photo → Jack) |
+| Make the cast sheet: the child's face close-up as Jack + full-body Jack, mother, cow, old man | `POST /api/hero` | 1 image edit (photo → Jack) |
 | Paint a page | `POST /api/page` | 1 image edit (Jack reference → page) |
 | Change one thing on Jack or a page | `POST /api/adjust` | 1 image edit (existing image + Jack → same image, one change) |
 | Build the PDF | `POST /api/pdf` | none |
@@ -14,7 +14,7 @@ Upload one photo → the child becomes Jack → paint pages 1–3 → download `
 Every click is exactly one API call; there are no loops, and the SDK's automatic retries are off (`max_retries=0`).
 
 ## Keeping the book consistent
-- **One reference image.** Jack is drawn once, as a character sheet: a large face close-up plus the full body in his outfit. Every page call sends that same image.
+- **One reference image.** A cast sheet is drawn once: a large close-up of the child as Jack on the left, and full-body Jack, his mother, Milky-White and the old man on the right. Every page call sends that same image, so the whole cast stays the same from page to page.
 - **One style string.** `STYLE` in `storyboard.py` is sent word for word in every call and never changes.
 - **Fixed cast descriptions.** The mother, Milky-White and the old man are described in `CAST` once and reused word for word.
 - **No words in the art.** The image model never draws text. The PDF layer (`book_pdf.py`) prints the story text in Young Serif over a soft fade in each page's quiet area (lower third, sky, or dark grass).
@@ -32,8 +32,7 @@ Every click is exactly one API call; there are no loops, and the SDK's automatic
 |---|---|---|
 | `OPENAI_API_KEY` | — | required; never in code or the repo |
 | `IMAGE_MODEL` | `gpt-image-2.5-flare` | `gpt-image-1-mini` is cheaper but gave waxy, broken scenes in testing |
-| `IMAGE_QUALITY` | `low` | quality for Jack and the "Change it" edits |
-| `PAGE_QUALITY` | `medium` | quality for the story pages (~5¢ each); `low` looked smeared |
+| `PAGE_QUALITY` | `medium` | quality for every picture: cast sheet, pages and "Change it" edits (~5¢ each); `low` looked smeared |
 | `HOURLY_LIMIT` | `40` | requests per IP per hour |
 
 ## Run locally

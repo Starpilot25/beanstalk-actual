@@ -15,8 +15,8 @@ STYLE = "Modern 3D animated feature — rounded forms, large expressive eyes, so
 JACK_OUTFIT = ("a patched oatmeal-colored linen shirt, a brown wool vest, rough brown trousers "
                "held up with a rope belt, and scuffed leather boots")
 CAST = {
-    "jack": ("Jack is the exact character in the reference sheet (close-up face on the left, full body "
-             "on the right), an unmistakable match: the same face "
+    "jack": ("Jack is the exact character on the reference sheet (the large close-up on the left and the "
+             "top-left full-body view), an unmistakable match: the same face "
              "shape, eyes, nose, mouth, eyebrows, hair, skin tone, apparent age and body proportions, "
              f"wearing {JACK_OUTFIT}."),
     "mother": ("Jack's mother is a thin, careworn woman in her forties with auburn hair in a loose bun, "
@@ -26,6 +26,12 @@ CAST = {
     "old_man": ("The old man is small and twinkly-eyed, with a long white beard, a patched green cloak "
                 "and a crooked walking stick."),
 }
+
+# The reference image is a cast sheet: Jack's face close-up on the left, and a 2x2 grid of
+# full-body views (Jack, mother, cow, old man) on the right. One image, reused on every page.
+CAST_SHEET = ("The reference image is the cast sheet for this book. Draw every character who appears in "
+              "this scene exactly as they look on the sheet - same face, build, colors and clothes - and "
+              "draw only the characters this scene names.")
 
 # Where the story text goes, and how the picture keeps that area calm.
 # The image model is never asked to draw any words; the PDF layer adds them.

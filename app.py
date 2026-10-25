@@ -21,7 +21,7 @@ from openai import OpenAI
 from PIL import Image, ImageOps
 
 from book_pdf import build_pdf
-from storyboard import CAST, PAGES, PAGES_BY_N, STYLE, ZONES
+from storyboard import CAST, CAST_SHEET, PAGES, PAGES_BY_N, STYLE, ZONES
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
@@ -63,16 +63,19 @@ MATCH_RENDER = ("A full-bleed frame from a 3D computer-animated film, rendered e
 
 
 def hero_prompt():
+    others = " ".join(CAST[c] for c in ("mother", "cow", "old_man"))
     return (
         f"Art style: {STYLE} "
-        "Turn the person in this photo into the hero of a picture book, as a character reference "
-        "sheet on a plain light background with two views of the same character side by side. "
-        "Left half: a large head-and-shoulders close-up facing the viewer, the face filling most of "
-        "that half, crisp and detailed. Right half: the same character standing full-body, facing the "
-        "viewer, arms relaxed. Keep their real face shape, eye shape, nose, mouth, eyebrows, skin tone, "
-        "hair color, hair length and hairstyle, and their real age, so family would recognize them at "
-        "a glance. Stylize the rendering, not the anatomy. Neutral, relaxed expression with the mouth closed. "
-        f"In both views, dress them as Jack, in {CAST['jack'].split('wearing ', 1)[1]} {NO_WORDS}"
+        "Create the cast reference sheet for a picture book, on one plain light background. "
+        "LEFT HALF: a large head-and-shoulders close-up of the person in this photo as the hero, Jack, "
+        "facing the viewer, the face filling most of that half, crisp and detailed. Keep their real "
+        "face shape, eye shape, nose, mouth, eyebrows, skin tone, hair color, hair length and hairstyle, "
+        "and their real age, so family would recognize them at a glance. Stylize the rendering, not the "
+        "anatomy. Neutral, relaxed expression with the mouth closed. "
+        "RIGHT HALF: a neat two-by-two grid of full-body views, each standing and facing the viewer: "
+        "top left, the same Jack; top right, Jack's mother; bottom left, Milky-White the cow; "
+        f"bottom right, the old man. Jack wears {CAST['jack'].split('wearing ', 1)[1]} {others} "
+        f"{NO_WORDS}"
     )
 
 
@@ -80,7 +83,7 @@ def page_prompt(page):
     cast = " ".join(CAST[c] for c in page["cast"])
     return (
         f"Art style: {STYLE} "
-        f"{MATCH_RENDER} {cast} "
+        f"{MATCH_RENDER} {CAST_SHEET} {cast} "
         "Match Jack's face to the reference sheet, but his expression follows this page's mood. "
         f"Scene: {page['scene']} {page['shot']} {page['mood']} {ZONES[page['zone']]} "
         f"Art style, again: {STYLE} {NO_WORDS}"
@@ -88,10 +91,10 @@ def page_prompt(page):
 
 
 def adjust_prompt(change, is_page):
-    what = "storybook page" if is_page else "character reference sheet"
+    what = "storybook page" if is_page else "cast reference sheet"
     return (
         f"Art style: {STYLE} "
-        f"Image 1 is a {what}; image 2 is the reference sheet for Jack. Edit image 1 with one change: "
+        f"Image 1 is a {what}; image 2 is the cast reference sheet. Edit image 1 with one change: "
         f"\"{change}\". Keep everything else exactly as it is - composition, characters, Jack's face "
         f"and clothes, colors and lighting. {NO_WORDS}"
     )
@@ -186,7 +189,7 @@ def hero():
     except ValueError as e:
         return error(str(e))
     try:
-        return jsonify({"image": call_edit(photo, hero_prompt(), "1536x1024")})
+        return jsonify({"image": call_edit(photo, hero_prompt(), "1536x1024", PAGE_QUALITY)})  # the sheet every page copies
     except Exception as e:
         return api_error(e)
 
@@ -227,7 +230,7 @@ def adjust():
         return error(str(e))
     size = "1536x1024"  # pages and the Jack sheet are both landscape
     try:
-        return jsonify({"image": call_edit([image, hero_ref], adjust_prompt(change, is_page), size)})
+        return jsonify({"image": call_edit([image, hero_ref], adjust_prompt(change, is_page), size, PAGE_QUALITY)})
     except Exception as e:
         return api_error(e)
 

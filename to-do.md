@@ -3,12 +3,13 @@
 What still needs work in this build, most important first.
 
 ## Consistency (the book fails without this)
-- **Faces haven't been checked across all three pages with several kids yet.** Jack is drawn from one
-  reference image, but `gpt-image-1-mini` doesn't support high input fidelity, so the face can drift,
-  especially on page 3, where it's dusk and Jack is smaller in the doorway. Test with at least 5 different
+- **Faces haven't been checked across all three pages with several kids yet.** Jack is copied from one
+  cast sheet, but `gpt-image-2.5-flare` has no face-fidelity setting, so the face can still drift,
+  especially on page 3, where it's dusk and Jack is small in the doorway. Test with at least 5 different
   photos and log results in `PROMPTS.md`.
-- **Only Jack has a reference image.** The mother (pages 1 and 3) and Milky-White (pages 1 and 2) are
-  held together by text descriptions alone, so they may not match between pages.
+- **The cow looked different on pages 1 and 2** because only Jack had a reference image. Fixed by turning
+  Jack's sheet into a cast sheet (Jack's face close-up + full-body Jack, mother, cow, old man). Still to check:
+  whether squeezing four characters onto one sheet makes Jack's full-body view too small to copy his outfit.
 - **The required style fights likeness.** "Large expressive eyes" pushes faces toward a generic
   cartoon kid. The hero prompt asks to keep real proportions, but the balance needs more Playground
   testing.
