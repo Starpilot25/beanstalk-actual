@@ -29,11 +29,11 @@ app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
 app.config["MAX_FORM_MEMORY_SIZE"] = 40 * 1024 * 1024
 
 # Model and quality are set in Render's Environment, so switching needs no code change.
-#   IMAGE_MODEL=gpt-image-1-mini     cheapest, older (default)
-#   IMAGE_MODEL=gpt-image-2.5-flare  newer, better scenes; still a few cents per image at low/medium
-IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1-mini")
+#   IMAGE_MODEL=gpt-image-2.5-flare  default: far better pages (tested Oct 25), ~5c per page at medium
+#   IMAGE_MODEL=gpt-image-1-mini     cheapest, but low quality gave waxy, broken scenes
+IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-2.5-flare")
 QUALITY = os.environ.get("IMAGE_QUALITY", "low")              # Jack + "change it" edits
-PAGE_QUALITY = os.environ.get("PAGE_QUALITY", QUALITY)       # the story pages
+PAGE_QUALITY = os.environ.get("PAGE_QUALITY", "medium")      # the story pages
 # input_fidelity is only sent to models documented to accept it; others reject unknown params.
 FIDELITY_MODELS = {"gpt-image-1", "gpt-image-1.5"}
 

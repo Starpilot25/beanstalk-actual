@@ -30,8 +30,9 @@ CAST = {
 # Where the story text goes, and how the picture keeps that area calm.
 # The image model is never asked to draw any words; the PDF layer adds them.
 ZONES = {
-    "bottom": ("Wide shot: every character, face and important object sits in the upper two-thirds of "
-               "the frame, and the bottom third is only plain, softly lit ground."),
+    "bottom": ("Wide shot: characters are shown full-length, feet on the ground, standing far enough back "
+               "that every character, face and important object sits in the upper two-thirds of the frame; "
+               "the bottom third is only plain, softly lit ground in front of them."),
     "top": ("Wide shot: every character, face and important object sits in the lower two-thirds of the "
             "frame, and the top third is only open, simple sky."),
 }
@@ -45,7 +46,7 @@ PAGES = [
         "scene": ("Inside a bare cottage kitchen with an empty wooden cupboard standing open. Jack and his "
                   "mother stand together near the table. Through the open door at the back, Milky-White "
                   "is visible standing in the yard."),
-        "shot": ("Jack and his mother stand a few steps back in the room, seen from head to knees. Jack shows "
+        "shot": ("Jack and his mother stand toward the back of the room, shown full-length from head to toe with both feet planted on the floorboards. Jack shows "
                  "his full face toward the viewer, warmly front-lit, his eyes turned to his mother. Warm "
                  "daylight palette. The floor in front of them is plain, bare wooden floorboards."),
         "zone": "bottom",

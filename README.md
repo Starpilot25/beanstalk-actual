@@ -31,9 +31,9 @@ Every click is exactly one API call; there are no loops, and the SDK's automatic
 | Variable | Default | Notes |
 |---|---|---|
 | `OPENAI_API_KEY` | — | required; never in code or the repo |
-| `IMAGE_MODEL` | `gpt-image-1-mini` | cheapest. `gpt-image-2.5-flare` is OpenAI's newer everyday model; try it if pages look weak |
+| `IMAGE_MODEL` | `gpt-image-2.5-flare` | `gpt-image-1-mini` is cheaper but gave waxy, broken scenes in testing |
 | `IMAGE_QUALITY` | `low` | quality for Jack and the "Change it" edits |
-| `PAGE_QUALITY` | same as `IMAGE_QUALITY` | quality for the story pages; `medium` is sharper and costs more |
+| `PAGE_QUALITY` | `medium` | quality for the story pages (~5¢ each); `low` looked smeared |
 | `HOURLY_LIMIT` | `40` | requests per IP per hour |
 
 ## Run locally
