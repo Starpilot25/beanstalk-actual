@@ -69,12 +69,14 @@
   .quiet{background:#fff;color:var(--stalk-dark);border:1.5px solid var(--line);padding:9px 14px;font-size:.92rem}
   .quiet:hover:not(:disabled){border-color:var(--stalk);background:var(--leaf-pale)}
 
-  .portraits{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .portraits{display:grid;grid-template-columns:2fr 3fr;gap:14px;align-items:start}
+  @media (max-width:860px){ .portraits{grid-template-columns:1fr} }
   .portraits figure{margin:0}
   .portraits figcaption{font-size:.88rem;color:var(--ink-soft);margin-top:8px;text-align:center}
   .frame{position:relative;border-radius:18px;overflow:hidden;background:var(--sky);display:grid;place-items:center;text-align:center;color:var(--ink-soft);font-size:.92rem;padding:10px}
   .frame img,.frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .tall{aspect-ratio:2/3}
+  .frame.tall{aspect-ratio:2/3}
+  .frame.wide{aspect-ratio:3/2}
   #heroFrame{background:var(--leaf-pale)}
   .spin{width:34px;height:34px;margin:0 auto 10px;border-radius:50% 4px 50% 4px;background:var(--leaf);animation:sprout 1.2s ease-in-out infinite}
   @keyframes sprout{0%,100%{transform:rotate(-45deg) scale(.7)}50%{transform:rotate(-45deg) scale(1)}}
@@ -155,7 +157,7 @@
       </div>
       <div class="portraits">
         <figure><div class="frame tall" id="photoFrame">Photo</div><figcaption>Photo</figcaption></figure>
-        <figure><div class="frame tall" id="heroFrame">Jack</div><figcaption>Jack, used on every page</figcaption></figure>
+        <figure><div class="frame wide" id="heroFrame">Jack</div><figcaption>Jack's character sheet, used on every page</figcaption></figure>
       </div>
     </div>
   </section>

@@ -110,6 +110,8 @@ def _about_page(c, name, about, hero_img):
     text_x = left
     if hero_img:
         im = Image.open(io.BytesIO(hero_img)).convert("RGB")
+        if im.width > im.height * 1.2:  # the Jack sheet: use the close-up face on its left half
+            im = im.crop((0, 0, im.width // 2, im.height))
         ph = H - 2 * MARGIN
         pw = ph * im.width / im.height
         c.saveState()

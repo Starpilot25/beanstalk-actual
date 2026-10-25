@@ -15,8 +15,10 @@ STYLE = "Modern 3D animated feature — rounded forms, large expressive eyes, so
 JACK_OUTFIT = ("a patched oatmeal-colored linen shirt, a brown wool vest, rough brown trousers "
                "held up with a rope belt, and scuffed leather boots")
 CAST = {
-    "jack": ("Jack is the child in the reference image: the same face, hair, skin tone, eye color, "
-             f"age and body as in the reference, wearing {JACK_OUTFIT}."),
+    "jack": ("Jack is the exact character in the reference sheet (close-up face on the left, full body "
+             "on the right), an unmistakable match: the same face "
+             "shape, eyes, nose, mouth, eyebrows, hair, skin tone, apparent age and body proportions, "
+             f"wearing {JACK_OUTFIT}."),
     "mother": ("Jack's mother is a thin, kind-faced woman in her forties with auburn hair in a loose bun, "
                "a faded blue dress and a cream apron."),
     "cow": ("Milky-White is a gentle, thin white dairy cow with soft brown ears and a small brass bell "
@@ -28,8 +30,10 @@ CAST = {
 # Where the story text goes, and how the picture keeps that area calm.
 # The image model is never asked to draw any words; the PDF layer adds them.
 ZONES = {
-    "bottom": "Keep the bottom third of the picture calm and simple, with no characters or detailed objects in it.",
-    "top": "Keep the top third of the picture calm and simple, with no characters or detailed objects in it.",
+    "bottom": ("Wide shot: every character, face and important object sits in the upper two-thirds of "
+               "the frame, and the bottom third is only plain, softly lit ground."),
+    "top": ("Wide shot: every character, face and important object sits in the lower two-thirds of the "
+            "frame, and the top third is only open, simple sky."),
 }
 
 PAGES = [
@@ -41,8 +45,9 @@ PAGES = [
         "scene": ("Inside a bare cottage kitchen with an empty wooden cupboard standing open. Jack and his "
                   "mother stand together near the table. Through the open door at the back, Milky-White "
                   "is visible standing in the yard."),
-        "shot": ("Jack shows his full face toward the viewer, warmly front-lit, his eyes turned to his "
-                 "mother. Warm daylight palette. The lower third is plain, empty wooden floorboards."),
+        "shot": ("Jack and his mother stand a few steps back in the room, seen from head to knees. Jack shows "
+                 "his full face toward the viewer, warmly front-lit, his eyes turned to his mother. Warm "
+                 "daylight palette. The floor in front of them is plain, bare wooden floorboards."),
         "zone": "bottom",
         "text_color": "light",   # light lettering on a soft dark fade
     },

@@ -56,17 +56,23 @@ def client():
 # Words we don't want in the picture are never named (naming them makes the model draw them).
 # ---------------------------------------------------------------------------
 NO_WORDS = "Pure illustration with no lettering anywhere."
+# Same sentence in every page call: ties the look to the 3D Jack reference so pages don't drift
+# into a flat, painted storybook style.
+MATCH_RENDER = ("A full-bleed frame from a 3D computer-animated film, rendered exactly like the reference "
+                "image: the same 3D modeling, materials, shading and lighting, with soft rounded 3D forms.")
 
 
 def hero_prompt():
     return (
         f"Art style: {STYLE} "
-        "Turn the child in this photo into the hero of a picture book: a full-body character "
-        "reference, standing, facing the viewer, arms relaxed, on a plain light background. "
-        "Keep their real face shape, eye shape, nose, mouth, eyebrows, skin tone, hair color, "
-        "hair length and hairstyle, and their real age, so family would recognize them at a glance. "
-        "Stylize the rendering, not the anatomy. Calm, friendly expression. "
-        f"Dress them as Jack, in {CAST['jack'].split('wearing ', 1)[1]} {NO_WORDS}"
+        "Turn the person in this photo into the hero of a picture book, as a character reference "
+        "sheet on a plain light background with two views of the same character side by side. "
+        "Left half: a large head-and-shoulders close-up facing the viewer, the face filling most of "
+        "that half, crisp and detailed. Right half: the same character standing full-body, facing the "
+        "viewer, arms relaxed. Keep their real face shape, eye shape, nose, mouth, eyebrows, skin tone, "
+        "hair color, hair length and hairstyle, and their real age, so family would recognize them at "
+        "a glance. Stylize the rendering, not the anatomy. Calm, friendly expression. "
+        f"In both views, dress them as Jack, in {CAST['jack'].split('wearing ', 1)[1]} {NO_WORDS}"
     )
 
 
@@ -74,17 +80,17 @@ def page_prompt(page):
     cast = " ".join(CAST[c] for c in page["cast"])
     return (
         f"Art style: {STYLE} "
-        f"A full-bleed picture-book illustration. {cast} "
-        "Draw Jack exactly as in the reference image every time - same face, same hair, same clothes. "
-        f"Scene: {page['scene']} {page['shot']} {ZONES[page['zone']]} {NO_WORDS}"
+        f"{MATCH_RENDER} {cast} "
+        f"Scene: {page['scene']} {page['shot']} {ZONES[page['zone']]} "
+        f"Art style, again: {STYLE} {NO_WORDS}"
     )
 
 
 def adjust_prompt(change, is_page):
-    what = "storybook page" if is_page else "character reference"
+    what = "storybook page" if is_page else "character reference sheet"
     return (
         f"Art style: {STYLE} "
-        f"Image 1 is a {what}; image 2 is the reference for Jack. Edit image 1 with one change: "
+        f"Image 1 is a {what}; image 2 is the reference sheet for Jack. Edit image 1 with one change: "
         f"\"{change}\". Keep everything else exactly as it is - composition, characters, Jack's face "
         f"and clothes, colors and lighting. {NO_WORDS}"
     )
@@ -179,7 +185,7 @@ def hero():
     except ValueError as e:
         return error(str(e))
     try:
-        return jsonify({"image": call_edit(photo, hero_prompt(), "1024x1536")})
+        return jsonify({"image": call_edit(photo, hero_prompt(), "1536x1024")})
     except Exception as e:
         return api_error(e)
 
@@ -218,7 +224,7 @@ def adjust():
         hero_ref = to_png(b64_field("hero", "Jack reference"), "jack.png")
     except ValueError as e:
         return error(str(e))
-    size = "1536x1024" if is_page else "1024x1536"
+    size = "1536x1024"  # pages and the Jack sheet are both landscape
     try:
         return jsonify({"image": call_edit([image, hero_ref], adjust_prompt(change, is_page), size)})
     except Exception as e:
