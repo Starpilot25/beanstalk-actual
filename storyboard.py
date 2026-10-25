@@ -19,7 +19,7 @@ CAST = {
              "on the right), an unmistakable match: the same face "
              "shape, eyes, nose, mouth, eyebrows, hair, skin tone, apparent age and body proportions, "
              f"wearing {JACK_OUTFIT}."),
-    "mother": ("Jack's mother is a thin, kind-faced woman in her forties with auburn hair in a loose bun, "
+    "mother": ("Jack's mother is a thin, careworn woman in her forties with auburn hair in a loose bun, "
                "a faded blue dress and a cream apron."),
     "cow": ("Milky-White is a gentle, thin white dairy cow with soft brown ears and a small brass bell "
             "on a rope collar."),
@@ -32,7 +32,7 @@ CAST = {
 ZONES = {
     "bottom": ("Wide shot: characters are shown full-length, feet on the ground, standing far enough back "
                "that every character, face and important object sits in the upper two-thirds of the frame; "
-               "the bottom third is only plain, softly lit ground in front of them."),
+               "the bottom third is only plain, simple ground in front of them."),
     "top": ("Wide shot: every character, face and important object sits in the lower two-thirds of the "
             "frame, and the top third is only open, simple sky."),
 }
@@ -49,6 +49,8 @@ PAGES = [
         "shot": ("Jack and his mother stand toward the back of the room, shown full-length from head to toe with both feet planted on the floorboards. Jack shows "
                  "his full face toward the viewer, warmly front-lit, his eyes turned to his mother. Warm "
                  "daylight palette. The floor in front of them is plain, bare wooden floorboards."),
+        "mood": ("Mood: worried and a little sad. Jack's brow is creased and his mouth turned slightly down; "
+                 "his mother looks tired and anxious, one hand on his shoulder. Nobody is smiling."),
         "zone": "bottom",
         "text_color": "light",   # light lettering on a soft dark fade
     },
@@ -61,6 +63,8 @@ PAGES = [
                   "palm with five shiny beans, each a different color. Jack holds Milky-White's rope."),
         "shot": ("Jack is in three-quarter view, face clearly visible, looking at the beans. Bright "
                  "midday palette. The top third is open pale-blue sky with a few soft clouds."),
+        "mood": ("Mood: curious and tempted. Jack leans in, eyes wide with wonder at the beans, lips parted; "
+                 "the old man wears a sly, knowing half-smile."),
         "zone": "top",
         "text_color": "dark",    # dark lettering on light sky
     },
@@ -75,6 +79,8 @@ PAGES = [
         "shot": ("Jack is in the doorway, face clearly visible and lit by the warm light from inside. "
                  "Darker dusk palette of deep blues and purples, darker than daytime. The lower third is "
                  "dark, shadowed grass."),
+        "mood": ("Mood: anger and dismay. His mother's face is furious, mouth open mid-shout, as she flings "
+                 "the beans; Jack looks stunned and crestfallen, shoulders slumped."),
         "zone": "bottom",
         "text_color": "light",
     },

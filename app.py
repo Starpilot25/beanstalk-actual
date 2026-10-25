@@ -71,7 +71,7 @@ def hero_prompt():
         "that half, crisp and detailed. Right half: the same character standing full-body, facing the "
         "viewer, arms relaxed. Keep their real face shape, eye shape, nose, mouth, eyebrows, skin tone, "
         "hair color, hair length and hairstyle, and their real age, so family would recognize them at "
-        "a glance. Stylize the rendering, not the anatomy. Calm, friendly expression. "
+        "a glance. Stylize the rendering, not the anatomy. Neutral, relaxed expression with the mouth closed. "
         f"In both views, dress them as Jack, in {CAST['jack'].split('wearing ', 1)[1]} {NO_WORDS}"
     )
 
@@ -81,7 +81,8 @@ def page_prompt(page):
     return (
         f"Art style: {STYLE} "
         f"{MATCH_RENDER} {cast} "
-        f"Scene: {page['scene']} {page['shot']} {ZONES[page['zone']]} "
+        "Match Jack's face to the reference sheet, but his expression follows this page's mood. "
+        f"Scene: {page['scene']} {page['shot']} {page['mood']} {ZONES[page['zone']]} "
         f"Art style, again: {STYLE} {NO_WORDS}"
     )
 
