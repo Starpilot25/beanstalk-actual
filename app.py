@@ -28,9 +28,14 @@ app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
 # Flask 3.1+ caps non-file form fields at 500 KB; images travel as base64 text fields.
 app.config["MAX_FORM_MEMORY_SIZE"] = 40 * 1024 * 1024
 
-# Cheap by default. IMAGE_MODEL=gpt-image-1 gives stronger likeness (adds input_fidelity="high").
+# Model and quality are set in Render's Environment, so switching needs no code change.
+#   IMAGE_MODEL=gpt-image-1-mini     cheapest, older (default)
+#   IMAGE_MODEL=gpt-image-2.5-flare  newer, better scenes; still a few cents per image at low/medium
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-1-mini")
-QUALITY = os.environ.get("IMAGE_QUALITY", "low")  # low | medium | high
+QUALITY = os.environ.get("IMAGE_QUALITY", "low")              # Jack + "change it" edits
+PAGE_QUALITY = os.environ.get("PAGE_QUALITY", QUALITY)       # the story pages
+# input_fidelity is only sent to models documented to accept it; others reject unknown params.
+FIDELITY_MODELS = {"gpt-image-1", "gpt-image-1.5"}
 
 _client = None
 
@@ -109,11 +114,11 @@ def b64_field(name, label):
         raise ValueError(f"The {label} was corrupted; make it again.")
 
 
-def call_edit(images, prompt, size):
+def call_edit(images, prompt, size, quality=None):
     """Exactly one image-edit call. No retries, no loops."""
-    extra = {"input_fidelity": "high"} if "mini" not in IMAGE_MODEL else {}
+    extra = {"input_fidelity": "high"} if IMAGE_MODEL in FIDELITY_MODELS else {}
     result = client().images.edit(
-        model=IMAGE_MODEL, image=images, prompt=prompt, size=size, quality=QUALITY, n=1,
+        model=IMAGE_MODEL, image=images, prompt=prompt, size=size, quality=quality or QUALITY, n=1,
         output_format="jpeg", output_compression=90, **extra,
     )
     return result.data[0].b64_json
@@ -154,7 +159,7 @@ def api_error(e):
 # ---------------------------------------------------------------------------
 @app.get("/")
 def index():
-    return render_template("index.html", pages=PAGES, cheap="mini" in IMAGE_MODEL)
+    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL)
 
 
 @app.get("/healthz")
@@ -192,7 +197,7 @@ def page():
         return error(str(e))
     try:
         # One reference image (Jack) + the same style and cast strings on every page.
-        return jsonify({"image": call_edit(hero_ref, page_prompt(p), "1536x1024")})
+        return jsonify({"image": call_edit(hero_ref, page_prompt(p), "1536x1024", PAGE_QUALITY)})
     except Exception as e:
         return api_error(e)
 
