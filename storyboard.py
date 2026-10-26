@@ -33,6 +33,11 @@ CAST_SHEET = ("The reference image is the cast sheet for this book. Draw every c
               "this scene exactly as they look on the sheet - same face, build, colors and clothes - and "
               "draw only the characters this scene names.")
 
+# The five magic beans, described the same way on every page they appear. Five named colors are
+# five distinct objects to draw, which models get right far more often than "five beans".
+BEANS = ("exactly five plump, glossy magic beans, each a different color: one red, one yellow, one green, "
+         "one blue and one purple")
+
 # Hands are the most common failure (extra or merged fingers). Same sentence in every call,
 # worded as what we want; each page also keeps its hand poses simple.
 HANDS = ("Every hand is anatomically correct: one thumb and four fingers, natural proportions, "
@@ -72,7 +77,7 @@ PAGES = [
         "text": "Five magic beans, said the old man. For one cow.",
         "cast": ["jack", "old_man", "cow"],
         "scene": ("A dirt road through green fields on the way to market. The old man holds out his open "
-                  "palm with five shiny beans, each a different color. Jack holds Milky-White's rope."),
+                  "palm with " + BEANS + ", spaced apart so each one is clearly visible. Jack holds Milky-White's rope."),
         "shot": ("Jack is in three-quarter view, face clearly visible, looking at the beans. Bright "
                  "midday palette. The top third is open pale-blue sky with a few soft clouds."),
         "hands": ("The old man's open hand faces palm-up toward the viewer, large and clear, with the five "
@@ -88,7 +93,7 @@ PAGES = [
         "text": "Beans! she cried. And out the window they went.",
         "cast": ["jack", "mother"],
         "scene": ("The outside of the small thatched cottage at dusk. Jack's mother leans out of a lit "
-                  "window, flinging the beans, which scatter through the air into the garden below. Jack "
+                  "window, flinging " + BEANS + ", large enough to see, scattering through the air into the garden below. Jack "
                   "stands in the open doorway, watching."),
         "shot": ("Jack is in the doorway, face clearly visible and lit by the warm light from inside. "
                  "Darker dusk palette of deep blues and purples, darker than daytime. The lower third is "
