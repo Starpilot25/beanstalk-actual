@@ -162,7 +162,8 @@ class Limiter:
                 self.hits[key].pop()
 
 
-requests_per_ip = Limiter(int(os.environ.get("HOURLY_LIMIT", "40")))           # any API call
+requests_per_ip = Limiter(int(os.environ.get("HOURLY_LIMIT", "20")))           # any API call
+edits_per_ip = Limiter(int(os.environ.get("EDITS_PER_HOUR", "5")))             # "Change it" per person
 books_per_ip = Limiter(int(os.environ.get("BOOKS_PER_HOUR", "3")))              # cast sheets per person
 books_site = Limiter(int(os.environ.get("SITE_BOOKS_PER_HOUR", "20")))          # cast sheets, everyone
 
@@ -202,7 +203,7 @@ def api_error(e):
 # ---------------------------------------------------------------------------
 @app.get("/")
 def index():
-    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL, books_per_hour=books_per_ip.limit)
+    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL, books_per_hour=books_per_ip.limit, edits_per_hour=edits_per_ip.limit)
 
 
 @app.get("/healthz")
@@ -213,7 +214,7 @@ def health():
 @app.post("/api/hero")
 def hero():
     if rate_limited():
-        return error("Hourly limit reached — try again later.", 429)
+        return error(f"You've reached {requests_per_ip.limit} pictures this hour. Try again later.", 429)
     f = request.files.get("photo")
     if not f or not f.filename:
         return error("Please upload or take a photo.")
@@ -242,7 +243,7 @@ def hero():
 @app.post("/api/page")
 def page():
     if rate_limited():
-        return error("Hourly limit reached — try again later.", 429)
+        return error(f"You've reached {requests_per_ip.limit} pictures this hour. Try again later.", 429)
     try:
         p = PAGES_BY_N.get(int(request.form.get("n", 0)))
         if not p:
@@ -260,7 +261,7 @@ def page():
 @app.post("/api/adjust")
 def adjust():
     if rate_limited():
-        return error("Hourly limit reached — try again later.", 429)
+        return error(f"You've reached {requests_per_ip.limit} pictures this hour. Try again later.", 429)
     try:
         change = " ".join(str(request.form.get("change", "")).split())[:240].replace('"', "'")
         if not change:
@@ -274,10 +275,17 @@ def adjust():
     except ValueError as e:
         return error(str(e))
     size = "1536x1024"  # pages and the Jack sheet are both landscape
+    ip = client_ip()
+    ok, left, wait = edits_per_ip.take(ip)
+    if not ok:
+        return error(f"You've used your {edits_per_ip.limit} changes this hour. You can make another in about "
+                     f"{minutes(wait)}, or repaint the page instead.", 429)
     try:
-        return jsonify({"image": call_edit([image, hero_ref], adjust_prompt(change, is_page), size, PAGE_QUALITY)})
+        image_out = call_edit([image, hero_ref], adjust_prompt(change, is_page), size, PAGE_QUALITY)
     except Exception as e:
+        edits_per_ip.refund(ip)   # a failed attempt doesn't use up a change
         return api_error(e)
+    return jsonify({"image": image_out, "edits_left": left})
 
 
 @app.post("/api/pdf")

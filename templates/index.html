@@ -150,7 +150,7 @@
         <textarea id="about" rows="3" maxlength="600" placeholder="A few sentences in their own words, or yours."></textarea>
 
         <button class="go wide" id="heroBtn" disabled>Turn them into Jack</button>
-        <p class="note">Each new Jack starts a new book. Up to {{ books_per_hour }} books per hour.</p>
+        <p class="note">Each new Jack starts a new book. Up to {{ books_per_hour }} books and {{ edits_per_hour }} changes per hour.</p>
         <div class="status" id="heroStatus"></div>
         <div class="change" id="heroChange" hidden>
           <input type="text" id="heroChangeText" maxlength="240" placeholder="Not quite right? e.g. “hair is curlier”, “face is rounder”" aria-label="What to change about Jack">
@@ -334,7 +334,7 @@ document.querySelectorAll("[data-adjust]").forEach(btn => btn.addEventListener("
     const d = await post("/api/adjust", fd);
     if (isHero) { heroB64 = d.image; $("heroFrame").innerHTML = `<img alt="Your child as Jack" src="${src(heroB64)}">`; }
     else { pages[target] = d.image; showPage(target); }
-    input.value = ""; setStatus(st, "Changed.");
+    input.value = ""; setStatus(st, d.edits_left === 0 ? "Changed. That was your last change this hour." : `Changed. ${d.edits_left} change${d.edits_left === 1 ? "" : "s"} left this hour.`);
   } catch (err) { setStatus(st, err.message, true); }
   finally { btn.disabled = false; }
 }));
