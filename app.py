@@ -13,6 +13,7 @@ The API key is read from the OPENAI_API_KEY environment variable only.
 import base64
 import io
 import os
+import threading
 import time
 from collections import defaultdict, deque
 
@@ -21,7 +22,7 @@ from openai import OpenAI
 from PIL import Image, ImageOps
 
 from book_pdf import build_pdf
-from storyboard import CAST, CAST_SHEET, PAGES, PAGES_BY_N, STYLE, ZONES
+from storyboard import CAST, CAST_SHEET, HANDS, PAGES, PAGES_BY_N, STYLE, ZONES
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
@@ -85,7 +86,7 @@ def page_prompt(page):
         f"Art style: {STYLE} "
         f"{MATCH_RENDER} {CAST_SHEET} {cast} "
         "Match Jack's face to the reference sheet, but his expression follows this page's mood. "
-        f"Scene: {page['scene']} {page['shot']} {page['mood']} {ZONES[page['zone']]} "
+        f"Scene: {page['scene']} {page['shot']} {page['hands']} {HANDS} {page['mood']} {ZONES[page['zone']]} "
         f"Art style, again: {STYLE} {NO_WORDS}"
     )
 
@@ -134,19 +135,51 @@ def call_edit(images, prompt, size, quality=None):
     return result.data[0].b64_json
 
 
-_hits = defaultdict(deque)
-LIMIT, WINDOW = int(os.environ.get("HOURLY_LIMIT", "40")), 3600
+class Limiter:
+    """Sliding one-hour window, kept in memory (resets when Render restarts the app)."""
+
+    def __init__(self, limit):
+        self.limit, self.hits, self.lock = limit, defaultdict(deque), threading.Lock()
+
+    def _trim(self, q, now):
+        while q and now - q[0] > 3600:
+            q.popleft()
+
+    def take(self, key):
+        """Use one slot. Returns (allowed, slots_left, seconds_until_next_slot)."""
+        now = time.time()
+        with self.lock:
+            q = self.hits[key]
+            self._trim(q, now)
+            if len(q) >= self.limit:
+                return False, 0, int(3600 - (now - q[0])) + 1
+            q.append(now)
+            return True, self.limit - len(q), 0
+
+    def refund(self, key):
+        with self.lock:
+            if self.hits[key]:
+                self.hits[key].pop()
+
+
+requests_per_ip = Limiter(int(os.environ.get("HOURLY_LIMIT", "40")))           # any API call
+books_per_ip = Limiter(int(os.environ.get("BOOKS_PER_HOUR", "3")))              # cast sheets per person
+books_site = Limiter(int(os.environ.get("SITE_BOOKS_PER_HOUR", "20")))          # cast sheets, everyone
+
+
+def client_ip():
+    # Render's proxy appends the real client address as the LAST entry; earlier entries can be faked.
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return (fwd.split(",")[-1].strip() if fwd else request.remote_addr) or "?"
 
 
 def rate_limited():
-    ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "?").split(",")[0].strip()
-    q, now = _hits[ip], time.time()
-    while q and now - q[0] > WINDOW:
-        q.popleft()
-    if len(q) >= LIMIT:
-        return True
-    q.append(now)
-    return False
+    return not requests_per_ip.take(client_ip())[0]
+
+
+def minutes(sec):
+    m = max(1, round(sec / 60))
+    return f"{m} minute{'s' if m != 1 else ''}"
 
 
 def error(msg, code=400):
@@ -169,7 +202,7 @@ def api_error(e):
 # ---------------------------------------------------------------------------
 @app.get("/")
 def index():
-    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL)
+    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL, books_per_hour=books_per_ip.limit)
 
 
 @app.get("/healthz")
@@ -188,10 +221,22 @@ def hero():
         photo = to_png(f.read(), "photo.png")
     except ValueError as e:
         return error(str(e))
+    # Each cast sheet starts a new book, so this is where books are counted.
+    ip = client_ip()
+    ok, left, wait = books_per_ip.take(ip)
+    if not ok:
+        return error(f"You've made {books_per_ip.limit} books this hour. You can start another in about {minutes(wait)}.", 429)
+    site_ok, _, site_wait = books_site.take("all")
+    if not site_ok:
+        books_per_ip.refund(ip)
+        return error(f"The site has hit its limit of {books_site.limit} books this hour. Try again in about {minutes(site_wait)}.", 429)
     try:
-        return jsonify({"image": call_edit(photo, hero_prompt(), "1536x1024", PAGE_QUALITY)})  # the sheet every page copies
+        image = call_edit(photo, hero_prompt(), "1536x1024", PAGE_QUALITY)  # the sheet every page copies
     except Exception as e:
+        books_per_ip.refund(ip)   # a failed attempt doesn't use up a book
+        books_site.refund("all")
         return api_error(e)
+    return jsonify({"image": image, "books_left": left})
 
 
 @app.post("/api/page")

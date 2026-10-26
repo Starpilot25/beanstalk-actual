@@ -33,6 +33,11 @@ CAST_SHEET = ("The reference image is the cast sheet for this book. Draw every c
               "this scene exactly as they look on the sheet - same face, build, colors and clothes - and "
               "draw only the characters this scene names.")
 
+# Hands are the most common failure (extra or merged fingers). Same sentence in every call,
+# worded as what we want; each page also keeps its hand poses simple.
+HANDS = ("Every hand is anatomically correct: one thumb and four fingers, natural proportions, "
+         "fingers clearly separated.")
+
 # Where the story text goes, and how the picture keeps that area calm.
 # The image model is never asked to draw any words; the PDF layer adds them.
 ZONES = {
@@ -55,6 +60,7 @@ PAGES = [
         "shot": ("Jack and his mother stand toward the back of the room, shown full-length from head to toe with both feet planted on the floorboards. Jack shows "
                  "his full face toward the viewer, warmly front-lit, his eyes turned to his mother. Warm "
                  "daylight palette. The floor in front of them is plain, bare wooden floorboards."),
+        "hands": "Jack's hands rest at his sides; his mother's hand rests flat on his shoulder.",
         "mood": ("Mood: worried and a little sad. Jack's brow is creased and his mouth turned slightly down; "
                  "his mother looks tired and anxious, one hand on his shoulder. Nobody is smiling."),
         "zone": "bottom",
@@ -69,6 +75,8 @@ PAGES = [
                   "palm with five shiny beans, each a different color. Jack holds Milky-White's rope."),
         "shot": ("Jack is in three-quarter view, face clearly visible, looking at the beans. Bright "
                  "midday palette. The top third is open pale-blue sky with a few soft clouds."),
+        "hands": ("The old man's open hand faces palm-up toward the viewer, large and clear, with the five "
+                  "beans resting in it; Jack's hand is closed around Milky-White's rope."),
         "mood": ("Mood: curious and tempted. Jack leans in, eyes wide with wonder at the beans, lips parted; "
                  "the old man wears a sly, knowing half-smile."),
         "zone": "top",
@@ -85,6 +93,7 @@ PAGES = [
         "shot": ("Jack is in the doorway, face clearly visible and lit by the warm light from inside. "
                  "Darker dusk palette of deep blues and purples, darker than daytime. The lower third is "
                  "dark, shadowed grass."),
+        "hands": "Jack's hands hold the edge of the door frame; his mother's arm swings out of the window.",
         "mood": ("Mood: anger and dismay. His mother's face is furious, mouth open mid-shout, as she flings "
                  "the beans; Jack looks stunned and crestfallen, shoulders slumped."),
         "zone": "bottom",

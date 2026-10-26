@@ -15,6 +15,9 @@ What still needs work in this build, most important first.
   testing.
 
 ## Pages and text
+- **Hands still sometimes have the wrong number of fingers.** Every page now describes correct hands and
+  uses simple hand poses, and "Change it" can repair hands on one page, but it isn't guaranteed. Page 2 (the old man's
+  open palm) is the riskiest.
 - **The text area isn't guaranteed to be calm.** The prompt asks for a quiet lower third / sky / dark grass,
   but nothing checks it. A busy floor or sky makes the words hard to read. Possible fix: measure how busy
   that strip is and warn the user to repaint.
