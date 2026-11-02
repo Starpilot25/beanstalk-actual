@@ -1,43 +1,94 @@
 """
-Jack and the Beanstalk storybook — MCON 368. First 3 pages + About Me, exported as one PDF.
+Jack and the Beanstalk storybook — MCON 368.
 
-Flow (each button click = exactly ONE API call; no loops or retries around any call):
-  POST /api/hero    photo                       -> "Jack": a full-body character reference in the book style
-  POST /api/page    hero + page number          -> one illustrated page (art only, no words)
-  POST /api/adjust  an image + what to change   -> the same image with one thing changed (edit endpoint)
-  POST /api/pdf     pages + About Me details    -> JackAndTheBeanstalk.pdf (no API call)
+Sign in with Google -> your books are saved and come back on every visit.
 
-The API key is read from the OPENAI_API_KEY environment variable only.
+  POST /api/books                    photo + About Me     -> new book with its cast sheet   (1 image call)
+  POST /api/books/<id>/pages/<n>     -                    -> paint page n                   (1 image call)
+  POST /api/books/<id>/adjust        target + change      -> edit the sheet or one page     (1 image call)
+  PATCH /api/books/<id>              About Me details     -> save details                   (no call)
+  GET  /api/books/<id>/pdf           -                    -> JackAndTheBeanstalk.pdf        (no call)
+
+"Paint all pages" sends the page requests at the same time; the server handles them in parallel
+threads (gunicorn --threads), one image call per request, no retries.
+
+Secrets (OPENAI_API_KEY, GOOGLE_CLIENT_ID/SECRET, SECRET_KEY, DATABASE_URL) come from the environment only.
 """
 
 import base64
+import hmac
 import io
+import logging
 import os
+import random
 import threading
 import time
 from collections import defaultdict, deque
+from functools import wraps
 
-from flask import Flask, Response, jsonify, render_template, request
+from authlib.integrations.flask_client import OAuth
+from flask import Flask, Response, abort, jsonify, redirect, render_template, request, session, url_for
 from openai import OpenAI
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageOps
+from werkzeug.middleware.proxy_fix import ProxyFix
 
+import db
 from book_pdf import build_pdf
 from storyboard import CAST, CAST_SHEET, HANDS, PAGES, PAGES_BY_N, STYLE, ZONES
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger("beanstalk")
+
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
-# Flask 3.1+ caps non-file form fields at 500 KB; images travel as base64 text fields.
-app.config["MAX_FORM_MEMORY_SIZE"] = 40 * 1024 * 1024
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)   # Render terminates HTTPS
+app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)        # set SECRET_KEY on Render!
+app.config.update(
+    MAX_CONTENT_LENGTH=20 * 1024 * 1024,
+    MAX_FORM_MEMORY_SIZE=20 * 1024 * 1024,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER")),
+    PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30,                       # stay signed in 30 days
+)
 
-# Model and quality are set in Render's Environment, so switching needs no code change.
-#   IMAGE_MODEL=gpt-image-2.5-flare  default: far better pages (tested Oct 25), ~5c per page at medium
-#   IMAGE_MODEL=gpt-image-1-mini     cheapest, but low quality gave waxy, broken scenes
+# Image model. IMAGE_MODEL=fake draws free placeholder pictures for testing (no OpenAI calls).
 IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-2.5-flare")
-QUALITY = os.environ.get("IMAGE_QUALITY", "low")              # Jack + "change it" edits
-PAGE_QUALITY = os.environ.get("PAGE_QUALITY", "medium")      # the story pages
-# input_fidelity is only sent to models documented to accept it; others reject unknown params.
+PAGE_QUALITY = os.environ.get("PAGE_QUALITY", "medium")
 FIDELITY_MODELS = {"gpt-image-1", "gpt-image-1.5"}
+FAKE = IMAGE_MODEL == "fake"
 
+# ---------------------------------------------------------------------------
+# Google sign-in (OpenID Connect)
+# ---------------------------------------------------------------------------
+oauth = OAuth(app)
+oauth.register(
+    "google",
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+DEV_LOGIN = os.environ.get("DEV_LOGIN") == "1" and not os.environ.get("RENDER")  # local testing only
+# Optional shared password sign-in (e.g. for the professor or testers without Google).
+# The password lives only in the environment, never in the public repo. Unset = feature off.
+LOGIN_PASSWORD = os.environ.get("LOGIN_PASSWORD", "")
+
+
+def current_user_id():
+    return session.get("uid")
+
+
+def login_required(fn):
+    @wraps(fn)
+    def wrapper(*a, **kw):
+        if not current_user_id():
+            return error("Please sign in with Google first.", 401)
+        return fn(*a, **kw)
+    return wrapper
+
+
+# ---------------------------------------------------------------------------
+# OpenAI
+# ---------------------------------------------------------------------------
 _client = None
 
 
@@ -47,18 +98,14 @@ def client():
         key = os.environ.get("OPENAI_API_KEY")
         if not key:
             raise RuntimeError("OPENAI_API_KEY is not set on the server.")
-        # max_retries=0: the SDK's automatic retries would be a hidden loop around the call.
-        _client = OpenAI(api_key=key, max_retries=0, timeout=170)
+        _client = OpenAI(api_key=key, max_retries=0, timeout=170)   # no hidden retry loop
     return _client
 
 
 # ---------------------------------------------------------------------------
 # Prompts. STYLE and CAST come from storyboard.py and are identical in every call.
-# Words we don't want in the picture are never named (naming them makes the model draw them).
 # ---------------------------------------------------------------------------
 NO_WORDS = "Pure illustration with no lettering anywhere."
-# Same sentence in every page call: ties the look to the 3D Jack reference so pages don't drift
-# into a flat, painted storybook style.
 MATCH_RENDER = ("A full-bleed frame from a 3D computer-animated film, rendered exactly like the reference "
                 "image: the same 3D modeling, materials, shading and lighting, with soft rounded 3D forms.")
 
@@ -102,7 +149,7 @@ def adjust_prompt(change, is_page):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Image generation (one call, logged)
 # ---------------------------------------------------------------------------
 def to_png(raw: bytes, name: str, max_side=1024):
     try:
@@ -115,42 +162,62 @@ def to_png(raw: bytes, name: str, max_side=1024):
     return (name, buf.getvalue(), "image/png")
 
 
-def b64_field(name, label):
-    raw = request.form.get(name, "")
-    if not raw:
-        raise ValueError(f"Missing {label}.")
+def fake_image(label):
+    """Free placeholder for testing: a labeled picture after a short, realistic-feeling wait."""
+    time.sleep(float(os.environ.get("FAKE_DELAY", "4")) * random.uniform(0.6, 1.4))
+    rng = random.Random(label)
+    im = Image.new("RGB", (1536, 1024), tuple(rng.randint(90, 200) for _ in range(3)))
+    d = ImageDraw.Draw(im)
+    d.ellipse((620, 260, 916, 560), fill=(232, 196, 160))
+    d.rectangle((690, 560, 846, 860), fill=(110, 80, 50))
+    d.text((40, 40), f"TEST IMAGE - {label}", fill=(255, 255, 255))
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=85)
+    return buf.getvalue()
+
+
+def generate(images, prompt, *, uid, book_id, action, target, label):
+    """Exactly one image call (or a free fake). Returns JPEG bytes. Logs to stdout and the events table."""
+    t0 = time.time()
     try:
-        return base64.b64decode(raw, validate=True)
-    except Exception:
-        raise ValueError(f"The {label} was corrupted; make it again.")
+        if FAKE:
+            out = fake_image(label)
+        else:
+            extra = {"input_fidelity": "high"} if IMAGE_MODEL in FIDELITY_MODELS else {}
+            r = client().images.edit(model=IMAGE_MODEL, image=images, prompt=prompt, size="1536x1024",
+                                     quality=PAGE_QUALITY, n=1, output_format="jpeg",
+                                     output_compression=90, **extra)
+            out = base64.b64decode(r.data[0].b64_json)
+    except Exception as e:
+        ms = int((time.time() - t0) * 1000)
+        log.warning("generate FAIL user=%s book=%s action=%s target=%s model=%s ms=%d err=%s",
+                    uid, book_id, action, target, IMAGE_MODEL, ms, str(e)[:200])
+        db.log_event(user_id=uid, book_id=book_id, action=action, target=str(target), model=IMAGE_MODEL,
+                     ms=ms, ok=0, detail=str(e)[:300])
+        raise
+    ms = int((time.time() - t0) * 1000)
+    log.info("generate OK user=%s book=%s action=%s target=%s model=%s ms=%d bytes=%d",
+             uid, book_id, action, target, IMAGE_MODEL, ms, len(out))
+    db.log_event(user_id=uid, book_id=book_id, action=action, target=str(target), model=IMAGE_MODEL,
+                 ms=ms, ok=1, detail=f"{len(out)} bytes")
+    return out
 
 
-def call_edit(images, prompt, size, quality=None):
-    """Exactly one image-edit call. No retries, no loops."""
-    extra = {"input_fidelity": "high"} if IMAGE_MODEL in FIDELITY_MODELS else {}
-    result = client().images.edit(
-        model=IMAGE_MODEL, image=images, prompt=prompt, size=size, quality=quality or QUALITY, n=1,
-        output_format="jpeg", output_compression=90, **extra,
-    )
-    return result.data[0].b64_json
-
-
+# ---------------------------------------------------------------------------
+# Limits (per signed-in user now, not per IP)
+# ---------------------------------------------------------------------------
 class Limiter:
     """Sliding one-hour window, kept in memory (resets when Render restarts the app)."""
 
     def __init__(self, limit):
         self.limit, self.hits, self.lock = limit, defaultdict(deque), threading.Lock()
 
-    def _trim(self, q, now):
-        while q and now - q[0] > 3600:
-            q.popleft()
-
     def take(self, key):
-        """Use one slot. Returns (allowed, slots_left, seconds_until_next_slot)."""
         now = time.time()
         with self.lock:
             q = self.hits[key]
-            self._trim(q, now)
+            while q and now - q[0] > 3600:
+                q.popleft()
             if len(q) >= self.limit:
                 return False, 0, int(3600 - (now - q[0])) + 1
             q.append(now)
@@ -162,20 +229,11 @@ class Limiter:
                 self.hits[key].pop()
 
 
-requests_per_ip = Limiter(int(os.environ.get("HOURLY_LIMIT", "20")))           # any API call
-edits_per_ip = Limiter(int(os.environ.get("EDITS_PER_HOUR", "5")))             # "Change it" per person
-books_per_ip = Limiter(int(os.environ.get("BOOKS_PER_HOUR", "3")))              # cast sheets per person
-books_site = Limiter(int(os.environ.get("SITE_BOOKS_PER_HOUR", "20")))          # cast sheets, everyone
-
-
-def client_ip():
-    # Render's proxy appends the real client address as the LAST entry; earlier entries can be faked.
-    fwd = request.headers.get("X-Forwarded-For", "")
-    return (fwd.split(",")[-1].strip() if fwd else request.remote_addr) or "?"
-
-
-def rate_limited():
-    return not requests_per_ip.take(client_ip())[0]
+pictures_per_user = Limiter(int(os.environ.get("HOURLY_LIMIT", "20")))
+edits_per_user = Limiter(int(os.environ.get("EDITS_PER_HOUR", "5")))
+books_per_user = Limiter(int(os.environ.get("BOOKS_PER_HOUR", "3")))
+books_site = Limiter(int(os.environ.get("SITE_BOOKS_PER_HOUR", "20")))
+failed_logins = Limiter(10)   # wrong passwords per address per hour
 
 
 def minutes(sec):
@@ -188,7 +246,6 @@ def error(msg, code=400):
 
 
 def api_error(e):
-    app.logger.exception("API call failed")
     msg = getattr(e, "message", None) or str(e)
     low = msg.lower()
     if "safety" in low or "moderation" in low:
@@ -198,12 +255,38 @@ def api_error(e):
     return error(f"Generation failed: {msg}", 502)
 
 
+def take_picture_slot(uid):
+    ok, _, wait = pictures_per_user.take(uid)
+    return None if ok else error(f"You've reached {pictures_per_user.limit} pictures this hour. "
+                                 f"Try again in about {minutes(wait)}.", 429)
+
+
+def clean_details(src):
+    return {
+        "child_name": " ".join(str(src.get("child_name", "")).split())[:40],
+        "age": " ".join(str(src.get("age", "")).split())[:20],
+        "likes": str(src.get("likes", "")).strip()[:300],
+        "about": str(src.get("about", "")).strip()[:600],
+    }
+
+
 # ---------------------------------------------------------------------------
-# Routes
+# Pages
 # ---------------------------------------------------------------------------
 @app.get("/")
 def index():
-    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL, books_per_hour=books_per_ip.limit, edits_per_hour=edits_per_ip.limit)
+    uid = current_user_id()
+    user = db.get_user(uid) if uid else None
+    if uid and not user:          # stale cookie (e.g. database was reset)
+        session.clear()
+    return render_template("index.html", pages=PAGES, model=IMAGE_MODEL, user=user, fake=FAKE,
+                           dev_login=DEV_LOGIN, password_login=bool(LOGIN_PASSWORD), books_per_hour=books_per_user.limit,
+                           edits_per_hour=edits_per_user.limit)
+
+
+@app.get("/privacy")
+def privacy():
+    return render_template("privacy.html", updated="November 2, 2026", contact=os.environ.get("CONTACT_EMAIL", ""))
 
 
 @app.get("/healthz")
@@ -211,10 +294,92 @@ def health():
     return "ok"
 
 
-@app.post("/api/hero")
-def hero():
-    if rate_limited():
-        return error(f"You've reached {requests_per_ip.limit} pictures this hour. Try again later.", 429)
+@app.get("/login")
+def login():
+    if DEV_LOGIN and request.args.get("dev"):
+        uid = db.upsert_user("dev-" + request.args["dev"], f"{request.args['dev']}@example.com",
+                             request.args["dev"].title(), None)
+        session.permanent = True
+        session["uid"] = uid
+        return redirect(url_for("index"))
+    try:
+        return oauth.google.authorize_redirect(url_for("auth_callback", _external=True))
+    except Exception as e:   # Google unreachable or credentials missing
+        log.warning("login start FAIL err=%s", str(e)[:200])
+        return redirect(url_for("index", login="failed"))
+
+
+@app.post("/login/password")
+def login_password():
+    if not LOGIN_PASSWORD:
+        abort(404)
+    ip = (request.headers.get("X-Forwarded-For", "").split(",")[-1].strip() or request.remote_addr or "?")
+    name = " ".join(str(request.form.get("name", "")).split())[:40]
+    pw = str(request.form.get("password", ""))
+    if not failed_logins.take(ip)[0]:
+        return redirect(url_for("index", login="locked"))
+    if len(name) < 2 or not hmac.compare_digest(pw.encode(), LOGIN_PASSWORD.encode()):
+        log.warning("password login FAIL ip=%s name=%s", ip, name)
+        return redirect(url_for("index", login="badpw"))
+    failed_logins.refund(ip)              # only failed attempts count toward the lockout
+    uid = db.upsert_user("pw:" + name.lower(), name, name, None)
+    session.permanent = True
+    session["uid"] = uid
+    log.info("password login OK user=%s name=%s", uid, name)
+    db.log_event(user_id=uid, action="login", ok=1, detail=f"password:{name}")
+    return redirect(url_for("index"))
+
+
+@app.get("/auth/callback")
+def auth_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+        info = token.get("userinfo") or oauth.google.userinfo()
+    except Exception as e:
+        log.warning("login FAIL err=%s", e)
+        return redirect(url_for("index", login="failed"))
+    uid = db.upsert_user(info["sub"], info.get("email", ""), info.get("name", ""), info.get("picture"))
+    session.permanent = True
+    session["uid"] = uid
+    log.info("login OK user=%s email=%s", uid, info.get("email"))
+    db.log_event(user_id=uid, action="login", ok=1, detail=info.get("email", "")[:300])
+    return redirect(url_for("index"))
+
+
+@app.get("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+
+# ---------------------------------------------------------------------------
+# Books API
+# ---------------------------------------------------------------------------
+@app.get("/api/books")
+@login_required
+def books_list():
+    out = []
+    for b in db.list_books(current_user_id()):
+        out.append({"id": b["id"], "child_name": b["child_name"], "pages": b["page_count"],
+                    "updated": b["updated_at"].isoformat() if b["updated_at"] else None})
+    return jsonify(out)
+
+
+@app.get("/api/books/<int:book_id>")
+@login_required
+def book_get(book_id):
+    b = db.get_book(current_user_id(), book_id)
+    if not b:
+        return error("Book not found.", 404)
+    b["updated_at"] = b["updated_at"].isoformat() if b["updated_at"] else None
+    return jsonify(b)
+
+
+@app.post("/api/books")
+@login_required
+def book_create():
+    """Upload a photo -> make the cast sheet -> a new saved book."""
+    uid = current_user_id()
     f = request.files.get("photo")
     if not f or not f.filename:
         return error("Please upload or take a photo.")
@@ -222,98 +387,144 @@ def hero():
         photo = to_png(f.read(), "photo.png")
     except ValueError as e:
         return error(str(e))
-    # Each cast sheet starts a new book, so this is where books are counted.
-    ip = client_ip()
-    ok, left, wait = books_per_ip.take(ip)
+    if (blocked := take_picture_slot(uid)):
+        return blocked
+    ok, left, wait = books_per_user.take(uid)
     if not ok:
-        return error(f"You've made {books_per_ip.limit} books this hour. You can start another in about {minutes(wait)}.", 429)
+        pictures_per_user.refund(uid)
+        return error(f"You've made {books_per_user.limit} books this hour. You can start another in about {minutes(wait)}.", 429)
     site_ok, _, site_wait = books_site.take("all")
     if not site_ok:
-        books_per_ip.refund(ip)
+        books_per_user.refund(uid)
+        pictures_per_user.refund(uid)
         return error(f"The site has hit its limit of {books_site.limit} books this hour. Try again in about {minutes(site_wait)}.", 429)
     try:
-        image = call_edit(photo, hero_prompt(), "1536x1024", PAGE_QUALITY)  # the sheet every page copies
+        sheet = generate(photo, hero_prompt(), uid=uid, book_id=None, action="sheet", target="sheet",
+                         label="cast sheet")
     except Exception as e:
-        books_per_ip.refund(ip)   # a failed attempt doesn't use up a book
+        books_per_user.refund(uid)
         books_site.refund("all")
+        pictures_per_user.refund(uid)
         return api_error(e)
-    return jsonify({"image": image, "books_left": left})
+    book_id = db.create_book(uid, sheet, clean_details(request.form))
+    return jsonify({"id": book_id, "books_left": left})
 
 
-@app.post("/api/page")
-def page():
-    if rate_limited():
-        return error(f"You've reached {requests_per_ip.limit} pictures this hour. Try again later.", 429)
+@app.patch("/api/books/<int:book_id>")
+@login_required
+def book_update(book_id):
+    if not db.own_book(current_user_id(), book_id):
+        return error("Book not found.", 404)
+    db.update_details(current_user_id(), book_id, clean_details(request.get_json(silent=True) or {}))
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/books/<int:book_id>")
+@login_required
+def book_delete(book_id):
+    db.delete_book(current_user_id(), book_id)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/books/<int:book_id>/pages/<int:n>")
+@login_required
+def page_paint(book_id, n):
+    uid = current_user_id()
+    p = PAGES_BY_N.get(n)
+    sheet = db.get_image(uid, book_id, "sheet")
+    if not p or sheet is None:
+        return error("Book or page not found.", 404)
+    if (blocked := take_picture_slot(uid)):
+        return blocked
     try:
-        p = PAGES_BY_N.get(int(request.form.get("n", 0)))
-        if not p:
-            raise ValueError("Unknown page.")
-        hero_ref = to_png(b64_field("hero", "Jack reference"), "jack.png")
-    except ValueError as e:
-        return error(str(e))
-    try:
-        # One reference image (Jack) + the same style and cast strings on every page.
-        return jsonify({"image": call_edit(hero_ref, page_prompt(p), "1536x1024", PAGE_QUALITY)})
+        img = generate(to_png(sheet, "sheet.png"), page_prompt(p), uid=uid, book_id=book_id, action="page",
+                       target=n, label=f"page {n}: {p['title']}")
     except Exception as e:
+        pictures_per_user.refund(uid)
         return api_error(e)
+    db.save_page(uid, book_id, n, img)
+    return jsonify({"ok": True, "n": n})
 
 
-@app.post("/api/adjust")
-def adjust():
-    if rate_limited():
-        return error(f"You've reached {requests_per_ip.limit} pictures this hour. Try again later.", 429)
-    try:
-        change = " ".join(str(request.form.get("change", "")).split())[:240].replace('"', "'")
-        if not change:
-            raise ValueError("Say what to change, like “make the cow whiter”.")
-        target = request.form.get("target", "")
-        is_page = target != "hero"
-        if is_page and int(target or 0) not in PAGES_BY_N:
-            raise ValueError("Unknown page.")
-        image = to_png(b64_field("image", "picture"), "image.png", max_side=1536)
-        hero_ref = to_png(b64_field("hero", "Jack reference"), "jack.png")
-    except ValueError as e:
-        return error(str(e))
-    size = "1536x1024"  # pages and the Jack sheet are both landscape
-    ip = client_ip()
-    ok, left, wait = edits_per_ip.take(ip)
-    if not ok:
-        return error(f"You've used your {edits_per_ip.limit} changes this hour. You can make another in about "
-                     f"{minutes(wait)}, or repaint the page instead.", 429)
-    try:
-        image_out = call_edit([image, hero_ref], adjust_prompt(change, is_page), size, PAGE_QUALITY)
-    except Exception as e:
-        edits_per_ip.refund(ip)   # a failed attempt doesn't use up a change
-        return api_error(e)
-    return jsonify({"image": image_out, "edits_left": left})
-
-
-@app.post("/api/pdf")
-def pdf():
+@app.post("/api/books/<int:book_id>/adjust")
+@login_required
+def adjust(book_id):
+    uid = current_user_id()
     data = request.get_json(silent=True) or {}
-    name = " ".join(str(data.get("name", "")).split())[:40]
-    if not name:
-        return error("Add the child's name for the About Me page.")
-    about = {
-        "age": " ".join(str(data.get("age", "")).split())[:20],
-        "likes": str(data.get("likes", "")).strip()[:300],
-        "about": str(data.get("about", "")).strip()[:600],
-    }
+    change = " ".join(str(data.get("change", "")).split())[:240].replace('"', "'")
+    target = str(data.get("target", ""))
+    if not change:
+        return error("Say what to change, like “make the cow whiter”.")
+    is_page = target != "sheet"
+    if is_page and (not target.isdigit() or int(target) not in PAGES_BY_N):
+        return error("Unknown page.")
+    current = db.get_image(uid, book_id, target)
+    sheet = db.get_image(uid, book_id, "sheet")
+    if current is None or sheet is None:
+        return error("Make that picture first.", 404)
+    ok, left, wait = edits_per_user.take(uid)
+    if not ok:
+        return error(f"You've used your {edits_per_user.limit} changes this hour. You can make another in about "
+                     f"{minutes(wait)}, or repaint the page instead.", 429)
+    if (blocked := take_picture_slot(uid)):
+        edits_per_user.refund(uid)
+        return blocked
     try:
-        images = {}
-        for p in PAGES:
-            raw = data.get("pages", {}).get(str(p["n"]))
-            if not raw:
-                raise ValueError(f"Page {p['n']} hasn't been made yet.")
-            images[p["n"]] = base64.b64decode(raw, validate=True)
-        hero_img = base64.b64decode(data.get("hero", ""), validate=True) if data.get("hero") else None
-    except ValueError as e:
-        return error(str(e))
-    except Exception:
-        return error("A page image was corrupted; make it again.")
-    pdf_bytes = build_pdf(PAGES, images, name, about, hero_img)
-    return Response(pdf_bytes, mimetype="application/pdf",
+        img = generate([to_png(current, "image.png", 1536), to_png(sheet, "sheet.png")],
+                       adjust_prompt(change, is_page), uid=uid, book_id=book_id, action="adjust",
+                       target=target, label=f"{target} changed")
+    except Exception as e:
+        edits_per_user.refund(uid)
+        pictures_per_user.refund(uid)
+        return api_error(e)
+    if is_page:
+        db.save_page(uid, book_id, int(target), img)
+    else:
+        db.set_cast_sheet(uid, book_id, img)
+    return jsonify({"ok": True, "edits_left": left})
+
+
+@app.get("/img/<int:book_id>/<target>")
+@login_required
+def image(book_id, target):
+    if target != "sheet" and not target.isdigit():
+        abort(404)
+    data = db.get_image(current_user_id(), book_id, target)
+    if data is None:
+        abort(404)
+    return Response(data, mimetype="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+
+@app.get("/api/books/<int:book_id>/pdf")
+@login_required
+def pdf(book_id):
+    uid = current_user_id()
+    b = db.get_book(uid, book_id)
+    if not b:
+        return error("Book not found.", 404)
+    if not b["child_name"]:
+        return error("Add the child's name for the About Me page.")
+    missing = [p["n"] for p in PAGES if p["n"] not in b["pages"]]
+    if missing:
+        return error(f"Paint page {missing[0]} first.")
+    images = {p["n"]: db.get_image(uid, book_id, p["n"]) for p in PAGES}
+    t0 = time.time()
+    data = build_pdf(PAGES, images, b["child_name"], {k: b[k] for k in ("age", "likes", "about")},
+                     db.get_image(uid, book_id, "sheet"))
+    log.info("pdf OK user=%s book=%s ms=%d bytes=%d", uid, book_id, (time.time() - t0) * 1000, len(data))
+    db.log_event(user_id=uid, book_id=book_id, action="pdf", ok=1, ms=int((time.time() - t0) * 1000))
+    return Response(data, mimetype="application/pdf",
                     headers={"Content-Disposition": 'attachment; filename="JackAndTheBeanstalk.pdf"'})
+
+
+@app.get("/api/activity")
+@login_required
+def activity():
+    """Your own recent generation log (for checking that logging works)."""
+    rows = db.recent_events(current_user_id())
+    for r in rows:
+        r["at"] = r["at"].isoformat() if r["at"] else None
+    return jsonify(rows)
 
 
 @app.errorhandler(413)
@@ -322,4 +533,4 @@ def too_big(_):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=int(os.environ.get("PORT", 5000)))
+    app.run(debug=True, port=int(os.environ.get("PORT", 5000)), threaded=True)

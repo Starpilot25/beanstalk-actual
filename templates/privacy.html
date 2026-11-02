@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy · Jack and the Beanstalk</title>
+<style>
+  :root{--sky:#d9eef6;--ink:#17251b;--ink-soft:#4c5d51;--stalk-dark:#174428}
+  body{margin:0;background:var(--sky);color:var(--ink);font:16px/1.6 system-ui,sans-serif}
+  main{max-width:720px;margin:40px auto;padding:32px;background:#fff;border-radius:24px}
+  @media (max-width:760px){ main{margin:16px;padding:20px} }
+  h1{color:var(--stalk-dark);font-size:2rem;line-height:1.1;margin:0 0 6px}
+  h2{color:var(--stalk-dark);font-size:1.15rem;margin:26px 0 6px}
+  p,li{max-width:65ch}
+  .muted{color:var(--ink-soft)}
+  a{color:var(--stalk-dark)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy policy</h1>
+  <p class="muted">Jack and the Beanstalk, starring your child. A student project for MCON 368. Last updated {{ updated }}.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><b>Your account:</b> if you sign in with Google, your name, email address and profile picture, which Google shares with us. If you sign in with the class password, the name you type.</li>
+    <li><b>Your books:</b> the child's name, age, likes and "about me" text you enter, and the pictures the app generates (the cast sheet and story pages).</li>
+    <li><b>A usage log:</b> when pictures are made, how long they took and whether they worked, so we can fix problems and keep costs under control.</li>
+  </ul>
+
+  <h2>What we don't keep</h2>
+  <p>The photo you upload is used once to create the cast sheet and is <b>never stored</b>. We don't sell your data, show ads or use tracking cookies. The only cookie keeps you signed in.</p>
+
+  <h2>Who else sees it</h2>
+  <p>To make the pictures, your photo and the prompts are sent to <b>OpenAI's image API</b>, which processes them under <a href="https://openai.com/policies/privacy-policy/">OpenAI's privacy policy</a>. The app runs on <b>Render</b>, which hosts the server and database. Nobody else receives your data.</p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li><b>Delete a book</b> at any time with the "Delete this book" button. Its pictures and details are removed from our database.</li>
+    <li>To have your whole account removed, contact us{% if contact %} at <a href="mailto:{{ contact }}">{{ contact }}</a>{% endif %}.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>This app is meant to be used by a parent or guardian making a book for their child. Please don't upload a photo of a child unless you're their parent or guardian or have their permission.</p>
+
+  <p style="margin-top:30px"><a href="/">Back to the app</a></p>
+</main>
+</body>
+</html>

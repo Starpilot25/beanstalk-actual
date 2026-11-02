@@ -18,6 +18,9 @@ What still needs work in this build, most important first.
 - **Hands still sometimes have the wrong number of fingers.** Every page now describes correct hands and
   uses simple hand poses, and "Change it" can repair hands on one page, but it isn't guaranteed. Page 2 (the old man's
   open palm) is the riskiest.
+- **The number of beans can still be wrong.** The story says five. Pages 2 and 3 now describe the same
+  five beans in five named colors (red, yellow, green, blue, purple), which helps a lot, but image models
+  still can't count reliably.
 - **The text area isn't guaranteed to be calm.** The prompt asks for a quiet lower third / sky / dark grass,
   but nothing checks it. A busy floor or sky makes the words hard to read. Possible fix: measure how busy
   that strip is and warn the user to repaint.
@@ -34,7 +37,12 @@ What still needs work in this build, most important first.
 - Each page is one click on purpose (no loops around the API). With 20 pages that's a lot of clicking,
   so I need a design that stays within the rule.
 
+## Cost and limits
+- **A book costs about 20¢** (`gpt-image-2.5-flare` at medium: the cast sheet plus 3 pages, ~5¢ each).
+  At 20 pages that's about $1 per book. `low` quality was much cheaper but looked smeared and waxy.
+- **The usage limits live in memory** (3 books, 5 changes and 20 pictures per person per hour; 20 books per hour
+  site-wide), so they reset whenever Render restarts the app, including after every deploy. A small database
+  would make them stick.
+
 ## Smaller things
-- The rate limit is kept in memory, so it resets whenever Render restarts the app.
 - The PDF has no alt text for the pictures.
-- Draft quality (`low`) keeps costs at about 1¢ per image, but the art is softer. Compare with `medium`.

@@ -116,50 +116,130 @@
 
   footer{max-width:1120px;margin:0 auto;padding:0 24px 40px calc(24px + var(--vine-w));color:var(--ink-soft);font-size:.86rem}
   @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+  /* account, library, progress */
+  .topbar{max-width:1120px;margin:0 auto;padding:16px 24px 0;display:flex;justify-content:flex-end;align-items:center;gap:12px;font-size:.92rem;color:var(--ink-soft)}
+  .topbar img{width:30px;height:30px;border-radius:50%}
+  .topbar a{color:var(--stalk-dark);font-weight:650}
+  .signin{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+  .gbtn{display:inline-flex;align-items:center;gap:12px;background:#fff;color:#1f1f1f;border:1px solid #747775;border-radius:999px;padding:10px 20px;font:600 1rem var(--ui);text-decoration:none}
+  .gbtn:hover{background:#f6f8f6}
+  .gbtn svg{width:20px;height:20px}
+  .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+  .bookcard{all:unset;cursor:pointer;display:block;border-radius:16px;overflow:hidden;background:#fff;border:2px solid var(--line)}
+  .bookcard:hover,.bookcard:focus-visible{border-color:var(--stalk)}
+  .bookcard.on{border-color:var(--bean)}
+  .bookcard .thumb{aspect-ratio:3/2;background:var(--leaf-pale) center/cover no-repeat}
+  .bookcard .meta{padding:8px 12px}
+  .bookcard b{display:block;font-size:.98rem}
+  .bookcard small{color:var(--ink-soft)}
+  .newcard{display:grid;place-items:center;min-height:150px;border-style:dashed;color:var(--stalk-dark);font-weight:700}
+  .prog{height:10px;border-radius:5px;background:var(--leaf-pale);overflow:hidden;margin-top:10px}
+  .prog i{display:block;height:100%;width:0;background:var(--leaf);border-radius:5px;transition:width .4s linear}
+  .prog.done i{background:var(--stalk)}
+  .prog.fail i{background:var(--err)}
+  .proglabel{display:flex;justify-content:space-between;font-size:.86rem;color:var(--ink-soft);margin-top:4px;font-variant-numeric:tabular-nums}
+  .allbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .allbar .prog{flex:1;min-width:200px;margin:0}
+  .saved{font-size:.85rem;color:var(--stalk)}
+  .pwform{display:flex;flex-direction:column;gap:8px;margin-top:10px;width:100%;max-width:560px}
+  .pwrow{display:flex;gap:8px;flex-wrap:wrap}
+  .pwrow input{flex:1;min-width:140px;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px}
 </style>
 </head>
 <body>
+<div class="topbar">
+  {% if user %}
+    {% if user.picture %}<img src="{{ user.picture }}" alt="" referrerpolicy="no-referrer">{% endif %}
+    <span>{{ user.email }}</span>
+    <a href="/logout">Sign out</a>
+  {% endif %}
+</div>
 <header class="hero">
   <h1>Jack and the Beanstalk, starring your child.</h1>
   <p>Upload one photo. Your child becomes Jack on every page, and the book downloads as a PDF.</p>
 </header>
 
 <main>
+{% if not user %}
+  <section class="step grown" data-step="0">
+    <div class="leaf"><span>✓</span></div>
+    <div class="panel signin">
+      <h2>Sign in to start your book</h2>
+      <p class="lede">Your books are saved to your account, so you can come back to them any time.</p>
+      <a class="gbtn" href="/login">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        Sign in with Google
+      </a>
+      {% if dev_login %}<a class="quiet" href="/login?dev=tester">Local test sign-in</a>{% endif %}
+      {% if password_login %}
+      <form class="pwform" method="post" action="/login/password">
+        <p class="note" style="margin:0">Or sign in with the class password:</p>
+        <div class="pwrow">
+          <input type="text" name="name" placeholder="Your name" aria-label="Your name" minlength="2" maxlength="40" required autocomplete="username">
+          <input type="password" name="password" placeholder="Password" aria-label="Password" required autocomplete="current-password">
+          <button class="quiet" type="submit">Sign in</button>
+        </div>
+        <p class="note" style="margin:0">Use the same name next time to get your books back.</p>
+      </form>
+      {% endif %}
+      {% set why = request.args.get('login') %}
+      {% if why == 'failed' %}<p class="status err">Sign-in didn't finish. Please try again.</p>
+      {% elif why == 'badpw' %}<p class="status err">That password isn't right, or the name is too short.</p>
+      {% elif why == 'locked' %}<p class="status err">Too many wrong passwords. Try again in an hour.</p>{% endif %}
+    </div>
+  </section>
+{% else %}
+  <!-- library -->
+  <section class="step grown" data-step="0" id="sec-0">
+    <div class="leaf"><span>★</span></div>
+    <div class="panel">
+      <h2>Your books</h2>
+      <p class="lede" id="shelfNote">Every book you make is saved here.</p>
+      <div class="shelf" id="shelf">
+        <button class="bookcard newcard" id="newBook" type="button">+ New book</button>
+      </div>
+    </div>
+  </section>
+
   <!-- 1 -->
   <section class="step" id="sec-1" data-step="1">
     <div class="leaf"><span>1</span></div>
     <div class="panel two">
       <div>
         <h2>Who is Jack?</h2>
-        <p class="lede">One clear photo of your child, facing the camera in good light.</p>
+        <p class="lede">One clear photo of your child, facing the camera in good light. The photo isn't saved.</p>
 
-        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo">
-          <svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 2C8 2 4 16 8 28s2 22 12 22 16-8 14-22S32 2 20 2z" fill="#e8a33d"/></svg>
-          <div><b>Drop a photo here, or click to choose one</b><small>JPG, PNG or WEBP</small></div>
-          <input id="file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <div id="photoInputs">
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo">
+            <svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 2C8 2 4 16 8 28s2 22 12 22 16-8 14-22S32 2 20 2z" fill="#e8a33d"/></svg>
+            <div><b>Drop a photo here, or click to choose one</b><small>JPG, PNG or WEBP</small></div>
+            <input id="file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          </div>
+          <div class="row"><button class="quiet" id="camBtn" type="button">Use my camera</button><button class="go" id="snapBtn" type="button" hidden>Take the photo</button></div>
         </div>
-        <div class="row"><button class="quiet" id="camBtn" type="button">Use my camera</button><button class="go" id="snapBtn" type="button" hidden>Take the photo</button></div>
 
         <div class="grid-name">
-          <div><label class="f" for="name">Child's name</label><input type="text" id="name" maxlength="40" autocomplete="off"></div>
+          <div><label class="f" for="child_name">Child's name</label><input type="text" id="child_name" maxlength="40" autocomplete="off"></div>
           <div><label class="f" for="age">Age <small>(optional)</small></label><input type="text" id="age" maxlength="20" autocomplete="off"></div>
         </div>
         <label class="f" for="likes">Things they love <small>(optional)</small></label>
         <input type="text" id="likes" maxlength="300" placeholder="Soccer, dinosaurs, pancakes">
         <label class="f" for="about">About them <small>(optional, for the last page)</small></label>
         <textarea id="about" rows="3" maxlength="600" placeholder="A few sentences in their own words, or yours."></textarea>
+        <span class="saved" id="savedNote" hidden>Saved</span>
 
-        <button class="go wide" id="heroBtn" disabled>Turn them into Jack</button>
-        <p class="note">Each new Jack starts a new book. Up to {{ books_per_hour }} books and {{ edits_per_hour }} changes per hour.</p>
+        <button class="go wide" id="heroBtn" disabled>Create Jack and the cast</button>
+        <div id="heroProg" hidden><div class="prog"><i></i></div><div class="proglabel"><span>Drawing the cast sheet</span><span class="t">0s</span></div></div>
         <div class="status" id="heroStatus"></div>
+        <p class="note">Up to {{ books_per_hour }} new books and {{ edits_per_hour }} changes per hour.</p>
         <div class="change" id="heroChange" hidden>
-          <input type="text" id="heroChangeText" maxlength="240" placeholder="Not quite right? e.g. “hair is curlier”, “face is rounder”" aria-label="What to change about Jack">
-          <button class="quiet" data-adjust="hero" type="button">Change it</button>
+          <input type="text" id="chgText-sheet" maxlength="240" placeholder="Not quite right? e.g. “hair is curlier”, “face is rounder”" aria-label="What to change on the cast sheet">
+          <button class="quiet" data-adjust="sheet" type="button">Change it</button>
         </div>
       </div>
       <div class="portraits">
         <figure><div class="frame tall" id="photoFrame">Photo</div><figcaption>Photo</figcaption></figure>
-        <figure><div class="frame wide" id="heroFrame">Jack</div><figcaption>The cast sheet: every page copies Jack, his mother, the cow and the old man from it</figcaption></figure>
+        <figure><div class="frame wide" id="heroFrame">Cast sheet</div><figcaption>The cast sheet: every page copies Jack, his mother, the cow and the old man from it</figcaption></figure>
       </div>
     </div>
   </section>
@@ -169,7 +249,12 @@
     <div class="leaf"><span>2</span></div>
     <div class="panel">
       <h2>Paint the pages</h2>
-      <p class="lede">Each page is painted from the same picture of Jack. The words are added by the book, not the painter, so they stay sharp.</p>
+      <p class="lede">All pages paint at the same time from the same cast sheet. Each has its own progress bar. The words are added by the book, not the painter, so they stay sharp.</p>
+      <div class="allbar">
+        <button class="go" id="allBtn" disabled>Paint all {{ pages|length }} pages</button>
+        <div class="prog" id="allProg" hidden><i></i></div>
+        <span class="status" id="allStatus" style="margin:0"></span>
+      </div>
       <div class="pages">
         {% for p in pages %}
         <figure class="bookpage" style="margin:0">
@@ -179,8 +264,9 @@
             <div class="words {{ p.zone }}">{{ p.text }}</div>
             <div class="placeholder" id="ph-{{ p.n }}">Page {{ p.n }} appears here</div>
           </div>
+          <div id="prog-{{ p.n }}" hidden><div class="prog"><i></i></div><div class="proglabel"><span class="what">Painting page {{ p.n }}</span><span class="t">0s</span></div></div>
           <div class="page-tools">
-            <button class="go pageBtn" data-n="{{ p.n }}" disabled>Paint page {{ p.n }}</button>
+            <button class="quiet pageBtn" data-n="{{ p.n }}" disabled>Paint page {{ p.n }}</button>
             <span class="status" id="st-{{ p.n }}"></span>
           </div>
           <div class="change" id="chg-{{ p.n }}" hidden>
@@ -202,40 +288,134 @@
         <p>All the pages in order, with an About Me page for <span id="nameEcho">your child</span> at the end.</p>
         <div class="status" id="pdfStatus"></div>
       </div>
-      <button class="go" id="pdfBtn" disabled>Download PDF</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="go" id="pdfBtn" disabled>Download PDF</button>
+        <button class="quiet" id="delBtn" type="button" hidden>Delete this book</button>
+      </div>
     </div>
   </section>
+{% endif %}
 </main>
-<footer>MCON 368. Pictures by OpenAI {{ model }}. Photos are used only to make the pictures and are never stored.</footer>
+<footer><a href="/privacy">Privacy policy</a> · MCON 368. Pictures by {{ "free test images (no OpenAI calls)" if fake else "OpenAI " ~ model }}. Photos are used only to make the pictures and are never stored.</footer>
 
+{% if user %}
 <script>
 const $ = id => document.getElementById(id);
 const PAGE_NUMS = [{% for p in pages %}{{ p.n }}{{ "," if not loop.last }}{% endfor %}];
-let photoFile = null, heroB64 = null, stream = null;
-const pages = {};   // n -> base64 jpeg
+const EST = {{ 6 if fake else 55 }};      // typical seconds per picture, for the progress bars
+const FIELDS = ["child_name","age","likes","about"];
+let photoFile = null, stream = null, book = null;   // book = {id, pages:[...], ...}
+const busy = {};                                    // target -> true while generating
 
-function steps(){
-  const done = PAGE_NUMS.every(n => pages[n]);
-  const n = done ? 3 : heroB64 ? 2 : photoFile ? 1 : 0;
-  document.querySelectorAll(".step").forEach(el => el.classList.toggle("grown", +el.dataset.step <= n));
-  document.querySelectorAll(".pageBtn").forEach(b => b.disabled = !heroB64);
-  $("pdfBtn").disabled = !done;
-}
+/* ---------- helpers ---------- */
 function setStatus(el, msg, isErr){ el.textContent = msg || ""; el.classList.toggle("err", !!isErr); }
-function busy(el, msg){
-  const t0 = Date.now();
-  el.innerHTML = `<div><div class="spin"></div>${msg}<span class="elapsed">0s</span></div>`;
-  const e = el.querySelector(".elapsed");
-  const id = setInterval(() => { if (!e.isConnected) return clearInterval(id); e.textContent = Math.round((Date.now()-t0)/1000)+"s"; }, 1000);
-}
-async function post(url, body, asJson){
-  const r = await fetch(url, asJson ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {method:"POST", body});
+async function api(url, opts = {}){
+  const r = await fetch(url, opts);
+  if (r.status === 401) { location.reload(); throw new Error("Please sign in again."); }
   if (r.ok && (r.headers.get("Content-Type")||"").includes("pdf")) return r.blob();
   let d; try { d = await r.json(); } catch { d = {error:`Server error (${r.status})`}; }
   if (!r.ok) throw new Error(d.error || `Request failed (${r.status})`);
   return d;
 }
-const src = b64 => "data:image/jpeg;base64," + b64;
+const imgUrl = (target) => `/img/${book.id}/${target}?v=${Date.now()}`;
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* One progress bar per picture. The image API doesn't report progress, so the bar is driven by
+   elapsed time against a typical duration, eases toward 95%, and jumps to 100% when the picture lands. */
+function startProgress(box){
+  box.hidden = false;
+  const bar = box.querySelector(".prog"), fill = bar.querySelector("i"), t = box.querySelector(".t");
+  bar.classList.remove("done","fail"); fill.style.width = "2%";
+  const t0 = Date.now();
+  const id = setInterval(() => {
+    const s = (Date.now() - t0) / 1000;
+    fill.style.width = (95 * (1 - Math.exp(-s / (EST * 0.6)))).toFixed(1) + "%";
+    if (t) t.textContent = Math.round(s) + "s";
+  }, 250);
+  return ok => { clearInterval(id); fill.style.width = ok ? "100%" : fill.style.width;
+                 bar.classList.add(ok ? "done" : "fail"); setTimeout(() => { if (ok) box.hidden = true; }, 900); };
+}
+
+function steps(){
+  const done = book && PAGE_NUMS.every(n => book.pages.includes(n));
+  const n = done ? 3 : book ? 2 : photoFile ? 1 : 0;
+  document.querySelectorAll(".step[data-step]").forEach(el => { if (+el.dataset.step > 0) el.classList.toggle("grown", +el.dataset.step <= n); });
+  const anyBusy = Object.values(busy).some(Boolean);
+  document.querySelectorAll(".pageBtn").forEach(b => b.disabled = !book || busy[b.dataset.n]);
+  $("allBtn").disabled = !book || anyBusy;
+  $("pdfBtn").disabled = !done || anyBusy;
+  $("heroBtn").disabled = !photoFile || busy.sheet;
+}
+
+/* ---------- library ---------- */
+async function loadShelf(selectId){
+  const list = await api("/api/books");
+  const shelf = $("shelf");
+  shelf.querySelectorAll(".bookcard:not(.newcard)").forEach(e => e.remove());
+  for (const b of list) {
+    const el = document.createElement("button");
+    el.type = "button"; el.className = "bookcard" + (book && book.id === b.id ? " on" : "");
+    el.innerHTML = `<div class="thumb" style="background-image:url('/img/${b.id}/sheet')"></div>
+      <div class="meta"><b>${esc(b.child_name || "Untitled book")}</b><small>${b.pages} of ${PAGE_NUMS.length} pages · ${new Date(b.updated).toLocaleDateString()}</small></div>`;
+    el.addEventListener("click", () => openBook(b.id));
+    shelf.appendChild(el);
+  }
+  $("shelfNote").textContent = list.length ? "Pick up where you left off, or start a new book." : "You don't have any books yet. Start one below.";
+  if (selectId) await openBook(selectId);
+  else if (!book && list.length) await openBook(list[0].id);
+}
+
+async function openBook(id){
+  book = await api(`/api/books/${id}`);
+  for (const f of FIELDS) $(f).value = book[f] || "";
+  $("nameEcho").textContent = book.child_name || "your child";
+  $("heroFrame").innerHTML = `<img alt="Cast sheet" src="${imgUrl("sheet")}">`;
+  $("heroChange").hidden = false;
+  for (const n of PAGE_NUMS) showPage(n, book.pages.includes(n));
+  document.querySelectorAll(".bookcard").forEach(c => c.classList.remove("on"));
+  [...document.querySelectorAll(".bookcard:not(.newcard)")].find(c => c.querySelector(".thumb").style.backgroundImage.includes(`/img/${id}/`))?.classList.add("on");
+  $("delBtn").hidden = false;
+  steps();
+}
+
+$("delBtn").addEventListener("click", async () => {
+  if (!book) return;
+  const name = book.child_name || "this book";
+  if (!confirm(`Delete ${name}? Its pictures and details will be removed for good.`)) return;
+  try {
+    await api(`/api/books/${book.id}`, {method:"DELETE"});
+    book = null; $("delBtn").hidden = true;
+    $("newBook").click();
+    setStatus($("heroStatus"), "Book deleted.");
+    await loadShelf();
+  } catch (err) { setStatus($("pdfStatus"), err.message, true); }
+});
+
+$("newBook").addEventListener("click", () => {
+  book = null; photoFile = null; $("delBtn").hidden = true;
+  for (const f of FIELDS) $(f).value = "";
+  $("photoFrame").textContent = "Photo"; $("heroFrame").textContent = "Cast sheet"; $("heroChange").hidden = true;
+  for (const n of PAGE_NUMS) showPage(n, false);
+  document.querySelectorAll(".bookcard").forEach(c => c.classList.remove("on"));
+  setStatus($("heroStatus"), "New book: add a photo to begin.");
+  $("sec-1").scrollIntoView({behavior:"smooth"});
+  steps();
+});
+
+/* ---------- About Me details: saved automatically ---------- */
+let saveTimer = null;
+function details(){ const d = {}; for (const f of FIELDS) d[f] = $(f).value; return d; }
+async function saveDetails(){
+  clearTimeout(saveTimer); saveTimer = null;
+  if (!book) return;
+  await api(`/api/books/${book.id}`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(details())});
+  Object.assign(book, details());
+  $("savedNote").hidden = false; setTimeout(() => $("savedNote").hidden = true, 1500);
+}
+for (const f of FIELDS) $(f).addEventListener("input", () => {
+  if (f === "child_name") $("nameEcho").textContent = $(f).value.trim() || "your child";
+  clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDetails().catch(()=>{}), 800);
+});
 
 /* ---------- photo ---------- */
 function shrink(file, max = 1024){
@@ -256,7 +436,8 @@ async function setPhoto(file){
   if (!file || !file.type.startsWith("image/")) return;
   photoFile = await shrink(file); stopCam();
   $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(photoFile)}">`;
-  $("heroBtn").disabled = false; steps();
+  setStatus($("heroStatus"), book ? "Creating Jack from this photo starts a new book; this one stays on your shelf." : "");
+  steps();
 }
 const drop = $("drop");
 drop.addEventListener("click", () => $("file").click());
@@ -281,77 +462,100 @@ $("snapBtn").addEventListener("click", () => {
   c.toBlob(b => setPhoto(new File([b], "camera.jpg", {type:"image/jpeg"})), "image/jpeg", .92);
 });
 function stopCam(){ if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $("snapBtn").hidden = true; $("camBtn").textContent = "Use my camera"; }
-$("name").addEventListener("input", () => $("nameEcho").textContent = $("name").value.trim() || "your child");
 
-/* ---------- Jack (one API call per click) ---------- */
+/* ---------- cast sheet: creates a new saved book (one API call) ---------- */
 $("heroBtn").addEventListener("click", async () => {
-  const btn = $("heroBtn"), st = $("heroStatus");
-  btn.disabled = true; setStatus(st, ""); busy($("heroFrame"), "Making Jack");
+  const st = $("heroStatus");
+  busy.sheet = true; steps(); setStatus(st, "");
+  const finish = startProgress($("heroProg"));
   const fd = new FormData(); fd.append("photo", photoFile);
+  for (const [k, v] of Object.entries(details())) fd.append(k, v);
   try {
-    const d = await post("/api/hero", fd);
-    heroB64 = d.image; $("heroFrame").innerHTML = `<img alt="Your child as Jack" src="${src(heroB64)}">`;
-    $("heroChange").hidden = false; btn.textContent = "Start Jack over";
-    const made = PAGE_NUMS.filter(n => pages[n]).length;
-    const left = d.books_left === 0 ? "That was your last new book this hour; you can still paint and change pages."
-               : `You can start ${d.books_left} more book${d.books_left === 1 ? "" : "s"} this hour.`;
-    setStatus(st, (made ? "Jack changed, so repaint the pages to match. " : "") + left);
-  } catch (err) { $("heroFrame").textContent = "Jack"; setStatus(st, err.message, true); }
-  finally { btn.disabled = false; steps(); }
+    const d = await api("/api/books", {method:"POST", body:fd});
+    finish(true);
+    photoFile = null;
+    setStatus(st, d.books_left === 0 ? "Saved to your books. That was your last new book this hour."
+                                     : `Saved to your books. You can start ${d.books_left} more this hour.`);
+    await loadShelf(d.id);
+  } catch (err) { finish(false); setStatus(st, err.message, true); }
+  finally { busy.sheet = false; steps(); }
 });
 
-/* ---------- pages (one API call per click) ---------- */
-function showPage(n){
+/* ---------- pages ---------- */
+function showPage(n, exists){
   const art = $("art-"+n);
-  art.querySelector("img")?.remove(); $("ph-"+n).hidden = true;
-  art.insertAdjacentHTML("afterbegin", `<img alt="Page ${n}" src="${src(pages[n])}">`);
+  art.querySelector("img")?.remove();
+  $("ph-"+n).hidden = exists;
+  if (exists) art.insertAdjacentHTML("afterbegin", `<img alt="Page ${n}" src="${imgUrl(n)}">`);
+  $("chg-"+n).hidden = !exists;
+  document.querySelector(`.pageBtn[data-n="${n}"]`).textContent = exists ? `Paint page ${n} again` : `Paint page ${n}`;
 }
-document.querySelectorAll(".pageBtn").forEach(btn => btn.addEventListener("click", async () => {
-  const n = btn.dataset.n, st = $("st-"+n), ph = $("ph-"+n);
-  btn.disabled = true; setStatus(st, "");
-  $("art-"+n).querySelector("img")?.remove(); ph.hidden = false;
-  const old = ph.innerHTML; busy(ph, `Painting page ${n}`);
-  const fd = new FormData(); fd.append("n", n); fd.append("hero", heroB64);
-  try {
-    const d = await post("/api/page", fd);
-    pages[n] = d.image; ph.innerHTML = old; showPage(n);
-    $("chg-"+n).hidden = false; btn.textContent = `Paint page ${n} again`;
-  } catch (err) { ph.innerHTML = old; if (pages[n]) showPage(n); setStatus(st, err.message, true); }
-  finally { btn.disabled = false; steps(); }
-}));
 
-/* ---------- change one thing (edit endpoint, one API call per click) ---------- */
+async function paint(n){
+  // One page = one request = one image call. Several of these run at once for "Paint all".
+  const st = $("st-"+n);
+  busy[n] = true; steps(); setStatus(st, "");
+  const finish = startProgress($("prog-"+n));
+  try {
+    await api(`/api/books/${book.id}/pages/${n}`, {method:"POST"});
+    finish(true);
+    if (!book.pages.includes(n)) book.pages.push(n);
+    showPage(n, true);
+    return true;
+  } catch (err) { finish(false); setStatus(st, err.message, true); return false; }
+  finally { busy[n] = false; steps(); }
+}
+document.querySelectorAll(".pageBtn").forEach(b => b.addEventListener("click", () => paint(+b.dataset.n)));
+
+$("allBtn").addEventListener("click", async () => {
+  const fill = $("allProg").querySelector("i"), st = $("allStatus");
+  $("allProg").hidden = false; fill.style.width = "0%";
+  let done = 0, ok = 0;
+  setStatus(st, `0 of ${PAGE_NUMS.length} pages painted`);
+  await Promise.all(PAGE_NUMS.map(n => paint(n).then(res => {
+    done++; ok += res ? 1 : 0;
+    fill.style.width = (100 * done / PAGE_NUMS.length) + "%";
+    setStatus(st, `${ok} of ${PAGE_NUMS.length} pages painted`);
+  })));
+  setStatus(st, ok === PAGE_NUMS.length ? "All pages painted and saved." : `${ok} of ${PAGE_NUMS.length} painted. Repaint the others below.`, ok !== PAGE_NUMS.length);
+  loadShelf().catch(()=>{});
+});
+
+/* ---------- change one thing (edit endpoint, one API call) ---------- */
 document.querySelectorAll("[data-adjust]").forEach(btn => btn.addEventListener("click", async () => {
-  const target = btn.dataset.adjust, isHero = target === "hero";
-  const input = isHero ? $("heroChangeText") : $("chgText-"+target);
-  const st = isHero ? $("heroStatus") : $("st-"+target);
+  const target = btn.dataset.adjust, isSheet = target === "sheet";
+  const input = $("chgText-"+target), st = isSheet ? $("heroStatus") : $("st-"+target);
   const change = input.value.trim();
   if (!change) { setStatus(st, "Type what to change first.", true); input.focus(); return; }
-  btn.disabled = true; setStatus(st, "Changing it…");
-  const fd = new FormData(); fd.append("target", target); fd.append("change", change);
-  fd.append("image", isHero ? heroB64 : pages[target]); fd.append("hero", heroB64);
+  btn.disabled = true; busy[target] = true; steps(); setStatus(st, "");
+  const finish = startProgress(isSheet ? $("heroProg") : $("prog-"+target));
   try {
-    const d = await post("/api/adjust", fd);
-    if (isHero) { heroB64 = d.image; $("heroFrame").innerHTML = `<img alt="Your child as Jack" src="${src(heroB64)}">`; }
-    else { pages[target] = d.image; showPage(target); }
-    input.value = ""; setStatus(st, d.edits_left === 0 ? "Changed. That was your last change this hour." : `Changed. ${d.edits_left} change${d.edits_left === 1 ? "" : "s"} left this hour.`);
-  } catch (err) { setStatus(st, err.message, true); }
-  finally { btn.disabled = false; }
+    const d = await api(`/api/books/${book.id}/adjust`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({target, change})});
+    finish(true);
+    if (isSheet) $("heroFrame").innerHTML = `<img alt="Cast sheet" src="${imgUrl("sheet")}">`; else showPage(+target, true);
+    input.value = "";
+    setStatus(st, d.edits_left === 0 ? "Changed. That was your last change this hour." : `Changed. ${d.edits_left} change${d.edits_left === 1 ? "" : "s"} left this hour.`);
+  } catch (err) { finish(false); setStatus(st, err.message, true); }
+  finally { btn.disabled = false; busy[target] = false; steps(); }
 }));
 
-/* ---------- PDF (no API call) ---------- */
+/* ---------- PDF (no API call; built on the server from your saved book) ---------- */
 $("pdfBtn").addEventListener("click", async () => {
-  const st = $("pdfStatus"), name = $("name").value.trim();
-  if (!name) { setStatus(st, "Add the child's name in step 1 first.", true); $("name").focus(); return; }
+  const st = $("pdfStatus");
+  if (!$("child_name").value.trim()) { setStatus(st, "Add the child's name in step 1 first.", true); $("child_name").focus(); return; }
   $("pdfBtn").disabled = true; setStatus(st, "Making the PDF…");
   try {
-    const blob = await post("/api/pdf", {name, age:$("age").value, likes:$("likes").value, about:$("about").value, hero:heroB64, pages}, true);
+    await saveDetails();
+    const blob = await api(`/api/books/${book.id}/pdf`);
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "JackAndTheBeanstalk.pdf"; a.click();
     setStatus(st, "");
   } catch (err) { setStatus(st, err.message, true); }
-  finally { $("pdfBtn").disabled = false; }
+  finally { steps(); }
 });
+
+loadShelf().catch(err => setStatus($("heroStatus"), err.message, true));
 steps();
 </script>
+{% endif %}
 </body>
 </html>
