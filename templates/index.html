@@ -208,7 +208,7 @@
     background:linear-gradient(180deg,#fff6d8 0%,#ffd77a 55%,#e9a93a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 2px 14px rgba(255,210,120,.35))}
   .hero p{color:var(--on-night-soft)}
-  .hero .sky-art{width:100%;height:auto;filter:drop-shadow(0 0 30px rgba(255,226,160,.25))}
+  .hero .sky-art{width:100%;height:auto;overflow:visible;filter:drop-shadow(0 0 30px rgba(255,226,160,.25))}
   @media (max-width:760px){ .hero{grid-template-columns:1fr} .hero .sky-art{max-width:250px;justify-self:end;margin-top:-6px} .cloud{opacity:.22!important;width:160px!important} }
   .topbar,.topbar span{color:var(--on-night-soft)}
   .topbar a{color:var(--moon)}
@@ -341,7 +341,7 @@
 <svg class="hills" id="hills" data-depth=".5" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice">
     <path d="M0 170 C180 110 320 150 480 120 S800 80 980 130 1260 100 1440 140 V300 H0Z" fill="#123a55"/>
     <path d="M0 220 C200 170 360 210 560 185 S900 150 1100 200 1320 175 1440 195 V300 H0Z" fill="#0d2c43"/>
-    <g transform="translate(1290 150)">
+    <g id="cottage" transform="translate(1290 150)">
       <path d="M0 40 L32 12 L64 40 Z" fill="#3b2a1a"/><rect x="6" y="40" width="52" height="34" fill="#2a2016"/>
       <rect x="16" y="50" width="12" height="12" rx="2" fill="#ffd36a"/><rect x="38" y="52" width="10" height="22" fill="#1a130c"/>
       <circle cx="22" cy="56" r="22" fill="#ffd36a" opacity=".12"/>
@@ -856,7 +856,7 @@ steps();
 (() => {
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const svg = document.getElementById("giantStalk"), NS = "http://www.w3.org/2000/svg";
-  let stem, tip, len = 0, leaves = [], startY = 0;
+  let stem, tip, len = 0, leaves = [], startY = 0, table = [];
 
   /* Build a wavy stalk the height of the whole page, with leaves every ~150px. */
   function build(){
@@ -879,10 +879,15 @@ steps();
       d += ` S${(48 + Math.sin((y - 60) / 180) * 34).toFixed(1)} ${y - 60} ${x.toFixed(1)} ${y}`;
       pts.push([x, y]);
     }
+    const last = pts.length ? pts[pts.length - 1] : [48, top];
+    if (last[1] < H) d += ` S${last[0].toFixed(1)} ${((last[1] + H) / 2).toFixed(1)} 48 ${H}`;
     stem = document.createElementNS(NS, "path"); stem.setAttribute("class", "stem"); stem.setAttribute("d", d);
     svg.appendChild(stem); len = stem.getTotalLength();
     tip = document.createElementNS(NS, "circle"); tip.setAttribute("class", "tip"); tip.setAttribute("r", 7);
     stem.style.strokeDasharray = len;
+    table = [];
+    for (let l = 0; l <= len; l += 8) table.push([stem.getPointAtLength(l).y, l]);
+    table.push([H, len]);
     leaves = pts.map(([x, y], i) => {
       const left = i % 2 === 0, l = document.createElementNS(NS, "path");
       l.setAttribute("class", "lf");
@@ -891,14 +896,25 @@ steps();
       svg.appendChild(l); return [l, y];
     });
     svg.appendChild(tip);
+    /* Put the cottage just to the left of where the beanstalk meets the ground. */
+    const hills = document.getElementById("hills"), cot = document.getElementById("cottage");
+    if (hills && cot && getComputedStyle(svg).display !== "none") {
+      const pt = hills.createSVGPoint(), m = hills.getScreenCTM();
+      pt.x = svg.getBoundingClientRect().left + 48 - 120; pt.y = 0;
+      if (m) cot.setAttribute("transform", `translate(${pt.matrixTransform(m.inverse()).x.toFixed(0)} 150)`);
+    }
     update();
   }
   /* Reveal the stalk down to the bottom of the screen, so it grows as you scroll. */
   function update(){
     if (!stem) return;
     const H = document.documentElement.scrollHeight;
-    const shown = calm ? H : Math.min(H, scrollY + innerHeight * 0.92);
-    const f = Math.max(0, Math.min(1, (shown - startY) / (H - startY)));
+    const atBottom = scrollY + innerHeight >= H - 4;
+    const shown = calm || atBottom ? H : Math.min(H, scrollY + innerHeight * 0.92);
+    let L = 0;
+    for (const [y, l] of table) { if (y > shown) break; L = l; }
+    if (shown >= H) L = len;
+    const f = len ? L / len : 0;
     stem.style.strokeDashoffset = len - len * f;
     leaves.forEach(([l, y]) => l.classList.toggle("on", y < shown - 20));
     const pt = stem.getPointAtLength(len * f);
