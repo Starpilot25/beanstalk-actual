@@ -111,7 +111,7 @@ MATCH_RENDER = ("A full-bleed frame from a 3D computer-animated film, rendered e
 
 
 def hero_prompt():
-    others = " ".join(CAST[c] for c in ("mother", "cow", "old_man"))
+    others = " ".join(CAST[c] for c in ("mother", "cow"))   # recurring characters only
     return (
         f"Art style: {STYLE} "
         "Create the cast reference sheet for a picture book, on one plain light background. "
@@ -120,9 +120,9 @@ def hero_prompt():
         "face shape, eye shape, nose, mouth, eyebrows, skin tone, hair color, hair length and hairstyle, "
         "and their real age, so family would recognize them at a glance. Stylize the rendering, not the "
         "anatomy. Neutral, relaxed expression with the mouth closed. "
-        "RIGHT HALF: a neat two-by-two grid of full-body views, each standing and facing the viewer: "
-        "top left, the same Jack; top right, Jack's mother; bottom left, Milky-White the cow; "
-        f"bottom right, the old man. Jack wears {CAST['jack'].split('wearing ', 1)[1]} {others} "
+        "RIGHT HALF: full-body views of the recurring cast. Across the top, the same Jack and Jack's "
+        "mother standing side by side, facing the viewer, head to toe; across the bottom, Milky-White "
+        f"the cow standing in side view. Jack wears {CAST['jack'].split('wearing ', 1)[1]} {others} "
         f"{NO_WORDS}"
     )
 

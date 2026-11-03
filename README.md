@@ -27,7 +27,7 @@ generation log). The uploaded photo is never stored. Locally, without `DATABASE_
 books per hour site-wide. They are kept in memory and reset when the app restarts.
 
 ## Keeping the book consistent
-- **One reference image.** A cast sheet is drawn once: a large close-up of the child as Jack on the left, and full-body Jack, his mother, Milky-White and the old man on the right. Every page call sends that same image, so the whole cast stays the same from page to page.
+- **One reference image.** A cast sheet is drawn once: a large close-up of the child as Jack on the left, and full-body Jack, his mother and Milky-White on the right (the old man appears only once, so he is drawn from his description). Every page call sends that same image, so the whole cast stays the same from page to page.
 - **One style string.** `STYLE` in `storyboard.py` is sent word for word in every call and never changes.
 - **Fixed cast descriptions.** The mother, Milky-White and the old man are described in `CAST` once and reused word for word.
 - **No words in the art.** The image model never draws text. The PDF layer (`book_pdf.py`) prints the story text in Young Serif over a soft fade in each page's quiet area (lower third, sky, or dark grass).

@@ -8,8 +8,9 @@ What still needs work in this build, most important first.
   especially on page 3, where it's dusk and Jack is small in the doorway. Test with at least 5 different
   photos and log results in `PROMPTS.md`.
 - **The cow looked different on pages 1 and 2** because only Jack had a reference image. Fixed by turning
-  Jack's sheet into a cast sheet (Jack's face close-up + full-body Jack, mother, cow, old man). Still to check:
-  whether squeezing four characters onto one sheet makes Jack's full-body view too small to copy his outfit.
+  Jack's sheet into a cast sheet (Jack's face close-up + full-body Jack, mother and cow). The old man was
+  taken off the sheet because he only appears once; that gives the others more room. Still to check: whether
+  the old man looks right drawn only from his description.
 - **The required style fights likeness.** "Large expressive eyes" pushes faces toward a generic
   cartoon kid. The hero prompt asks to keep real proportions, but the balance needs more Playground
   testing.

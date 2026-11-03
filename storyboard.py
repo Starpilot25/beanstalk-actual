@@ -27,11 +27,13 @@ CAST = {
                 "and a crooked walking stick."),
 }
 
-# The reference image is a cast sheet: Jack's face close-up on the left, and a 2x2 grid of
-# full-body views (Jack, mother, cow, old man) on the right. One image, reused on every page.
-CAST_SHEET = ("The reference image is the cast sheet for this book. Draw every character who appears in "
-              "this scene exactly as they look on the sheet - same face, build, colors and clothes - and "
-              "draw only the characters this scene names.")
+# The reference image is a cast sheet: Jack's face close-up on the left, and full-body views of the
+# characters who recur (Jack, his mother, Milky-White) on the right. One-off characters like the old
+# man (page 2 only) are drawn from their written description. One image, reused on every page.
+CAST_SHEET = ("The reference image is the cast sheet for this book. Draw every character who is on the "
+              "sheet exactly as they look there - same face, build, colors and clothes. Characters who "
+              "are not on the sheet follow their written description. Draw only the characters this "
+              "scene names.")
 
 # The five magic beans, described the same way on every page they appear. Five named colors are
 # five distinct objects to draw, which models get right far more often than "five beans".
