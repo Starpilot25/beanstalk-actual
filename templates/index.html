@@ -190,7 +190,13 @@
   #giantStalk path.stem{fill:none;stroke:url(#stemgrad);stroke-width:13;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(120,230,140,.45))}
   #giantStalk .lf{fill:#5fbf5a;transform-box:fill-box;transform-origin:var(--ox,0%) 50%;transform:scale(0);transition:transform .6s cubic-bezier(.3,1.6,.4,1)}
   #giantStalk .lf.on{transform:scale(1)}
-  @media (max-width:1299px){ #giantStalk{display:none} }
+  /* the stalk hangs down from a cloud bank that stays at the top of the screen */
+  #stalkCloud{position:fixed;top:-18px;right:max(6px,calc((100vw - 1120px)/2 - 96px));margin-right:-62px;width:220px;z-index:1;pointer-events:none;
+    filter:drop-shadow(0 8px 18px rgba(0,0,0,.35));animation:cloudBob 7s ease-in-out infinite alternate}
+  @keyframes cloudBob{to{transform:translateY(5px)}}
+  #giantStalk .tip{fill:#c9ffb8;filter:drop-shadow(0 0 8px #9be88f) drop-shadow(0 0 16px rgba(155,232,143,.7));transition:opacity .3s}
+  @media (max-width:1299px){ #giantStalk,#stalkCloud{display:none} }
+  main,.topbar,header.hero{position:relative;z-index:2}
 
   /* sparkles */
   .spark{position:fixed;z-index:50;pointer-events:none;width:10px;height:10px;margin:-5px 0 0 -5px;
@@ -249,22 +255,6 @@
     .shooting,.spark{display:none}
     #giantStalk .lf{transform:scale(1);transition:none}
   }
-
-  /* ===================== Grand opening ===================== */
-  #intro{position:fixed;inset:0;z-index:100;overflow:hidden;cursor:pointer;
-    background:linear-gradient(180deg,#06142b,#0d2a4f 60%,#164867);transition:opacity .9s ease}
-  #intro.bye{opacity:0;pointer-events:none}
-  #intro .track{position:absolute;left:0;right:0;top:0;height:300vh;animation:introPan 4.2s cubic-bezier(.55,0,.2,1) .5s forwards}
-  #intro .track svg{width:100%;height:100%}
-  @keyframes introPan{to{transform:translateY(-200vh)}}
-  #intro .itl{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:10px;text-align:center;pointer-events:none;padding:20px}
-  #intro .itl b{font:400 clamp(2.4rem,7vw,5.4rem)/1 var(--story);opacity:0;transform:translateY(16px) scale(.96);
-    background:linear-gradient(180deg,#fff6d8,#ffd77a 55%,#e9a93a);-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 4px 24px rgba(0,0,0,.6));animation:titleIn 1.2s ease-out 3.7s forwards}
-  #intro .itl span{color:#eaf0ff;font-size:1.15rem;opacity:0;animation:titleIn 1s ease-out 4.2s forwards;text-shadow:0 2px 10px rgba(0,0,0,.7)}
-  @keyframes titleIn{to{opacity:1;transform:none}}
-  #intro .skip{position:absolute;right:20px;bottom:20px;z-index:2;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);
-    border-radius:999px;padding:8px 16px;font:600 .9rem var(--ui);backdrop-filter:blur(6px)}
 
   /* ===================== Parallax world ===================== */
   .layer{position:absolute;left:-4%;width:108%;will-change:transform}
@@ -348,39 +338,6 @@
 </style>
 </head>
 <body>
-<div id="intro" hidden aria-hidden="true">
-  <div class="track"><svg viewBox="0 0 400 1200" preserveAspectRatio="xMidYMid meet">
-    <defs>
-      <radialGradient id="ig-moon"><stop offset="0" stop-color="#fff6d8" stop-opacity=".95"/><stop offset=".4" stop-color="#ffe2a0" stop-opacity=".25"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/></radialGradient>
-      <linearGradient id="ig-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3ebff"/><stop offset="1" stop-color="#7d93c4"/></linearGradient>
-      <linearGradient id="ig-stem" x1="0" x2="1"><stop offset="0" stop-color="#3e9a48"/><stop offset=".5" stop-color="#86e07e"/><stop offset="1" stop-color="#2f7a3a"/></linearGradient>
-    </defs>
-    <g fill="#fff8e6"><circle cx="40" cy="40" r="1.4"/><circle cx="120" cy="18" r="1"/><circle cx="350" cy="30" r="1.2"/><circle cx="70" cy="130" r="1"/><circle cx="370" cy="160" r="1.4"/><circle cx="30" cy="330" r="1"/><circle cx="380" cy="420" r="1.2"/><circle cx="20" cy="560" r="1"/><circle cx="360" cy="640" r="1"/><circle cx="50" cy="760" r="1.3"/></g>
-    <circle cx="300" cy="90" r="80" fill="url(#ig-moon)"/><circle cx="300" cy="90" r="30" fill="#fff3cf"/>
-    <g fill="#0f2440">
-      <rect x="150" y="170" width="20" height="70"/><path d="M146 170l14-24 14 24z"/>
-      <rect x="174" y="146" width="32" height="94"/><path d="M170 146l20-34 20 34z"/>
-      <rect x="210" y="176" width="20" height="64"/><path d="M206 176l14-22 14 22z"/>
-      <rect x="166" y="200" width="70" height="40"/>
-    </g>
-    <g fill="#ffd36a"><rect x="186" y="166" width="7" height="11" rx="3"/><rect x="156" y="188" width="6" height="9" rx="3"/><rect x="216" y="194" width="6" height="9" rx="3"/></g>
-    <g fill="url(#ig-cloud)"><ellipse cx="120" cy="252" rx="80" ry="26"/><ellipse cx="200" cy="244" rx="80" ry="32"/><ellipse cx="290" cy="258" rx="80" ry="24"/></g>
-    <g fill="#c9d6f2" opacity=".35"><ellipse cx="80" cy="520" rx="60" ry="16"/><ellipse cx="320" cy="760" rx="70" ry="18"/><ellipse cx="110" cy="940" rx="55" ry="14"/></g>
-    <path d="M200 268C230 330 160 380 200 450S250 560 196 640 150 760 205 840 250 960 200 1040 190 1100 196 1130" fill="none" stroke="url(#ig-stem)" stroke-width="12" stroke-linecap="round"/>
-    <g fill="#5fbf5a">
-      <path d="M214 330c30-4 44-20 44-34-20 0-38 14-44 34z"/><path d="M186 420c-30-4-44-20-44-34 20 0 38 14 44 34z"/>
-      <path d="M222 520c30-4 44-20 44-34-20 0-38 14-44 34z"/><path d="M180 610c-30-4-44-20-44-34 20 0 38 14 44 34z"/>
-      <path d="M212 720c30-4 44-20 44-34-20 0-38 14-44 34z"/><path d="M184 810c-30-4-44-20-44-34 20 0 38 14 44 34z"/>
-      <path d="M226 910c30-4 44-20 44-34-20 0-38 14-44 34z"/><path d="M188 1000c-30-4-44-20-44-34 20 0 38 14 44 34z"/>
-    </g>
-    <path d="M0 1110C80 1080 160 1100 240 1088S360 1080 400 1094V1200H0Z" fill="#123a55"/>
-    <path d="M0 1150C100 1130 220 1150 300 1140S380 1138 400 1144V1200H0Z" fill="#0b2740"/>
-    <g transform="translate(262 1058)"><path d="M0 34L28 10 56 34Z" fill="#3b2a1a"/><rect x="5" y="34" width="46" height="30" fill="#2a2016"/>
-      <rect x="13" y="42" width="11" height="11" rx="2" fill="#ffd36a"/><rect x="33" y="44" width="9" height="20" fill="#1a130c"/><circle cx="18" cy="47" r="22" fill="#ffd36a" opacity=".14"/></g>
-  </svg></div>
-  <div class="itl"><b>Jack and the Beanstalk</b><span>starring your child</span></div>
-  <button class="skip" type="button">Skip</button>
-</div>
 <div class="sky" aria-hidden="true"><svg class="cloud c1" viewBox="0 0 280 90"><g fill="#c9d6f2" opacity=".55"><ellipse cx="80" cy="58" rx="70" ry="26"/><ellipse cx="140" cy="44" rx="62" ry="34"/><ellipse cx="205" cy="60" rx="66" ry="24"/></g></svg><svg class="cloud c2" viewBox="0 0 280 90"><g fill="#c9d6f2" opacity=".55"><ellipse cx="80" cy="58" rx="70" ry="26"/><ellipse cx="140" cy="44" rx="62" ry="34"/><ellipse cx="205" cy="60" rx="66" ry="24"/></g></svg><svg class="cloud c3" viewBox="0 0 280 90"><g fill="#c9d6f2" opacity=".55"><ellipse cx="80" cy="58" rx="70" ry="26"/><ellipse cx="140" cy="44" rx="62" ry="34"/><ellipse cx="205" cy="60" rx="66" ry="24"/></g></svg><div class="beams" data-depth=".1"></div>
 <svg class="layer mountains" data-depth=".12" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice"><path d="M0 260L120 170 230 230 360 110 470 210 590 140 720 230 850 90 980 200 1110 130 1240 220 1340 160 1440 210V400H0Z" fill="#12355a" opacity=".85"/><path d="M360 110l26 24-18-2-8 14zM850 90l28 26-20-3-8 15z" fill="#d9e6ff" opacity=".18"/></svg>
 <svg class="layer trees" data-depth=".28" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice"><g fill="#0c2a44"><path d="M30 300V165 l-22 80h44z"/><path d="M80 300V135 l-26 110h52z"/><path d="M140 300V175 l-20 70h40z"/><path d="M200 300V145 l-24 100h48z"/><path d="M270 300V115 l-30 130h60z"/><path d="M340 300V155 l-22 90h44z"/><path d="M400 300V125 l-28 120h56z"/><path d="M470 300V165 l-20 80h40z"/><path d="M540 300V140 l-26 105h52z"/><path d="M610 300V110 l-30 135h60z"/><path d="M690 300V160 l-22 85h44z"/><path d="M760 300V130 l-26 115h52z"/><path d="M830 300V170 l-20 75h40z"/><path d="M900 300V120 l-28 125h56z"/><path d="M980 300V150 l-24 95h48z"/><path d="M1050 300V115 l-30 130h60z"/><path d="M1120 300V165 l-22 80h44z"/><path d="M1190 300V135 l-26 110h52z"/><path d="M1260 300V155 l-22 90h44z"/><path d="M1330 300V120 l-28 125h56z"/><path d="M1400 300V160 l-24 85h48z"/><rect x="0" y="240" width="1440" height="60"/></g></svg>
@@ -901,12 +858,19 @@ steps();
 </script>
 {% endif %}
 
+<svg id="stalkCloud" viewBox="0 0 320 120" aria-hidden="true">
+  <defs><linearGradient id="sc-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef3ff"/><stop offset="1" stop-color="#8ea3d1"/></linearGradient></defs>
+  <g fill="#0f2440" opacity=".9"><rect x="196" y="18" width="12" height="40"/><path d="M193 18l9-16 9 16z"/><rect x="212" y="30" width="18" height="30"/><path d="M209 30l12-18 12 18z"/></g>
+  <g fill="#ffd36a"><rect x="200" y="30" width="4" height="7" rx="2"/><rect x="219" y="40" width="4" height="7" rx="2"/></g>
+  <g fill="url(#sc-g)"><ellipse cx="80" cy="74" rx="78" ry="30"/><ellipse cx="160" cy="62" rx="74" ry="40"/><ellipse cx="240" cy="74" rx="78" ry="30"/><ellipse cx="160" cy="86" rx="130" ry="24"/></g>
+  <g fill="#fff" opacity=".55"><ellipse cx="130" cy="44" rx="34" ry="12"/><ellipse cx="236" cy="58" rx="26" ry="9"/></g>
+</svg>
 <svg id="giantStalk" aria-hidden="true"><defs><linearGradient id="stemgrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3e9a48"/><stop offset=".5" stop-color="#7fdc7a"/><stop offset="1" stop-color="#2f7a3a"/></linearGradient></defs></svg>
 <script>
 (() => {
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const svg = document.getElementById("giantStalk"), NS = "http://www.w3.org/2000/svg";
-  let stem, len = 0, leaves = [];
+  let stem, tip, len = 0, leaves = [];
 
   /* Build a wavy stalk the height of the whole page, with leaves every ~150px. */
   function build(){
@@ -922,6 +886,7 @@ steps();
     }
     stem = document.createElementNS(NS, "path"); stem.setAttribute("class", "stem"); stem.setAttribute("d", d);
     svg.appendChild(stem); len = stem.getTotalLength();
+    tip = document.createElementNS(NS, "circle"); tip.setAttribute("class", "tip"); tip.setAttribute("r", 7);
     stem.style.strokeDasharray = len;
     leaves = pts.filter((_, i) => i % 1 === 0 && i > 0).map(([x, y], i) => {
       const left = i % 2 === 0, l = document.createElementNS(NS, "path");
@@ -930,6 +895,7 @@ steps();
       l.style.setProperty("--ox", left ? "100%" : "0%");
       svg.appendChild(l); return [l, y];
     });
+    svg.appendChild(tip);
     update();
   }
   /* Reveal the stalk down to the bottom of the screen, so it grows as you scroll. */
@@ -939,23 +905,14 @@ steps();
     const shown = calm ? H : Math.min(H, scrollY + innerHeight * 0.92);
     stem.style.strokeDashoffset = Math.max(0, len - len * (shown / H));
     leaves.forEach(([l, y]) => l.classList.toggle("on", y < shown - 20));
+    const pt = stem.getPointAtLength(len * shown / H);
+    tip.setAttribute("cx", pt.x); tip.setAttribute("cy", pt.y);
+    tip.style.opacity = shown >= H - 4 ? 0 : 1;
   }
   addEventListener("scroll", () => requestAnimationFrame(update), {passive:true});
   addEventListener("resize", () => requestAnimationFrame(build));
   new ResizeObserver(() => requestAnimationFrame(build)).observe(document.body);
   build();
-
-  /* Grand opening: once per browser session, never for people who prefer less motion. */
-  const intro = document.getElementById("intro");
-  let seen = false;
-  try { seen = sessionStorage.getItem("introSeen") === "1"; sessionStorage.setItem("introSeen", "1"); } catch {}
-  if (intro && !calm && !seen) {
-    intro.hidden = false;
-    const done = () => { intro.classList.add("bye"); setTimeout(() => intro.remove(), 900); removeEventListener("keydown", done); };
-    intro.addEventListener("click", done);
-    addEventListener("keydown", done);
-    setTimeout(done, 6200);
-  } else intro?.remove();
 
   if (calm) return;
 
