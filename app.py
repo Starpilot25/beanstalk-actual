@@ -34,7 +34,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import db
 from book_pdf import build_pdf
-from storyboard import CAST, CAST_SHEET, HANDS, PAGES, PAGES_BY_N, STYLE, ZONES
+from storyboard import CAST, CAST_SHEET, HANDS, JACK_OUTFIT, JACK_OUTFIT_SKIRT, PAGES, PAGES_BY_N, STYLE, ZONES
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("beanstalk")
@@ -122,7 +122,9 @@ def hero_prompt():
         "anatomy. Neutral, relaxed expression with the mouth closed. "
         "RIGHT HALF: full-body views of the recurring cast. Across the top, the same Jack and Jack's "
         "mother standing side by side, facing the viewer, head to toe; across the bottom, Milky-White "
-        f"the cow standing in side view. Jack wears {CAST['jack'].split('wearing ', 1)[1]} {others} "
+        "the cow standing in side view. "
+        f"If the person in the photo is a girl or a woman, Jack wears {JACK_OUTFIT_SKIRT}; "
+        f"otherwise Jack wears {JACK_OUTFIT}. Draw the same outfit in the close-up and the full-body view. {others} "
         f"{NO_WORDS}"
     )
 

@@ -14,11 +14,15 @@ STYLE = "Modern 3D animated feature — rounded forms, large expressive eyes, so
 # Fixed descriptions, reused word for word in every call so characters don't drift.
 JACK_OUTFIT = ("a patched oatmeal-colored linen shirt, a brown wool vest, rough brown trousers "
                "held up with a rope belt, and scuffed leather boots")
+# For a girl or woman in the photo the cast sheet uses the skirt version; every page then copies the sheet.
+JACK_OUTFIT_SKIRT = ("a patched oatmeal-colored linen blouse, a brown wool vest, a knee-length rough brown "
+                     "wool skirt with a rope belt, thick cream wool stockings, and scuffed leather boots")
 CAST = {
     "jack": ("Jack is the exact character on the reference sheet (the large close-up on the left and the "
              "top-left full-body view), an unmistakable match: the same face "
              "shape, eyes, nose, mouth, eyebrows, hair, skin tone, apparent age and body proportions, "
-             f"wearing {JACK_OUTFIT}."),
+             "wearing exactly the clothes from the reference sheet: the patched oatmeal-colored linen top, "
+             "brown wool vest, rope belt and scuffed leather boots, with the same trousers or skirt as on the sheet."),
     "mother": ("Jack's mother is a thin, careworn woman in her forties with auburn hair in a loose bun, "
                "a faded blue dress and a cream apron."),
     "cow": ("Milky-White is a gentle, thin white dairy cow with soft brown ears and a small brass bell "
