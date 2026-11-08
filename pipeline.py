@@ -184,6 +184,8 @@ def analysis_call(images, prompt, *, label, user_id=None, book_id=None, fake_hin
         if FAKE:
             time.sleep(float(os.environ.get("FAKE_DELAY", "3")) * 0.3)
             rng = random.Random(label + str(time.time()))
+            if '"box"' in prompt:
+                return {"found": True, "box": [0.6, 0.3, 0.85, 0.95]}
             bad = rng.random() < 0.3                     # fail sometimes, so the repaint loop is exercised
             busy = {"top": [False] * 3, "middle": [True, False, True], "bottom": [False] * 3}
             if fake_hint:                                # mark the hero's column busy in the middle row
@@ -475,8 +477,14 @@ def run_pregen(story, only=None, redo=False):
                                  label=f"{story} bible {k} from scene {src}", quality=SCENE_QUALITY)
                 _plog(f"{story}: drew {name} from scene {src} instead")
             except Exception as e2:
-                _plog(f"{story}: {name} FAILED again from scene {src}: {str(e2)[:200]}")
-                return
+                _plog(f"{story}: {name} refused again from scene {src}: {str(e2)[:160]}")
+                # Last resort, no image call at all: find the character in that scene and cut them out.
+                try:
+                    img = crop_from_scene(story, k, scene_img)
+                    _plog(f"{story}: cut {name} out of scene {src} for the bible")
+                except Exception as e3:
+                    _plog(f"{story}: {name} couldn't be cut out of scene {src}: {str(e3)[:160]}")
+                    return
         db.save_bible(story, k, name, desc, img)
         pregen_state["done"] += 1
         _plog(f"{story}: drew {name}")
@@ -504,7 +512,8 @@ def run_pregen(story, only=None, redo=False):
             except Exception as e:              # a refused try is a failed attempt; earlier good tries are kept
                 last_err = str(e)
                 continue
-            a = safe_analysis([img] + [db.bible_image(story, c) for c in p["cast"] if c not in S.TEXT_ONLY][:3],
+            a = safe_analysis([img] + [b for b in (db.bible_image(story, c) for c in p["cast"] if c not in S.TEXT_ONLY)
+                                       if b][:3],
                               scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}")
             score, ok = grade(a)
             # The words' band must be clear in the scene itself, or the template can't be honoured.
@@ -533,6 +542,26 @@ def run_pregen(story, only=None, redo=False):
               f"missing scenes: {', '.join(map(str, miss_s)) or 'none'}. See the errors above.")
     else:
         _plog(f"{story}: complete. All characters and all 20 scenes are drawn.")
+
+
+def crop_from_scene(story, key, scene_img):
+    """Ask the vision model where a character is in a scene, then crop them out locally (no image generation)."""
+    name, desc = S.BIBLE[story][key]
+    prompt = (f"Image 1 is a picture-book page. Find {name}: {desc}. Reply with only JSON "
+              "{\"found\":bool,\"box\":[left,top,right,bottom]}, the box as fractions from 0 to 1 of the image's width "
+              "and height, covering the whole character from the top of the head to the feet.")
+    a = analysis_call([scene_img], prompt, label=f"{story} find {key}")
+    box = a.get("box") if a.get("found") else None
+    if not (isinstance(box, list) and len(box) == 4):
+        raise RuntimeError("the character wasn't found in the scene")
+    im = Image.open(io.BytesIO(scene_img)).convert("RGB")
+    W, H = im.size
+    l, t, r, b = [max(0.0, min(1.0, float(v))) for v in box]
+    if r - l < 0.04 or b - t < 0.08:
+        raise RuntimeError("the box found was too small")
+    pw, ph = (r - l) * 0.15, (b - t) * 0.06                       # a little room around them
+    crop = im.crop((int(max(0, l - pw) * W), int(max(0, t - ph) * H), int(min(1, r + pw) * W), int(min(1, b + ph) * H)))
+    return jpeg(crop, 90)
 
 
 def scene_check_prompt(story, p):

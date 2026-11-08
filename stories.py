@@ -188,8 +188,8 @@ STORIES = {
                        "the beanstalk curling over the edge of the cloud in the foreground."),
             dict(text="A giant woman opened the door. \"Hide quickly,\" she said kindly. \"My husband is coming!\"",
                  cast=["wife"],
-                 scene="The enormous castle doorway; the giant's wife leans down on the right with a kind, "
-                       "welcoming smile.",
+                 scene="The enormous castle doorway, wide open; the giant's wife stands tall in the doorway on the "
+                       "right holding a big wooden spoon, looking out in surprise.",
                  action="looking up at the giant's wife, tiny next to her", mood="nervous but polite"),
             dict(text="FEE-FI-FO-FUM! The whole castle shook.",
                  cast=["giant"],
