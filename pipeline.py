@@ -274,7 +274,12 @@ def _run_book_safe(book_id, user_id, photo_png):
         run_book(book_id, user_id, photo_png)
     except Exception as e:
         log.exception("book %s failed", book_id)
-        fail_book(book_id, user_id, f"Something went wrong while making the book ({str(e)[:160]}).")
+        msg = str(e)
+        if "safety system" in msg:
+            fail_book(book_id, user_id, "OpenAI's safety filter declined this photo. Try a different photo: one person, "
+                                        "facing the camera, in everyday clothes.")
+        else:
+            fail_book(book_id, user_id, f"Something went wrong while making the book ({msg[:160]}).")
     finally:
         with _running_lock:
             _running.discard(book_id)
@@ -335,13 +340,19 @@ def run_book(book_id, user_id, photo_png):
         n = p["n"]
         scene, _ = db.get_scene(story, n)
         scene_png = to_png(scene)
-        best, tries = None, 0
+        best, tries, last_err = None, 0, ""
         for attempt in range(1, MAX_ATTEMPTS + 1):
             tries = attempt
             db.set_page(book_id, n, status="painting", attempts=attempt)
-            img = image_call([scene_png, hero_png], S.insert_prompt(story, p),
-                             purpose="page" if attempt == 1 else "retry", label=f"page {n} try {attempt}",
-                             user_id=user_id, book_id=book_id, hero_at=p["hero"])
+            try:
+                img = image_call([scene_png, hero_png], S.insert_prompt(story, p),
+                                 purpose="page" if attempt == 1 else "retry", label=f"page {n} try {attempt}",
+                                 user_id=user_id, book_id=book_id, hero_at=p["hero"])
+            except Exception as e:          # e.g. a safety rejection: count it as a failed try
+                last_err = str(e)
+                if time.time() - t0 > RETRY_DEADLINE:
+                    break
+                continue
             db.set_page(book_id, n, status="checking", thumb=thumb(img))
             a = safe_analysis([img, hero], S.analysis_prompt(story, p, True), label=f"page {n} check {attempt}",
                               user_id=user_id, book_id=book_id, fake_hint=p["hero"])
@@ -353,6 +364,13 @@ def run_book(book_id, user_id, photo_png):
                 break
             if time.time() - t0 > RETRY_DEADLINE:
                 break
+        if best is None:                    # every try was refused: keep the pre-made scene so the book still exists
+            _, sa = db.get_scene(story, n)
+            why = "OpenAI's safety filter declined it" if "safety" in last_err else last_err[:120]
+            db.set_page(book_id, n, status="done", score=None, image=scene, thumb=thumb(scene),
+                        zone=clear_zone(p, (sa or {}).get("busy")),
+                        issues=f"no try passed; the hero couldn't be added to this page ({why}), so the scene is shown without them")
+            return
         score, ok, img, a, att = best
         note = "; ".join(a.get("issues") or [])[:300]
         if not ok:
@@ -470,7 +488,8 @@ def run_pregen(story, only=None, redo=False):
                               scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}")
             score, ok = grade(a)
             # The words' band must be clear in the scene itself, or the template can't be honoured.
-            if p["layout"] == "full" and clear_zone(p, a.get("busy")) != p["zones"][0]:
+            # (An unchecked scene is kept as is: a failed check must never cause a repaint.)
+            if not a.get("unchecked") and p["layout"] == "full" and clear_zone(p, a.get("busy")) != p["zones"][0]:
                 ok = False
                 a.setdefault("issues", []).append(f"the {p['zones'][0]} band isn't clear for the words")
             if best is None or (ok, score or 0) > (best[0], best[1] or 0):

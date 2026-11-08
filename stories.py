@@ -80,16 +80,16 @@ HERO_POSITION = {
 # ---------------------------------------------------------------------------------------------------------
 BIBLE = {
     "jack": {
-        "mother": ("Jack's mother", "a thin, careworn woman in her forties with auburn hair in a loose bun, "
-                   "a faded blue dress and a cream apron"),
+        "mother": ("Jack's mother", "a kind, hard-working mother in her forties with auburn hair in a loose bun, "
+                   "a long blue cotton dress and a cream apron"),
         "cow": ("Milky-White", "a gentle, thin white dairy cow with soft brown ears and a small brass bell "
                 "on a rope collar"),
         "old_man": ("the old man", "a small, twinkly-eyed old man with a long white beard, a patched green "
                     "cloak and a crooked walking stick"),
-        "giant": ("the giant", "an enormous, broad giant with a wild black beard, bushy eyebrows, a rough "
-                  "brown leather tunic and a big belly; grumpy rather than gory"),
-        "wife": ("the giant's wife", "a tall, kindly giantess with grey hair in a thick plait, rosy cheeks "
-                 "and a long green apron"),
+        "giant": ("the giant", "a huge, burly storybook giant with a bushy black beard, thick eyebrows and a "
+                  "brown leather tunic, comically grumpy like a cartoon character"),
+        "wife": ("the giant's wife", "a very tall, gentle, motherly woman with grey hair in a long braid, rosy "
+                 "cheeks, a warm smile and a long green apron"),
         "hen": ("the golden hen", "a plump russet-red hen with a golden comb and a warm golden glow"),
         "harp": ("the golden harp", "a small golden harp with a carved woman's face at the top of the frame "
                  "and shining strings"),
@@ -101,8 +101,8 @@ BIBLE = {
                     "spectacles, a lavender nightgown and a frilled white nightcap"),
         "wolf": ("the wolf", "a tall, lanky grey wolf who walks on his hind legs, with yellow eyes, a long "
                  "snout and a sly grin; cartoonish and more sneaky than scary"),
-        "woodcutter": ("the woodcutter", "a big, kind woodcutter with a red-brown beard, a checked flannel "
-                       "shirt, suspenders and an axe over his shoulder"),
+        "woodcutter": ("the woodcutter", "a big, friendly woodcutter with a red-brown beard, a checked flannel "
+                       "shirt, suspenders and a wooden-handled tool belt"),
     },
 }
 
@@ -302,8 +302,8 @@ STORIES = {
                  action="running away, cloak flying", mood="scared"),
             dict(text="Just then, the woodcutter burst through the door.",
                  cast=["woodcutter"],
-                 scene="The cottage doorway; the woodcutter bursts in on the left, axe raised, sunlight "
-                       "behind him.",
+                 scene="The cottage doorway; the friendly woodcutter steps in on the left, ready to help, "
+                       "sunlight behind him.",
                  action="pointing toward the woodcutter, relieved", mood="relieved"),
             dict(text="The wolf leapt out of the window and ran, and he was never seen again.",
                  cast=["wolf"],
