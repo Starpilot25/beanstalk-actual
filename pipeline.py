@@ -476,15 +476,16 @@ def run_pregen(story, only=None, redo=False):
             _plog(f"{story}: scene {p['n']} FAILED: {str(e)[:400]}")
 
     def _scene(p):
-        missing = [c for c in p["cast"] if not db.bible_image(story, c)]
+        missing = [c for c in p["cast"] if c not in S.TEXT_ONLY and not db.bible_image(story, c)]
         if missing:
             raise RuntimeError(f"draw these bible characters first: {', '.join(missing)}")
-        refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"] if db.bible_image(story, c)]
+        refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"]
+                if c not in S.TEXT_ONLY and db.bible_image(story, c)]
         best = None
         for attempt in range(1, MAX_ATTEMPTS + 1):
             img = image_call(refs, S.scene_prompt(story, p), purpose="scene",
                              label=f"{story} scene {p['n']} try {attempt}", quality=SCENE_QUALITY)
-            a = safe_analysis([img] + [db.bible_image(story, c) for c in p["cast"]][:3],
+            a = safe_analysis([img] + [db.bible_image(story, c) for c in p["cast"] if c not in S.TEXT_ONLY][:3],
                               scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}")
             score, ok = grade(a)
             # The words' band must be clear in the scene itself, or the template can't be honoured.
@@ -503,11 +504,21 @@ def run_pregen(story, only=None, redo=False):
 
     with ThreadPoolExecutor(8) as ex:
         list(ex.map(scene, todo))
-    _plog(f"{story}: finished")
+    have_scenes, have_bible = db.scene_status()
+    miss_b = [S.BIBLE[story][k][0] for k in S.BIBLE[story] if f"{story}:{k}" not in have_bible]
+    miss_s = [p["n"] for p in pages if f"{story}:{p['n']}" not in have_scenes]
+    if miss_b or miss_s:
+        _plog(f"{story}: stopped with gaps. Missing characters: {', '.join(miss_b) or 'none'}; "
+              f"missing scenes: {', '.join(map(str, miss_s)) or 'none'}. See the errors above.")
+    else:
+        _plog(f"{story}: complete. All characters and all 20 scenes are drawn.")
 
 
 def scene_check_prompt(story, p):
     return S.analysis_prompt(story, p, False).replace(
         "Image 1 is one generated page.",
         "Image 1 is one generated page; any further images are the reference sheets of its characters."
-        + (" The hero is added later, so an empty spot in the scene is correct." if p["hero"] else ""))
+        + (" The hero is added later, so an empty spot in the scene is correct." if p["hero"] else "")
+        + f" IMPORTANT: this scene must contain no child, boy, girl or {S.HERO[story]['role']} at all (the child "
+          "is added later, separately), and no people other than the listed characters. If any child or extra "
+          "person appears anywhere, score story 0.")

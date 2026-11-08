@@ -80,8 +80,9 @@ HERO_POSITION = {
 # ---------------------------------------------------------------------------------------------------------
 BIBLE = {
     "jack": {
-        "mother": ("Jack's mother", "a kind, hard-working mother in her forties with auburn hair in a loose bun, "
-                   "a long blue cotton dress and a cream apron"),
+        "mother": ("Jack's mother", "a cheerful fairy-tale village woman with auburn hair tied up in a bun, rosy "
+                   "cheeks and a warm smile, wearing a long-sleeved blue work dress and a cream apron, holding a "
+                   "wooden milk pail"),
         "cow": ("Milky-White", "a gentle, thin white dairy cow with soft brown ears and a small brass bell "
                 "on a rope collar"),
         "old_man": ("the old man", "a small, twinkly-eyed old man with a long white beard, a patched green "
@@ -91,7 +92,7 @@ BIBLE = {
         "wife": ("the giant's wife", "a very tall, gentle, motherly woman with grey hair in a long braid, rosy "
                  "cheeks, a warm smile and a long green apron"),
         "hen": ("the golden hen", "a plump russet-red hen with a golden comb and a warm golden glow"),
-        "harp": ("the golden harp", "a small golden harp with a carved woman's face at the top of the frame "
+        "harp": ("the golden harp", "a small, ornate golden harp with a carved swirl at the top of its frame "
                  "and shining strings"),
     },
     "red": {
@@ -173,11 +174,12 @@ STORIES = {
             dict(text="In the morning, a giant beanstalk reached all the way up into the clouds!",
                  cast=[],
                  scene="Bright morning; an enormous beanstalk beside the cottage rises straight up and "
-                       "disappears into fluffy white clouds high above.",
+                       "disappears into fluffy white clouds high above. The garden is quiet and empty.",
                  action="standing at the bottom of the beanstalk, looking up in wonder", mood="astonished"),
             dict(text="Up, up, up climbed Jack, higher than the birds.",
                  cast=[],
-                 scene="Halfway up the giant beanstalk among big leaves; the cottage and fields are tiny far "
+                 scene="A view along the giant beanstalk's thick stem halfway up, among big leaves, with an open "
+                       "stretch of stem in the middle for a climber added later; the cottage and fields are tiny far "
                        "below, birds fly past.",
                  action="climbing the beanstalk, both hands gripping the stalk", mood="brave and excited"),
             dict(text="At the very top stood a castle in the clouds.",
@@ -186,8 +188,8 @@ STORIES = {
                        "the beanstalk curling over the edge of the cloud in the foreground."),
             dict(text="A giant woman opened the door. \"Hide quickly,\" she said kindly. \"My husband is coming!\"",
                  cast=["wife"],
-                 scene="The enormous castle doorway; the giant's wife bends down on the right, one finger to "
-                       "her lips.",
+                 scene="The enormous castle doorway; the giant's wife leans down on the right with a kind, "
+                       "welcoming smile.",
                  action="looking up at the giant's wife, tiny next to her", mood="nervous but polite"),
             dict(text="FEE-FI-FO-FUM! The whole castle shook.",
                  cast=["giant"],
@@ -211,8 +213,8 @@ STORIES = {
                  action="reaching toward the golden harp", mood="enchanted"),
             dict(text="\"MASTER! MASTER!\" cried the harp. The giant woke with a roar.",
                  cast=["giant", "harp"],
-                 scene="The giant jumping up from his chair, wide awake and furious, roaring; the golden "
-                       "harp glows on the table."),
+                 scene="The giant springing up from his chair, wide awake, eyebrows raised in comic surprise and "
+                       "mouth open in a big cartoon shout; the golden harp glows on the table."),
             dict(text="Jack raced down the beanstalk as fast as could be, with the giant close behind!",
                  cast=["giant"],
                  scene="The beanstalk against the sky; high above, the giant climbs down after someone, "
@@ -341,6 +343,9 @@ for _key, _story in STORIES.items():
             assert _c in BIBLE[_key], (_key, _i, _c)
 
 STORY_KEYS = list(STORIES)
+# Characters whose bible picture is not sent as a reference image (it tripped the safety filter); they are
+# drawn from their description instead.
+TEXT_ONLY = {"harp"}
 HERO_PAGES = {k: [p["n"] for p in s["pages"] if p["hero"]] for k, s in STORIES.items()}
 
 
@@ -357,14 +362,15 @@ def bible_prompt(story, key):
 def scene_prompt(story, p):
     cast = " ".join(f"{BIBLE[story][c][0].capitalize()} is {BIBLE[story][c][1]}." for c in p["cast"])
     refs = (" The reference images show the characters in this scene; draw them exactly as they look there."
-            if p["cast"] else "")
+            if [c for c in p["cast"] if c not in TEXT_ONLY] else "")
     hero_space = ""
     if p["hero"]:
         hero_space = (f" Leave a clear, open spot on the ground {HERO_POSITION[p['hero']]}, where one more "
                       "character will be added later; nobody and nothing stands in that spot.")
     calm = CALM.get(p["calm"] or "", "")
     return (f"Art style: {STYLE} A full-bleed page from a 3D animated picture book of {STORIES[story]['title']}. "
-            f"Scene: {p['scene']}{refs} {cast} {SHOTS[p['shot']]}{hero_space} {calm} {HANDS} "
+            f"Scene: {p['scene']}{refs} {cast} The only characters in the picture are the ones named here. "
+            f"{SHOTS[p['shot']]}{hero_space} {calm} {HANDS} "
             f"Art style, again: {STYLE} {NO_WORDS}")
 
 
