@@ -10,3 +10,4 @@ local.db
 *.db
 .env.example
 .env.example
+.env.example
