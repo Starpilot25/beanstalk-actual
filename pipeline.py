@@ -141,8 +141,12 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
             files = [(f"in{i}.png", b, "image/png") for i, b in enumerate(images)]
             kw = dict(model=IMAGE_MODEL, prompt=prompt, size=SIZE, quality=quality, n=1, output_format="jpeg",
                       output_compression=88)
-            r = (client().images.edit(image=files if len(files) > 1 else files[0], **kw) if files
-                 else client().images.generate(**kw))
+            if files:
+                r = client().images.edit(image=files if len(files) > 1 else files[0], **kw)
+            else:
+                # Drawing from scratch (the character bible) accepts a looser moderation level; the strict
+                # default refused a plain picture-book farm woman every time. Edits have no such setting.
+                r = client().images.generate(moderation=os.environ.get("IMAGE_MODERATION", "low"), **kw)
             out = base64.b64decode(r.data[0].b64_json)
             u = getattr(r, "usage", None)
             if u:
