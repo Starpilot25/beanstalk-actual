@@ -33,6 +33,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const BIBLE = {{ bible|tojson }};
+const TEXT_ONLY = {{ text_only|tojson }};
 const ver = Date.now();
 async function api(url, opts) {
   const r = await fetch(url, opts); const d = await r.json().catch(() => ({}));
@@ -59,8 +60,8 @@ async function tick() {
     (d.failures.length ? "\n\nRecent failed API calls:\n" + d.failures.join("\n") : "");
   for (const story of Object.keys(BIBLE)) {
     $("bible-" + story).innerHTML = Object.keys(BIBLE[story]).map(k => {
-      const has = d.bible.includes(`${story}:${k}`);
-      return `<figure>${has ? `<img src="/bible/${story}/${k}.jpg?v=${Date.now()}" alt="">` : `<div class="noimg"></div>`}<figcaption><span>${BIBLE[story][k][0]}</span><button class="ghost" type="button" data-story="${story}" data-char="${k}">Redraw</button></figcaption></figure>`;
+      const has = d.bible.includes(`${story}:${k}`), words = TEXT_ONLY.includes(`${story}:${k}`);
+      return `<figure>${has ? `<img src="/bible/${story}/${k}.jpg?v=${Date.now()}" alt="">` : `<div class="noimg" style="display:grid;place-items:center;font-size:.75rem;color:#6a5d45">${words ? "Described in words" : ""}</div>`}<figcaption><span>${BIBLE[story][k][0]}</span>${words ? "" : `<button class="ghost" type="button" data-story="${story}" data-char="${k}">Redraw</button>`}</figcaption></figure>`;
     }).join("");
     $("scenes-" + story).innerHTML = Array.from({length: 20}, (_, i) => i + 1).map(n => {
       const s = d.scenes[`${story}:${n}`];

@@ -343,9 +343,16 @@ for _key, _story in STORIES.items():
             assert _c in BIBLE[_key], (_key, _i, _c)
 
 STORY_KEYS = list(STORIES)
-# Characters whose bible picture is not sent as a reference image (it tripped the safety filter); they are
-# drawn from their description instead.
-TEXT_ONLY = {"harp"}
+# Characters drawn from their written description in every scene, with no portrait in the bible. OpenAI's image
+# safety filter refused every attempt at these (Jack's mother: 10 refusals across 4 different descriptions, from
+# scratch and from a scene; the harp's portrait made the scenes using it get refused).
+TEXT_ONLY = {("jack", "mother"), ("jack", "harp")}
+TEXT_ONLY_NOTE = ("Not drawn as a portrait: OpenAI's image safety filter refused it every time, so each scene "
+                  "draws this character from the description instead.")
+
+
+def text_only(story, key):
+    return (story, key) in TEXT_ONLY
 HERO_PAGES = {k: [p["n"] for p in s["pages"] if p["hero"]] for k, s in STORIES.items()}
 
 
@@ -372,7 +379,7 @@ def bible_from_scene_prompt(story, key):
 def scene_prompt(story, p):
     cast = " ".join(f"{BIBLE[story][c][0].capitalize()} is {BIBLE[story][c][1]}." for c in p["cast"])
     refs = (" The reference images show the characters in this scene; draw them exactly as they look there."
-            if [c for c in p["cast"] if c not in TEXT_ONLY] else "")
+            if [c for c in p["cast"] if not text_only(story, c)] else "")
     hero_space = ""
     if p["hero"]:
         hero_space = (f" Leave a clear, open spot on the ground {HERO_POSITION[p['hero']]}, where one more "

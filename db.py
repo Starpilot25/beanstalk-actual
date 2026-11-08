@@ -363,6 +363,11 @@ def save_bible(story, key, name, description, image):
                                        updated_at=time.time()))
 
 
+def delete_bible(story, key):
+    with engine.begin() as c:
+        c.execute(delete(bible).where(bible.c.story == story, bible.c.key == key))
+
+
 def get_bible(story, key=None, with_images=False):
     cols = [bible.c.story, bible.c.key, bible.c.name, bible.c.description, bible.c.updated_at]
     if with_images:

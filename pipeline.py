@@ -448,9 +448,12 @@ def _pregen_safe(story, only, redo):
 def run_pregen(story, only=None, redo=False):
     """only: None (everything missing), 'bible', 'bible:<key>' (one character), or a list of scene numbers."""
     have_scenes, have_bible = db.scene_status()
-    chars = [k for k in S.BIBLE[story] if redo or f"{story}:{k}" not in have_bible]
+    for k in S.BIBLE[story]:                       # described-in-words characters keep no portrait
+        if S.text_only(story, k):
+            db.delete_bible(story, k)
+    chars = [k for k in S.BIBLE[story] if not S.text_only(story, k) and (redo or f"{story}:{k}" not in have_bible)]
     if isinstance(only, str) and only.startswith("bible:"):
-        chars = [only[6:]] if only[6:] in S.BIBLE[story] else []
+        chars = [only[6:]] if only[6:] in S.BIBLE[story] and not S.text_only(story, only[6:]) else []
     elif only not in (None, "bible"):
         chars = []
     pages = S.STORIES[story]["pages"]
@@ -498,11 +501,11 @@ def run_pregen(story, only=None, redo=False):
             _plog(f"{story}: scene {p['n']} FAILED: {str(e)[:400]}")
 
     def _scene(p):
-        missing = [c for c in p["cast"] if c not in S.TEXT_ONLY and not db.bible_image(story, c)]
+        missing = [c for c in p["cast"] if not S.text_only(story, c) and not db.bible_image(story, c)]
         if missing:
             _plog(f"{story}: scene {p['n']}: drawing {', '.join(missing)} from the description (no bible picture yet)")
         refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"]
-                if c not in S.TEXT_ONLY and db.bible_image(story, c)]
+                if not S.text_only(story, c) and db.bible_image(story, c)]
         best, last_err = None, ""
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
@@ -511,7 +514,7 @@ def run_pregen(story, only=None, redo=False):
             except Exception as e:              # a refused try is a failed attempt; earlier good tries are kept
                 last_err = str(e)
                 continue
-            a = safe_analysis([img] + [b for b in (db.bible_image(story, c) for c in p["cast"] if c not in S.TEXT_ONLY)
+            a = safe_analysis([img] + [b for b in (db.bible_image(story, c) for c in p["cast"] if not S.text_only(story, c))
                                        if b][:3],
                               scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}")
             score, ok = grade(a)
@@ -534,7 +537,8 @@ def run_pregen(story, only=None, redo=False):
     with ThreadPoolExecutor(8) as ex:
         list(ex.map(scene, todo))
     have_scenes, have_bible = db.scene_status()
-    miss_b = [S.BIBLE[story][k][0] for k in S.BIBLE[story] if f"{story}:{k}" not in have_bible]
+    miss_b = [S.BIBLE[story][k][0] for k in S.BIBLE[story]
+              if f"{story}:{k}" not in have_bible and not S.text_only(story, k)]
     miss_s = [p["n"] for p in pages if f"{story}:{p['n']}" not in have_scenes]
     if miss_b or miss_s:
         _plog(f"{story}: stopped with gaps. Missing characters: {', '.join(miss_b) or 'none'}; "

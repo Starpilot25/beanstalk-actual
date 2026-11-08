@@ -18,6 +18,11 @@ Known defects and open questions in the 20-page build, most costly first. Update
   and 20 with several photos (glasses, curly hair, darker and lighter skin, a girl and a boy).
 
 ## Book
+- **Jack's mother has no portrait in the character bible.** OpenAI's image safety filter refused her portrait
+  10 times (4 different descriptions, the strict and the "low" moderation setting, and editing her out of a
+  scene), while every other character went through. She is drawn from her written description in each of her 5
+  scenes (pp. 1, 2, 6, 18, 20), so she may vary slightly between pages. The golden harp is the same: its portrait
+  made the scenes that used it get refused, so it is described in words too. Both are marked on `/characters`.
 - Five pages per story are pre-made scenes without the hero. Check that a reader doesn't feel the hero
   disappears (Jack pp. 7, 10, 13, 16, 19; Red the same).
 - The words never use "he" or "she" for the hero (it's always "Jack", "Red" or "Mother"), so they fit a boy or a

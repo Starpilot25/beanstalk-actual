@@ -160,7 +160,13 @@ def _recover():
                                                   "Your $0.99 has been refunded; please make it again.")
 
 
+def _drop_text_only_portraits():
+    for story, key in S.TEXT_ONLY:
+        db.delete_bible(story, key)
+
+
 try:
+    _drop_text_only_portraits()
     _recover()
 except Exception as e:  # never block startup
     log.warning("recover FAIL %s", e)
@@ -203,7 +209,12 @@ def wallet_page():
 
 @app.get("/characters")
 def characters_page():
-    rows = {k: db.get_bible(k) for k in S.STORY_KEYS}
+    rows = {}
+    for k in S.STORY_KEYS:
+        have = {r["key"]: r for r in db.get_bible(k)}
+        rows[k] = [{"key": key, "name": name, "description": desc, "has": key in have,
+                    "note": S.TEXT_ONLY_NOTE if S.text_only(k, key) else ("Not drawn yet." if key not in have else "")}
+                   for key, (name, desc) in S.BIBLE[k].items()]
     return render_template("characters.html", user=current_user(), stories=S.STORIES, rows=rows,
                            hero=S.HERO, balance=billing.money(db.balance(current_user_id())) if current_user_id() else None)
 
@@ -212,6 +223,7 @@ def characters_page():
 @admin_required
 def admin_page():
     return render_template("admin.html", user=current_user(), stories=S.STORIES, bible=S.BIBLE,
+                           text_only=[f"{s}:{k}" for s, k in S.TEXT_ONLY],
                            balance=billing.money(db.balance(current_user_id())))
 
 
@@ -518,8 +530,11 @@ def bible_api():
     """The character bible as stored in the database."""
     out = {}
     for k in S.STORY_KEYS:
-        out[k] = [{"key": r["key"], "name": r["name"], "description": r["description"],
-                   "image": url_for("bible_img", story=k, key=r["key"])} for r in db.get_bible(k)]
+        have = {r["key"] for r in db.get_bible(k)}
+        out[k] = [{"key": key, "name": name, "description": desc,
+                   "image": url_for("bible_img", story=k, key=key) if key in have else None,
+                   "note": S.TEXT_ONLY_NOTE if S.text_only(k, key) else None}
+                  for key, (name, desc) in S.BIBLE[k].items()]
     return jsonify(out)
 
 
