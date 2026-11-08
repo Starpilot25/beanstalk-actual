@@ -80,9 +80,9 @@ HERO_POSITION = {
 # ---------------------------------------------------------------------------------------------------------
 BIBLE = {
     "jack": {
-        "mother": ("Jack's mother", "a cheerful fairy-tale village woman with auburn hair tied up in a bun, rosy "
-                   "cheeks and a warm smile, wearing a long-sleeved blue work dress and a cream apron, holding a "
-                   "wooden milk pail"),
+        "mother": ("Jack's mother", "a sturdy, cheerful farm woman in her forties with short curly dark-brown hair "
+                   "under a red headscarf, round cheeks and laugh lines, wearing a mustard-yellow knitted shawl over "
+                   "a brown wool dress with patched sleeves"),
         "cow": ("Milky-White", "a gentle, thin white dairy cow with soft brown ears and a small brass bell "
                 "on a rope collar"),
         "old_man": ("the old man", "a small, twinkly-eyed old man with a long white beard, a patched green "
