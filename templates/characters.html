@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Characters · Storybook{% endblock %}
+{% block style %}
+  .cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+  .ch{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .ch img,.ch .noimg{aspect-ratio:3/2;width:100%;object-fit:cover;background:#eee6d4}
+  .ch div{padding:10px 12px}
+  .ch b{font:400 1.05rem var(--story);display:block;text-transform:capitalize}
+  .ch p{margin:4px 0 0;color:var(--soft);font-size:.88rem}
+{% endblock %}
+{% block main %}
+  <h1>The character bible</h1>
+  <p class="lede">Every supporting character is drawn once, stored in the database, and used as the reference whenever they appear, so they look the same on every page and in every book. The hero is drawn from your photo for each book. (Also available as data: <a href="/api/bible">/api/bible</a>.)</p>
+  {% for key, s in stories.items() %}
+  <section class="card">
+    <h2>{{ s.title }}</h2>
+    <div class="cast">
+      <div class="ch"><div class="noimg" style="display:grid;place-items:center;color:var(--soft)">Your child</div>
+        <div><b>{{ hero[key].role }}</b><p>The hero: drawn from your photo for each book, and stored with that book.</p></div></div>
+      {% for r in rows[key] %}
+      <div class="ch"><img src="/bible/{{ key }}/{{ r.key }}.jpg" alt="{{ r.name }}" loading="lazy">
+        <div><b>{{ r.name }}</b><p>{{ r.description }}</p></div></div>
+      {% else %}
+      <p class="muted">Not drawn yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+{% endblock %}

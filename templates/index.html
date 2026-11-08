@@ -1,989 +1,366 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jack and the Beanstalk</title>
-<meta name="description" content="A picture book of Jack and the Beanstalk starring your child.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Young+Serif&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --sky:#d9eef6; --sky-deep:#b9dceb; --cloud:#fff; --ink:#17251b; --ink-soft:#4c5d51;
-    --stalk:#24613a; --stalk-dark:#174428; --leaf:#7db54a; --leaf-pale:#e6f2d6;
-    --bean:#e8a33d; --bean-dark:#c9831f; --line:#cfe0d4; --err:#b0361f;
-    --vine-w:72px;
-    --ui:"Bricolage Grotesque", system-ui, sans-serif;
-    --story:"Young Serif", Georgia, serif;
-  }
-  *{box-sizing:border-box}
-  [hidden]{display:none!important}
-  body{margin:0;background:var(--sky);color:var(--ink);font:400 16px/1.55 var(--ui);-webkit-font-smoothing:antialiased}
-  :focus-visible{outline:3px solid var(--stalk);outline-offset:3px}
+{% extends "base.html" %}
+{% block style %}
+  .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center;margin:0 0 26px}
+  .hero p{color:var(--soft);font-size:1.08rem;margin:0}
+  .steps{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 0;padding:0;list-style:none;color:var(--soft);font-size:.95rem}
+  .steps b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--leaf);color:#fff;font-size:.8rem;margin-right:6px}
+  .stories{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .story{position:relative;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;cursor:pointer;text-align:left;padding:0;color:var(--ink);font-weight:400;display:block;min-height:0}
+  .story:hover{background:#fff;border-color:#cbbf9f}
+  .story img,.story .noimg{aspect-ratio:3/2;width:100%;object-fit:cover;background:#dfe6d8}
+  .story div{padding:10px 12px}
+  .story b{font:400 1.1rem var(--story);display:block}
+  .story small{color:var(--soft)}
+  .story[aria-pressed=true]{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(47,125,70,.2)}
+  .story[aria-pressed=true]::after{content:"✓";position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:var(--leaf);color:#fff;display:grid;place-items:center;font-weight:700}
+  .story:disabled{opacity:.55}
+  .make{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .drop{border:2px dashed #cdbf9d;border-radius:12px;display:grid;place-items:center;text-align:center;padding:18px;min-height:190px;cursor:pointer;background:#fffdf7;position:relative;font-weight:400}
+  .drop:hover,.drop.over{border-color:var(--leaf);background:#f6fbf5}
+  .drop img{max-height:220px;border-radius:8px;margin:0 auto}
+  .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+  .two{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  .go{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px}
+  .stepno{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--night);color:#fff;font:600 .85rem var(--ui);margin-right:8px;vertical-align:2px}
 
-  .hero{max-width:1120px;margin:0 auto;padding:52px 24px 22px calc(24px + var(--vine-w))}
-  .hero h1{font-size:clamp(2.6rem,7vw,5.4rem);line-height:.92;font-weight:800;letter-spacing:-.035em;font-variation-settings:"wdth" 78,"opsz" 96;margin:0;color:var(--stalk-dark);max-width:11ch}
-  .hero p{font-size:1.12rem;color:var(--ink-soft);max-width:40ch;margin:18px 0 0}
-
-  main{max-width:1120px;margin:0 auto;padding:0 24px 72px}
-  .step{position:relative;padding-left:var(--vine-w);padding-bottom:36px}
-  .step::before{content:"";position:absolute;left:calc(var(--vine-w)/2 - 2px);top:0;bottom:0;width:4px;
-    background:repeating-linear-gradient(to bottom,var(--sky-deep) 0 10px,transparent 10px 18px)}
-  .step::after{content:"";position:absolute;left:calc(var(--vine-w)/2 - 3px);top:0;width:6px;height:0;background:var(--stalk);border-radius:3px;transition:height .9s cubic-bezier(.3,.7,.2,1)}
-  .step.grown::after{height:100%}
-  .step:last-child::before,.step:last-child::after{bottom:auto;height:48px}
-  .step.grown:last-child::after{height:48px}
-  .leaf{position:absolute;left:calc(var(--vine-w)/2 - 22px);top:4px;width:44px;height:44px;z-index:1;display:grid;place-items:center;
-    font:800 1.05rem var(--ui);color:var(--stalk);background:var(--cloud);border:3px solid var(--sky-deep);border-radius:50% 4px 50% 4px;transform:rotate(-45deg);transition:background .4s,border-color .4s}
-  .leaf span{transform:rotate(45deg)}
-  .step.grown .leaf{background:var(--leaf);border-color:var(--stalk);color:var(--stalk-dark)}
-  @media (max-width:760px){ :root{--vine-w:44px} .leaf{width:34px;height:34px;left:calc(var(--vine-w)/2 - 17px);font-size:.9rem} main{padding:0 14px 60px} .hero{padding:34px 14px 18px calc(14px + var(--vine-w))} }
-
-  .panel{background:var(--cloud);border-radius:28px;padding:30px;box-shadow:0 2px 0 var(--sky-deep)}
-  @media (max-width:760px){ .panel{padding:20px;border-radius:20px} }
-  h2{font-size:clamp(1.5rem,3.2vw,2.1rem);line-height:1.05;font-weight:750;letter-spacing:-.02em;font-variation-settings:"wdth" 85;margin:6px 0 6px;color:var(--stalk-dark)}
-  .lede{color:var(--ink-soft);margin:0 0 20px;max-width:60ch}
-  .two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:32px;align-items:start}
-  @media (max-width:860px){ .two{grid-template-columns:1fr} }
-
-  .drop{display:flex;align-items:center;gap:16px;border:2px dashed var(--leaf);border-radius:18px;padding:16px 20px;background:var(--leaf-pale);cursor:pointer}
-  .drop:hover,.drop.over{background:#d8ebc0;border-color:var(--stalk)}
-  .drop svg{flex:none;width:36px;height:46px}
-  .drop b{display:block;color:var(--stalk-dark)}
-  .drop small{color:var(--ink-soft)}
-  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-
-  label.f{display:block;font-weight:650;font-size:.95rem;margin:18px 0 6px}
-  label.f small{font-weight:400;color:var(--ink-soft)}
-  input[type=text],textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
-  textarea{resize:vertical}
-  .grid-name{display:grid;grid-template-columns:1fr 110px;gap:12px}
-
-  button{font:700 1rem var(--ui);border:0;border-radius:14px;cursor:pointer;padding:12px 18px}
-  button:active:not(:disabled){transform:translateY(1px)}
-  button:disabled{opacity:.4;cursor:not-allowed}
-  .go{background:var(--bean);color:var(--ink);box-shadow:0 3px 0 var(--bean-dark)}
-  .go:hover:not(:disabled){background:#f0b452}
-  .go.wide{width:100%;margin-top:20px;padding:15px;font-size:1.06rem}
-  .quiet{background:#fff;color:var(--stalk-dark);border:1.5px solid var(--line);padding:9px 14px;font-size:.92rem}
-  .quiet:hover:not(:disabled){border-color:var(--stalk);background:var(--leaf-pale)}
-
-  .portraits{display:grid;grid-template-columns:2fr 3fr;gap:14px;align-items:start}
-  @media (max-width:860px){ .portraits{grid-template-columns:1fr} }
-  .portraits figure{margin:0}
-  .portraits figcaption{font-size:.88rem;color:var(--ink-soft);margin-top:8px;text-align:center}
-  .frame{position:relative;border-radius:18px;overflow:hidden;background:var(--sky);display:grid;place-items:center;text-align:center;color:var(--ink-soft);font-size:.92rem;padding:10px}
-  .frame img,.frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .frame.tall{aspect-ratio:2/3}
-  .frame.wide{aspect-ratio:3/2}
-  #heroFrame{background:var(--leaf-pale)}
-  .spin{width:34px;height:34px;margin:0 auto 10px;border-radius:50% 4px 50% 4px;background:var(--leaf);animation:sprout 1.2s ease-in-out infinite}
-  @keyframes sprout{0%,100%{transform:rotate(-45deg) scale(.7)}50%{transform:rotate(-45deg) scale(1)}}
-  .elapsed{font-variant-numeric:tabular-nums;display:block;margin-top:2px;font-weight:650}
-  .status{min-height:1.4em;margin-top:8px;font-size:.92rem;color:var(--ink-soft)}
-  .status.err{color:var(--err);font-weight:600}
-
-  .note{font-size:.85rem;color:var(--ink-soft);margin:8px 0 0}
-  .change{display:flex;gap:8px;margin-top:12px}
-  .change input{flex:1;min-width:0}
-
-  /* book pages */
-  .pages{display:grid;gap:30px}
-  .bookpage h3{font:400 1.25rem/1.2 var(--story);margin:0 0 10px}
-  .bookpage h3 span{color:var(--ink-soft);font-size:.95rem}
-  .art{position:relative;aspect-ratio:3/2;border-radius:14px;overflow:hidden;background:linear-gradient(#e9f3f7,#cfe5ee);display:grid;place-items:center;color:var(--ink-soft)}
-  .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .art .words{position:absolute;left:0;right:0;padding:4% 10%;text-align:center;font:400 clamp(1rem,2.6vw,1.75rem)/1.3 var(--story);z-index:1;text-wrap:balance}
-  .art .words.bottom{bottom:0;padding-bottom:6%}
-  .art .words.top{top:0;padding-top:5%}
-  .art .fade{position:absolute;left:0;right:0;height:40%;z-index:1;pointer-events:none}
-  .art .fade.bottom{bottom:0}
-  .art .fade.top{top:0}
-  .art.light .fade.bottom{background:linear-gradient(to top,rgba(14,16,22,.62),rgba(14,16,22,0))}
-  .art.light .fade.top{background:linear-gradient(to bottom,rgba(14,16,22,.62),rgba(14,16,22,0))}
-  .art.dark .fade.top{background:linear-gradient(to bottom,rgba(255,255,255,.55),rgba(255,255,255,0))}
-  .art.dark .fade.bottom{background:linear-gradient(to top,rgba(255,255,255,.55),rgba(255,255,255,0))}
-  .art.light .words{color:#fffaf0;text-shadow:1px 1px 2px rgba(0,0,0,.45)}
-  .art.dark .words{color:var(--ink)}
-  .art .placeholder{position:relative;z-index:2;background:rgba(255,255,255,.85);padding:8px 14px;border-radius:10px}
-  .page-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
-
-  .book{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;background:var(--stalk-dark);color:#e9f3df;border-radius:28px;padding:30px}
-  .book h2{color:#fff;margin:0 0 4px}
-  .book p{margin:0;color:#bcd3b4;max-width:46ch}
-  .book .status{color:#ffd7cc}
-
-  footer{max-width:1120px;margin:0 auto;padding:0 24px 40px calc(24px + var(--vine-w));color:var(--ink-soft);font-size:.86rem}
-  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
-  /* account, library, progress */
-  .topbar{max-width:1120px;margin:0 auto;padding:16px 24px 0;display:flex;justify-content:flex-end;align-items:center;gap:12px;font-size:.92rem;color:var(--ink-soft)}
-  .topbar img{width:30px;height:30px;border-radius:50%}
-  .topbar a{color:var(--stalk-dark);font-weight:650}
-  .signin{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-  .gbtn{display:inline-flex;align-items:center;gap:12px;background:#fff;color:#1f1f1f;border:1px solid #747775;border-radius:999px;padding:10px 20px;font:600 1rem var(--ui);text-decoration:none}
-  .gbtn:hover{background:#f6f8f6}
-  .gbtn svg{width:20px;height:20px}
-  .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
-  .bookcard{all:unset;cursor:pointer;display:block;border-radius:16px;overflow:hidden;background:#fff;border:2px solid var(--line)}
-  .bookcard:hover,.bookcard:focus-visible{border-color:var(--stalk)}
-  .bookcard.on{border-color:var(--bean)}
-  .bookcard .thumb{aspect-ratio:3/2;background:var(--leaf-pale) center/cover no-repeat}
-  .bookcard .meta{padding:8px 12px}
-  .bookcard b{display:block;font-size:.98rem}
-  .bookcard small{color:var(--ink-soft)}
-  .newcard{display:grid;place-items:center;min-height:150px;border-style:dashed;color:var(--stalk-dark);font-weight:700}
-  .prog{height:10px;border-radius:5px;background:var(--leaf-pale);overflow:hidden;margin-top:10px}
-  .prog i{display:block;height:100%;width:0;background:var(--leaf);border-radius:5px;transition:width .4s linear}
-  .prog.done i{background:var(--stalk)}
-  .prog.fail i{background:var(--err)}
-  .proglabel{display:flex;justify-content:space-between;font-size:.86rem;color:var(--ink-soft);margin-top:4px;font-variant-numeric:tabular-nums}
-  .allbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-  .allbar .prog{flex:1;min-width:200px;margin:0}
-  .saved{font-size:.85rem;color:var(--stalk)}
-  .pwform{display:flex;flex-direction:column;gap:8px;margin-top:10px;width:100%;max-width:560px}
-  .pwrow{display:flex;gap:8px;flex-wrap:wrap}
-  .pwrow input{flex:1;min-width:140px;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px}
-
-  /* ===================== Storybook night theme ===================== */
-  :root{
-    /* the world behind the page */
-    --night-1:#06142b; --night-2:#0d2a4f; --night-3:#164867; --moon:#fff1c9; --gold:#f2b843; --gold-dark:#b9821c;
-    --on-night:#eaf0ff; --on-night-soft:#b8c6e0;
-    /* the storybook pages (panels) */
-    --parch:#f8efd7; --parch-2:#efe2c0;
-    --cloud:var(--parch); --ink:#2b2416; --ink-soft:#6a5d45;
-    --stalk:#2f6b3a; --stalk-dark:#1f4a28; --leaf:#5fae4e; --leaf-pale:#e7ebc9;
-    --line:#d9c89f; --sky:#ebdfc0; --sky-deep:rgba(255,255,255,.22);
-    --bean:var(--gold); --bean-dark:var(--gold-dark); --err:#b23a1f;
-    --story:"Young Serif", Georgia, serif;
-  }
-  html{background:var(--night-1)}
-  body{background:transparent;color:var(--ink);min-height:100vh;position:relative;isolation:isolate}
-  body::before,body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none}
-  body::before{background:radial-gradient(1.2px 1.2px at 45.2% 39.2%, rgba(255,250,230,0.62) 99%, transparent),radial-gradient(0.7px 0.7px at 50.8% 41.1%, rgba(255,250,230,0.64) 99%, transparent),radial-gradient(0.7px 0.7px at 63.0% 55.5%, rgba(255,250,230,0.55) 99%, transparent),radial-gradient(1.1px 1.1px at 9.1% 56.7%, rgba(255,250,230,0.44) 99%, transparent),radial-gradient(1.1px 1.1px at 98.2% 67.5%, rgba(255,250,230,0.69) 99%, transparent),radial-gradient(1.0px 1.0px at 15.7% 1.1%, rgba(255,250,230,0.45) 99%, transparent),radial-gradient(0.6px 0.6px at 19.0% 16.9%, rgba(255,250,230,0.62) 99%, transparent),radial-gradient(1.0px 1.0px at 44.1% 59.0%, rgba(255,250,230,0.70) 99%, transparent),radial-gradient(0.9px 0.9px at 50.0% 46.4%, rgba(255,250,230,0.54) 99%, transparent),radial-gradient(1.2px 1.2px at 99.8% 69.7%, rgba(255,250,230,0.73) 99%, transparent),radial-gradient(0.8px 0.8px at 31.5% 16.1%, rgba(255,250,230,0.45) 99%, transparent),radial-gradient(1.2px 1.2px at 76.6% 28.0%, rgba(255,250,230,0.59) 99%, transparent),radial-gradient(0.6px 0.6px at 95.8% 59.3%, rgba(255,250,230,0.51) 99%, transparent),radial-gradient(1.3px 1.3px at 91.0% 32.9%, rgba(255,250,230,0.59) 99%, transparent),radial-gradient(1.1px 1.1px at 7.3% 44.1%, rgba(255,250,230,0.54) 99%, transparent),radial-gradient(1.3px 1.3px at 8.7% 23.3%, rgba(255,250,230,0.75) 99%, transparent),radial-gradient(0.7px 0.7px at 11.8% 17.2%, rgba(255,250,230,0.45) 99%, transparent),radial-gradient(1.0px 1.0px at 79.7% 12.4%, rgba(255,250,230,0.62) 99%, transparent),radial-gradient(0.7px 0.7px at 19.1% 51.2%, rgba(255,250,230,0.70) 99%, transparent),radial-gradient(0.7px 0.7px at 11.7% 29.5%, rgba(255,250,230,0.54) 99%, transparent),radial-gradient(0.8px 0.8px at 97.1% 56.2%, rgba(255,250,230,0.80) 99%, transparent),radial-gradient(1.2px 1.2px at 21.1% 27.6%, rgba(255,250,230,0.70) 99%, transparent),radial-gradient(0.7px 0.7px at 10.0% 69.3%, rgba(255,250,230,0.53) 99%, transparent),radial-gradient(0.8px 0.8px at 77.3% 23.0%, rgba(255,250,230,0.46) 99%, transparent),radial-gradient(0.8px 0.8px at 9.0% 40.8%, rgba(255,250,230,0.68) 99%, transparent),radial-gradient(1.3px 1.3px at 37.2% 31.7%, rgba(255,250,230,0.63) 99%, transparent),radial-gradient(0.7px 0.7px at 57.5% 60.7%, rgba(255,250,230,0.49) 99%, transparent),radial-gradient(0.8px 0.8px at 90.8% 57.2%, rgba(255,250,230,0.51) 99%, transparent),radial-gradient(0.7px 0.7px at 73.9% 65.8%, rgba(255,250,230,0.83) 99%, transparent),radial-gradient(0.9px 0.9px at 88.2% 42.2%, rgba(255,250,230,0.47) 99%, transparent),radial-gradient(0.8px 0.8px at 3.9% 67.4%, rgba(255,250,230,0.72) 99%, transparent),radial-gradient(1.0px 1.0px at 25.7% 57.7%, rgba(255,250,230,0.55) 99%, transparent),radial-gradient(0.6px 0.6px at 17.5% 50.4%, rgba(255,250,230,0.52) 99%, transparent),radial-gradient(1.0px 1.0px at 55.9% 59.7%, rgba(255,250,230,0.54) 99%, transparent),radial-gradient(0.6px 0.6px at 91.7% 14.3%, rgba(255,250,230,0.54) 99%, transparent),radial-gradient(0.7px 0.7px at 44.6% 4.2%, rgba(255,250,230,0.58) 99%, transparent),radial-gradient(0.9px 0.9px at 57.2% 9.2%, rgba(255,250,230,0.80) 99%, transparent),radial-gradient(1.1px 1.1px at 98.0% 46.0%, rgba(255,250,230,0.67) 99%, transparent),radial-gradient(0.6px 0.6px at 14.0% 2.5%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(0.6px 0.6px at 70.1% 67.4%, rgba(255,250,230,0.70) 99%, transparent),radial-gradient(0.8px 0.8px at 48.2% 51.1%, rgba(255,250,230,0.85) 99%, transparent),radial-gradient(1.1px 1.1px at 7.5% 38.2%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(1.2px 1.2px at 73.7% 49.3%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(1.2px 1.2px at 35.2% 48.0%, rgba(255,250,230,0.80) 99%, transparent),radial-gradient(1.2px 1.2px at 41.7% 55.3%, rgba(255,250,230,0.67) 99%, transparent),radial-gradient(1.0px 1.0px at 62.5% 26.8%, rgba(255,250,230,0.68) 99%, transparent),radial-gradient(1.3px 1.3px at 8.0% 44.8%, rgba(255,250,230,0.80) 99%, transparent),radial-gradient(1.1px 1.1px at 72.8% 27.2%, rgba(255,250,230,0.67) 99%, transparent),radial-gradient(0.7px 0.7px at 44.1% 58.7%, rgba(255,250,230,0.74) 99%, transparent),radial-gradient(0.9px 0.9px at 3.0% 42.1%, rgba(255,250,230,0.52) 99%, transparent),radial-gradient(1.0px 1.0px at 69.8% 34.8%, rgba(255,250,230,0.82) 99%, transparent),radial-gradient(0.8px 0.8px at 25.6% 0.8%, rgba(255,250,230,0.71) 99%, transparent),radial-gradient(1.2px 1.2px at 20.3% 11.9%, rgba(255,250,230,0.71) 99%, transparent),radial-gradient(0.8px 0.8px at 44.2% 62.4%, rgba(255,250,230,0.71) 99%, transparent),radial-gradient(1.2px 1.2px at 19.9% 30.2%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(1.0px 1.0px at 88.0% 26.9%, rgba(255,250,230,0.56) 99%, transparent),radial-gradient(1.2px 1.2px at 13.6% 34.8%, rgba(255,250,230,0.79) 99%, transparent),radial-gradient(0.8px 0.8px at 71.1% 66.5%, rgba(255,250,230,0.50) 99%, transparent),radial-gradient(0.7px 0.7px at 45.1% 19.3%, rgba(255,250,230,0.60) 99%, transparent),radial-gradient(0.8px 0.8px at 62.6% 34.6%, rgba(255,250,230,0.78) 99%, transparent),radial-gradient(0.7px 0.7px at 98.2% 31.7%, rgba(255,250,230,0.44) 99%, transparent),radial-gradient(1.1px 1.1px at 87.3% 2.9%, rgba(255,250,230,0.67) 99%, transparent),radial-gradient(0.6px 0.6px at 30.9% 55.4%, rgba(255,250,230,0.48) 99%, transparent),radial-gradient(1.2px 1.2px at 45.5% 1.7%, rgba(255,250,230,0.53) 99%, transparent),radial-gradient(1.0px 1.0px at 14.1% 3.3%, rgba(255,250,230,0.61) 99%, transparent),radial-gradient(1.2px 1.2px at 63.0% 45.9%, rgba(255,250,230,0.83) 99%, transparent),radial-gradient(0.9px 0.9px at 68.4% 14.0%, rgba(255,250,230,0.50) 99%, transparent),radial-gradient(1.1px 1.1px at 1.1% 33.1%, rgba(255,250,230,0.50) 99%, transparent),radial-gradient(1.1px 1.1px at 27.2% 24.2%, rgba(255,250,230,0.65) 99%, transparent),radial-gradient(0.9px 0.9px at 61.4% 52.9%, rgba(255,250,230,0.76) 99%, transparent),radial-gradient(1.3px 1.3px at 90.6% 6.1%, rgba(255,250,230,0.73) 99%, transparent),radial-gradient(1.0px 1.0px at 13.0% 31.7%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(1.2px 1.2px at 37.7% 39.8%, rgba(255,250,230,0.76) 99%, transparent),radial-gradient(1.1px 1.1px at 94.4% 32.5%, rgba(255,250,230,0.51) 99%, transparent),radial-gradient(1.0px 1.0px at 72.2% 57.3%, rgba(255,250,230,0.73) 99%, transparent),radial-gradient(1.3px 1.3px at 21.3% 63.0%, rgba(255,250,230,0.84) 99%, transparent),radial-gradient(0.8px 0.8px at 53.7% 55.4%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(0.7px 0.7px at 85.6% 24.4%, rgba(255,250,230,0.61) 99%, transparent),radial-gradient(0.9px 0.9px at 55.0% 53.8%, rgba(255,250,230,0.44) 99%, transparent),radial-gradient(1.2px 1.2px at 80.9% 4.5%, rgba(255,250,230,0.50) 99%, transparent);animation:fadein 1.6s ease-out both}
-  body::after{background:radial-gradient(0.8px 0.8px at 33.5% 55.2%, rgba(255,250,230,0.57) 99%, transparent),radial-gradient(1.9px 1.9px at 51.7% 50.6%, rgba(255,250,230,0.84) 99%, transparent),radial-gradient(2.0px 2.0px at 94.6% 34.5%, rgba(255,250,230,0.54) 99%, transparent),radial-gradient(1.0px 1.0px at 22.1% 36.9%, rgba(255,250,230,0.86) 99%, transparent),radial-gradient(1.9px 1.9px at 63.9% 36.6%, rgba(255,250,230,0.78) 99%, transparent),radial-gradient(1.9px 1.9px at 31.2% 26.7%, rgba(255,250,230,0.95) 99%, transparent),radial-gradient(2.1px 2.1px at 20.8% 59.6%, rgba(255,250,230,0.76) 99%, transparent),radial-gradient(1.4px 1.4px at 57.3% 14.1%, rgba(255,250,230,0.75) 99%, transparent),radial-gradient(2.1px 2.1px at 60.5% 1.9%, rgba(255,250,230,0.76) 99%, transparent),radial-gradient(1.4px 1.4px at 40.1% 56.1%, rgba(255,250,230,0.75) 99%, transparent),radial-gradient(1.4px 1.4px at 69.1% 4.6%, rgba(255,250,230,0.71) 99%, transparent),radial-gradient(1.0px 1.0px at 95.7% 64.6%, rgba(255,250,230,0.74) 99%, transparent),radial-gradient(1.8px 1.8px at 12.7% 30.4%, rgba(255,250,230,0.95) 99%, transparent),radial-gradient(0.9px 0.9px at 47.7% 22.2%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(1.8px 1.8px at 92.5% 9.1%, rgba(255,250,230,0.51) 99%, transparent),radial-gradient(1.6px 1.6px at 19.4% 15.9%, rgba(255,250,230,0.66) 99%, transparent),radial-gradient(0.8px 0.8px at 35.5% 43.4%, rgba(255,250,230,0.87) 99%, transparent),radial-gradient(1.0px 1.0px at 12.3% 35.7%, rgba(255,250,230,0.60) 99%, transparent),radial-gradient(1.2px 1.2px at 53.0% 30.6%, rgba(255,250,230,0.71) 99%, transparent),radial-gradient(0.9px 0.9px at 52.9% 11.2%, rgba(255,250,230,0.82) 99%, transparent),radial-gradient(1.9px 1.9px at 63.8% 37.1%, rgba(255,250,230,0.81) 99%, transparent),radial-gradient(1.7px 1.7px at 85.7% 16.3%, rgba(255,250,230,0.91) 99%, transparent),radial-gradient(1.1px 1.1px at 90.3% 22.1%, rgba(255,250,230,0.96) 99%, transparent),radial-gradient(1.9px 1.9px at 21.8% 69.9%, rgba(255,250,230,0.57) 99%, transparent),radial-gradient(1.0px 1.0px at 23.9% 50.9%, rgba(255,250,230,0.55) 99%, transparent),radial-gradient(1.8px 1.8px at 83.2% 29.5%, rgba(255,250,230,0.56) 99%, transparent);animation:fadein 1.6s .3s ease-out both, twinkle 5s 2s ease-in-out infinite alternate}
+  /* progress */
+  .prog{height:14px;border-radius:999px;background:#ece5d3;overflow:hidden;margin:10px 0 6px}
+  .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3f9a56,#7cd67a);border-radius:999px;transition:width .5s ease}
+  .stagebar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-weight:600;margin-top:12px}
+  .stagebar span:last-child{font-variant-numeric:tabular-nums;color:var(--soft);font-weight:500}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px}
+  .tile{position:relative;border-radius:10px;overflow:hidden;background:#ece6d6;aspect-ratio:3/2;cursor:pointer;border:0;padding:0;min-height:0;display:block;color:var(--ink);font-weight:400}
+  .tile:hover{background:#e6dfcb}
+  .tile img{width:100%;height:100%;object-fit:cover;animation:fadein .4s ease}
   @keyframes fadein{from{opacity:0}to{opacity:1}}
-  @keyframes twinkle{from{opacity:1}to{opacity:.4}}
+  .tile .n{position:absolute;top:6px;left:6px;background:rgba(15,34,64,.85);color:#fff;border-radius:6px;padding:1px 7px;font:600 .8rem var(--ui)}
+  .tile .badge{position:absolute;left:6px;right:6px;bottom:6px;background:rgba(255,255,255,.94);border-radius:6px;padding:2px 7px;font:600 .75rem/1.5 var(--ui);text-align:left;display:flex;justify-content:space-between;gap:6px}
+  .tile .badge.warn{background:#fff3d6}
+  .tile.busy::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%);background-size:200% 100%;animation:shine 1.3s linear infinite}
+  @keyframes shine{from{background-position:150% 0}to{background-position:-50% 0}}
+  .tile .wait{position:absolute;inset:0;display:grid;place-items:center;color:var(--soft);font-size:.85rem}
+  .done-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:16px;padding:14px;border-radius:12px;background:#eef6ef}
 
-  /* ---- the scene ---- */
-  .sky{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;background:
-      radial-gradient(900px 500px at 80% 0%, rgba(255,230,170,.18), transparent 60%),
-      linear-gradient(180deg,var(--night-1) 0%,var(--night-2) 55%,var(--night-3) 100%)}
-  .cloud{position:absolute;left:-30vw;opacity:.5;will-change:transform;animation:drift linear infinite}
-  .cloud.c1{top:12vh;width:280px;animation-duration:150s;animation-delay:-40s}
-  .cloud.c2{top:34vh;width:200px;opacity:.35;animation-duration:210s;animation-delay:-120s}
-  .cloud.c3{top:4vh;width:360px;opacity:.3;animation-duration:260s;animation-delay:-200s}
-  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(160vw)}}
-  .hills{position:absolute;left:0;right:0;bottom:0;width:100%;height:30vh;min-height:180px;will-change:transform}
-  .firefly{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff3a6;
-    box-shadow:0 0 10px 3px rgba(255,236,140,.75);animation:float var(--d,9s) ease-in-out var(--delay,0s) infinite alternate,blink 2.6s ease-in-out var(--delay,0s) infinite alternate}
-  @keyframes float{from{transform:translate(0,0)}to{transform:translate(var(--dx,30px),var(--dy,-40px))}}
-  @keyframes blink{from{opacity:.15}to{opacity:1}}
-  .shooting{position:fixed;width:140px;height:2px;z-index:-1;pointer-events:none;border-radius:2px;
-    background:linear-gradient(90deg,rgba(255,250,230,0),rgba(255,250,230,.95));transform-origin:right center;
-    animation:shoot 1.1s ease-out forwards}
-  @keyframes shoot{from{opacity:0;transform:translate(0,0) rotate(-24deg) scaleX(.3)}20%{opacity:1}to{opacity:0;transform:translate(-420px,190px) rotate(-24deg) scaleX(1)}}
+  /* library */
+  .books{display:grid;gap:10px}
+  .bk{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .bk img{width:84px;aspect-ratio:3/2;object-fit:cover;border-radius:8px;background:#e8e2d2}
+  .bk .t{flex:1;min-width:180px}
+  .bk .t b{font:400 1.05rem var(--story)}
+  dialog{border:0;border-radius:14px;padding:0;max-width:min(900px,94vw);width:100%}
+  dialog::backdrop{background:rgba(10,20,40,.6)}
+  dialog img{width:100%}
+  dialog .body{padding:14px 18px}
+  .signin{max-width:520px;margin:10px auto;text-align:center}
+  .gbtn{background:#fff;color:#1f1f1f;border:1px solid #dadce0;font-weight:600}
+  .gbtn:hover{background:#f7f8f8}
+  .gbtn svg{width:20px;height:20px}
+  .pwrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .pwrow input{flex:1;min-width:140px}
+  @media (max-width:800px){ .hero,.make{grid-template-columns:1fr} }
+  @media (max-width:480px){ .stories{gap:10px} .story div{padding:8px} .story b{font-size:.98rem} .two{grid-template-columns:1fr} .grid{grid-template-columns:repeat(2,1fr)} }
+{% endblock %}
 
-  /* the giant beanstalk that grows down the page as you scroll (wide screens) */
-  #giantStalk{position:absolute;top:0;right:max(6px,calc((100vw - 1120px)/2 - 96px));width:96px;z-index:0;pointer-events:none;overflow:visible}
-  #giantStalk path.stem{fill:none;stroke:url(#stemgrad);stroke-width:13;stroke-linecap:round;filter:drop-shadow(0 0 8px rgba(120,230,140,.45))}
-  #giantStalk .lf{fill:#5fbf5a;transform-box:fill-box;transform-origin:var(--ox,0%) 50%;transform:scale(0);transition:transform .6s cubic-bezier(.3,1.6,.4,1)}
-  #giantStalk .lf.on{transform:scale(1)}
-  #giantStalk .tip{fill:#c9ffb8;filter:drop-shadow(0 0 8px #9be88f) drop-shadow(0 0 16px rgba(155,232,143,.7));transition:opacity .3s}
-  @media (max-width:1299px){ #giantStalk{display:none} }
-  main,.topbar,header.hero{position:relative;z-index:2}
-
-  /* sparkles */
-  .spark{position:fixed;z-index:50;pointer-events:none;width:10px;height:10px;margin:-5px 0 0 -5px;
-    background:radial-gradient(circle,#fff8d6 0 25%,#f6c453 45%,transparent 70%);border-radius:50%;
-    animation:spark .8s ease-out forwards}
-  .spark.star{background:none;width:14px;height:14px;margin:-7px 0 0 -7px}
-  .spark.star::before{content:"✦";position:absolute;inset:0;color:#ffe08a;font-size:14px;line-height:14px;text-shadow:0 0 8px #f6c453}
-  @keyframes spark{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--sx),var(--sy)) scale(.3)}}
-
-  /* ---- text on the night sky ---- */
-  .hero{display:grid;grid-template-columns:1fr minmax(220px,360px);gap:24px;align-items:center}
-  .hero h1{font-family:var(--story);font-weight:400;letter-spacing:-.01em;font-variation-settings:normal;line-height:1.02;max-width:13ch;
-    background:linear-gradient(180deg,#fff6d8 0%,#ffd77a 55%,#e9a93a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 2px 14px rgba(255,210,120,.35))}
-  .hero p{color:var(--on-night-soft)}
-  .hero .sky-art{width:100%;height:auto;overflow:visible;filter:drop-shadow(0 0 30px rgba(255,226,160,.25))}
-  @media (max-width:760px){ .hero{grid-template-columns:1fr} .hero .sky-art{max-width:250px;justify-self:end;margin-top:-6px} .cloud{opacity:.22!important;width:160px!important} }
-  .topbar,.topbar span{color:var(--on-night-soft)}
-  .topbar a{color:var(--moon)}
-  footer{color:var(--on-night-soft)} footer a{color:var(--moon)}
-
-  /* ---- storybook pages ---- */
-  .panel{background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.25 0 0 0 0 0.1 0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"), linear-gradient(180deg,var(--parch),var(--parch-2));color:var(--ink);
-    border:1px solid #e4d3a6;box-shadow:0 1px 0 #fffaf0 inset,0 18px 50px rgba(2,8,24,.55),0 0 0 6px rgba(248,239,215,.06)}
-  .panel h2,.book h2{font-family:var(--story);font-weight:400;letter-spacing:0;font-variation-settings:normal}
-  .panel h2{color:var(--stalk-dark)}
-  input[type=text],input[type=password],textarea{background:#fffbf0;border-color:var(--line);color:var(--ink)}
-  .quiet{background:#fffaf0;border-color:var(--line)}
-  .quiet:hover:not(:disabled){background:#f3ead0;border-color:var(--stalk)}
-  .go{background:linear-gradient(180deg,#ffd36a,var(--gold));color:#2b1a02;box-shadow:0 3px 0 var(--gold-dark),0 0 18px rgba(242,184,67,.35)}
-  .go:hover:not(:disabled){box-shadow:0 3px 0 var(--gold-dark),0 0 28px rgba(242,184,67,.6)}
-  .frame{background:#eadcb8;border:1px solid var(--line)}
-  #heroFrame{background:#e2e6c4}
-  .art{border:6px solid #fffaf0;box-shadow:0 10px 26px rgba(60,40,10,.25);background:linear-gradient(#dfe8e8,#c9d8dc)}
-  .bookpage h3{font-family:var(--story)}
-  .bookcard{background:#fffaf0;border-color:var(--line)}
-  .bookcard.on{border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,184,67,.35)}
-  .prog{background:#e6d8b1}
-  .prog i{background:linear-gradient(90deg,#7ccf6a,var(--stalk))}
-  .prog.done i{background:var(--gold)}
-
-  /* the progress vine on the left glows against the night */
-  .step::before{background:repeating-linear-gradient(to bottom,rgba(255,255,255,.22) 0 10px,transparent 10px 18px)}
-  .step::after{background:linear-gradient(180deg,#9df0a6,#5fbf5a);box-shadow:0 0 12px rgba(120,230,140,.6)}
-  .leaf{background:#f8efd7;border-color:#e4d3a6;color:var(--stalk-dark)}
-  .step.grown .leaf{background:#6fd06a;border-color:#c9ffc4;color:#082a0e;box-shadow:0 0 16px rgba(120,230,140,.55)}
-
-  /* the download block: a green leather book cover with gold trim */
-  .book{background:linear-gradient(135deg,#1f4a28,#163a1f);border:2px solid #c9a24a;box-shadow:inset 0 0 0 6px #1a4123,inset 0 0 0 7px rgba(242,184,67,.5),0 18px 50px rgba(2,8,24,.5)}
-  .book h2{color:#ffe6a3}
-  .book p{color:#cfe2c4}
-  .book .status{color:#ffc9b8}
-
-  @media (prefers-reduced-motion:reduce){
-    body::before,body::after,.cloud,.firefly{animation:none!important}
-    .shooting,.spark{display:none}
-    #giantStalk .lf{transform:scale(1);transition:none}
-  }
-
-  /* ===================== Parallax world ===================== */
-  .layer{position:absolute;left:-4%;width:108%;will-change:transform}
-  .beams{position:absolute;top:-20vh;right:-10vw;width:85vw;height:140vh;pointer-events:none;opacity:.9;
-    background:repeating-conic-gradient(from 208deg at 92% 6%,rgba(255,236,180,.07) 0deg 3deg,transparent 3deg 9deg);
-    -webkit-mask-image:radial-gradient(ellipse 80% 70% at 92% 6%,#000 0%,transparent 70%);mask-image:radial-gradient(ellipse 80% 70% at 92% 6%,#000 0%,transparent 70%);
-    animation:beams 9s ease-in-out infinite alternate}
-  @keyframes beams{from{opacity:.55}to{opacity:1}}
-  .mountains{bottom:0;height:52vh;min-height:300px}
-  .trees{bottom:0;height:36vh;min-height:220px}
-  .mist{position:absolute;left:-20%;width:140%;height:22vh;bottom:14vh;pointer-events:none;
-    background:radial-gradient(ellipse 30% 50% at 20% 50%,rgba(220,235,255,.10),transparent 70%),
-               radial-gradient(ellipse 28% 45% at 65% 60%,rgba(220,235,255,.08),transparent 70%),
-               radial-gradient(ellipse 22% 40% at 95% 40%,rgba(220,235,255,.07),transparent 70%);
-    animation:mist 40s ease-in-out infinite alternate}
-  @keyframes mist{from{margin-left:-6%}to{margin-left:6%}}
-
-  /* ===================== Magic moments ===================== */
-  /* progress bars are growing vines, with a bud at the tip */
-  .prog{height:14px;overflow:visible;background:#e6d8b1}
-  .prog i{position:relative;border-radius:7px;box-shadow:none;background:
-      radial-gradient(ellipse 5px 3.5px at 7px 3.5px,#7ccf6a 96%,transparent) 0 0/24px 14px repeat-x,
-      radial-gradient(ellipse 5px 3.5px at 18px 10.5px,#57ad4f 96%,transparent) 0 0/24px 14px repeat-x,
-      linear-gradient(#3f8f3f,#3f8f3f) 0 50%/100% 3px no-repeat}
-  .prog i::after{content:"";position:absolute;right:-8px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50% 0 50% 0;
-    background:#9be88f;transform:rotate(45deg);box-shadow:0 0 10px rgba(155,232,143,.9)}
-  .prog.done i{background:
-      radial-gradient(ellipse 5px 3.5px at 7px 3.5px,#ffd36a 96%,transparent) 0 0/24px 14px repeat-x,
-      radial-gradient(ellipse 5px 3.5px at 18px 10.5px,#f2b843 96%,transparent) 0 0/24px 14px repeat-x,
-      linear-gradient(#b9821c,#b9821c) 0 50%/100% 3px no-repeat}
-  .prog.done i::after{background:#ffd36a;box-shadow:0 0 14px rgba(255,211,106,.95)}
-  .allbar .prog{margin:0}
-  /* each new picture blooms open */
-  .reveal{animation:bloom 1.3s cubic-bezier(.2,.8,.2,1) both}
-  @keyframes bloom{0%{clip-path:circle(0% at 50% 65%);filter:brightness(1.9) saturate(.3)}55%{filter:brightness(1.25) saturate(.9)}100%{clip-path:circle(85% at 50% 50%);filter:none}}
-  /* golden-hour bean shower */
-  .fallbean{position:fixed;top:-30px;z-index:60;pointer-events:none;width:14px;height:19px;
-    border-radius:50% 50% 46% 54%/60% 60% 40% 40%;box-shadow:0 0 10px rgba(255,220,140,.5);
-    animation:beanfall var(--t,2.6s) cubic-bezier(.35,.1,.6,1) var(--d,0s) forwards}
-  @keyframes beanfall{to{transform:translate(var(--x,0),112vh) rotate(var(--r,540deg))}}
-
-  /* ===================== Flip-through book ===================== */
-  .viewer{margin:0 0 24px}
-  .viewer h2{font-family:var(--story);font-weight:400;color:var(--moon);margin:0 0 4px}
-  .viewer .sub{color:var(--on-night-soft);margin:0 0 16px}
-  .flipbook{position:relative;aspect-ratio:3/2;max-width:900px;margin:0 auto;perspective:2400px;cursor:pointer;outline:none}
-  .flipbook:focus-visible{box-shadow:0 0 0 3px var(--gold);border-radius:14px}
-  .fleaf{position:absolute;inset:0;transform-origin:left center;transform-style:preserve-3d;
-    transition:transform 1s cubic-bezier(.3,.7,.2,1),visibility 0s 1s}
-  .fleaf>.ff,.fleaf>.fb{position:absolute;inset:0;overflow:hidden;border-radius:6px 14px 14px 6px;
-    backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 22px 50px rgba(0,0,0,.5)}
-  .fleaf>.fb{transform:rotateY(180deg);background:linear-gradient(270deg,#e9dcb8,#f8efd7 40%,#efe2c0)}
-  .fleaf>.ff::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;
-    background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(0,0,0,0) 6%,rgba(255,255,255,.06) 7%,rgba(0,0,0,0) 12%)}
-  .fleaf.turned{transform:rotateY(-170deg);visibility:hidden;pointer-events:none}
-  .fleaf .art{border:0;border-radius:0;box-shadow:none;aspect-ratio:auto;height:100%}
-  .fcover{height:100%;display:grid;place-items:center;align-content:center;gap:14px;text-align:center;padding:6%;
-    background:radial-gradient(ellipse at 50% 30%,#2b6136,#173c20 70%);border:3px solid #c9a24a;border-radius:6px 14px 14px 6px;
-    box-shadow:inset 0 0 0 10px #1a4123,inset 0 0 0 12px rgba(242,184,67,.6)}
-  .fcover b{font:400 clamp(1.6rem,4.4vw,3rem)/1.05 var(--story);background:linear-gradient(180deg,#fff2c6,#f2c65a 60%,#c9902a);
-    -webkit-background-clip:text;background-clip:text;color:transparent}
-  .fcover span{color:#e8dcb0;font:400 clamp(.95rem,2vw,1.25rem) var(--story)}
-  .face{width:clamp(80px,22%,170px);aspect-ratio:1;border-radius:50%;background-size:200% auto;background-position:0 12%;
-    border:4px solid #f2c65a;box-shadow:0 0 24px rgba(242,198,90,.45);background-color:#e2e6c4}
-  .fabout{height:100%;display:grid;grid-template-columns:auto 1fr;gap:6%;align-items:center;padding:6% 7%;
-    background:linear-gradient(180deg,#f8efd7,#efe2c0);color:#2b2416;overflow:hidden}
-  .fabout .face{width:clamp(90px,30vw,240px);border-color:#c9a24a}
-  .fabout small{display:block;color:#2f6b3a;font:400 .95rem var(--story)}
-  .fabout h4{font:400 clamp(1.4rem,3.6vw,2.4rem)/1.05 var(--story);margin:.1em 0 .3em}
-  .fabout p{margin:.35em 0;font-size:clamp(.8rem,1.6vw,1rem)}
-  .fempty{height:100%;display:grid;place-items:center;background:linear-gradient(180deg,#1b2f4a,#10213a);color:#b8c6e0}
-  .flipnav{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px;color:var(--on-night-soft)}
-  .flipnav span{min-width:110px;text-align:center;font-variant-numeric:tabular-nums}
-  @media (max-width:560px){ .fabout{grid-template-columns:1fr;text-align:center;justify-items:center;align-content:center} }
-
-  @media (prefers-reduced-motion:reduce){
-    .beams,.mist,.reveal{animation:none!important}
-    .fleaf{transition:none}
-    .fallbean{display:none}
-  }
-</style>
-</head>
-<body>
-<div class="sky" aria-hidden="true"><svg class="cloud c1" viewBox="0 0 280 90"><g fill="#c9d6f2" opacity=".55"><ellipse cx="80" cy="58" rx="70" ry="26"/><ellipse cx="140" cy="44" rx="62" ry="34"/><ellipse cx="205" cy="60" rx="66" ry="24"/></g></svg><svg class="cloud c2" viewBox="0 0 280 90"><g fill="#c9d6f2" opacity=".55"><ellipse cx="80" cy="58" rx="70" ry="26"/><ellipse cx="140" cy="44" rx="62" ry="34"/><ellipse cx="205" cy="60" rx="66" ry="24"/></g></svg><svg class="cloud c3" viewBox="0 0 280 90"><g fill="#c9d6f2" opacity=".55"><ellipse cx="80" cy="58" rx="70" ry="26"/><ellipse cx="140" cy="44" rx="62" ry="34"/><ellipse cx="205" cy="60" rx="66" ry="24"/></g></svg><div class="beams" data-depth=".1"></div>
-<svg class="layer mountains" data-depth=".12" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice"><path d="M0 260L120 170 230 230 360 110 470 210 590 140 720 230 850 90 980 200 1110 130 1240 220 1340 160 1440 210V400H0Z" fill="#12355a" opacity=".85"/><path d="M360 110l26 24-18-2-8 14zM850 90l28 26-20-3-8 15z" fill="#d9e6ff" opacity=".18"/></svg>
-<svg class="layer trees" data-depth=".28" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice"><g fill="#0c2a44"><path d="M30 300V165 l-22 80h44z"/><path d="M80 300V135 l-26 110h52z"/><path d="M140 300V175 l-20 70h40z"/><path d="M200 300V145 l-24 100h48z"/><path d="M270 300V115 l-30 130h60z"/><path d="M340 300V155 l-22 90h44z"/><path d="M400 300V125 l-28 120h56z"/><path d="M470 300V165 l-20 80h40z"/><path d="M540 300V140 l-26 105h52z"/><path d="M610 300V110 l-30 135h60z"/><path d="M690 300V160 l-22 85h44z"/><path d="M760 300V130 l-26 115h52z"/><path d="M830 300V170 l-20 75h40z"/><path d="M900 300V120 l-28 125h56z"/><path d="M980 300V150 l-24 95h48z"/><path d="M1050 300V115 l-30 130h60z"/><path d="M1120 300V165 l-22 80h44z"/><path d="M1190 300V135 l-26 110h52z"/><path d="M1260 300V155 l-22 90h44z"/><path d="M1330 300V120 l-28 125h56z"/><path d="M1400 300V160 l-24 85h48z"/><rect x="0" y="240" width="1440" height="60"/></g></svg>
-<div class="mist" data-depth=".35"></div>
-<svg class="hills" id="hills" data-depth=".5" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice">
-    <path d="M0 170 C180 110 320 150 480 120 S800 80 980 130 1260 100 1440 140 V300 H0Z" fill="#123a55"/>
-    <path d="M0 220 C200 170 360 210 560 185 S900 150 1100 200 1320 175 1440 195 V300 H0Z" fill="#0d2c43"/>
-    <g id="cottage" transform="translate(1290 150)">
-      <path d="M0 40 L32 12 L64 40 Z" fill="#3b2a1a"/><rect x="6" y="40" width="52" height="34" fill="#2a2016"/>
-      <rect x="16" y="50" width="12" height="12" rx="2" fill="#ffd36a"/><rect x="38" y="52" width="10" height="22" fill="#1a130c"/>
-      <circle cx="22" cy="56" r="22" fill="#ffd36a" opacity=".12"/>
-    </g>
-    <path d="M0 260 C240 230 420 255 640 240 S1040 225 1240 250 1380 240 1440 248 V300 H0Z" fill="#081f31"/>
-  </svg><span class="firefly" style="left:41%;top:80%;--dx:-58px;--dy:-58px;--d:10.1s;--delay:-7.3s"></span><span class="firefly" style="left:94%;top:59%;--dx:1px;--dy:-25px;--d:9.0s;--delay:-5.5s"></span><span class="firefly" style="left:21%;top:58%;--dx:-47px;--dy:-68px;--d:9.3s;--delay:-4.1s"></span><span class="firefly" style="left:56%;top:60%;--dx:-38px;--dy:-58px;--d:11.0s;--delay:-7.9s"></span><span class="firefly" style="left:90%;top:59%;--dx:-53px;--dy:-13px;--d:8.8s;--delay:-6.1s"></span><span class="firefly" style="left:34%;top:72%;--dx:2px;--dy:-44px;--d:9.6s;--delay:-0.1s"></span><span class="firefly" style="left:69%;top:86%;--dx:-38px;--dy:-43px;--d:10.4s;--delay:-3.2s"></span><span class="firefly" style="left:21%;top:61%;--dx:2px;--dy:-69px;--d:11.4s;--delay:-6.4s"></span><span class="firefly" style="left:69%;top:87%;--dx:16px;--dy:-46px;--d:9.6s;--delay:-4.0s"></span><span class="firefly" style="left:95%;top:85%;--dx:-29px;--dy:-15px;--d:10.5s;--delay:-6.2s"></span><span class="firefly" style="left:80%;top:70%;--dx:48px;--dy:-17px;--d:10.2s;--delay:-6.1s"></span><span class="firefly" style="left:75%;top:70%;--dx:27px;--dy:-66px;--d:8.1s;--delay:-3.8s"></span><span class="firefly" style="left:4%;top:68%;--dx:17px;--dy:-33px;--d:7.4s;--delay:-7.6s"></span><span class="firefly" style="left:66%;top:67%;--dx:19px;--dy:-36px;--d:9.2s;--delay:-3.1s"></span></div>
-<div class="topbar">
-  {% if user %}
-    {% if user.picture %}<img src="{{ user.picture }}" alt="" referrerpolicy="no-referrer">{% endif %}
-    <span>{{ user.email }}</span>
-    <a href="/logout">Sign out</a>
-  {% endif %}
-</div>
-<header class="hero">
-  <div>
-  <h1>Jack and the Beanstalk, starring your child.</h1>
-  <p>Upload one photo. Your child becomes Jack on every page, and the book downloads as a PDF.</p>
-  </div>
-  <svg class="sky-art" id="castleCloud" viewBox="0 0 360 260" aria-hidden="true">
-    <defs>
-      <radialGradient id="moonglow" cx="50%" cy="50%" r="50%">
-        <stop offset="0" stop-color="#fff6d8" stop-opacity=".9"/><stop offset=".45" stop-color="#ffe2a0" stop-opacity=".25"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/>
-      </radialGradient>
-      <linearGradient id="cloudlit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3ebff"/><stop offset="1" stop-color="#7d93c4"/></linearGradient>
-    </defs>
-    <circle cx="250" cy="80" r="78" fill="url(#moonglow)"/>
-    <circle cx="250" cy="80" r="34" fill="#fff3cf"/>
-    <circle cx="238" cy="72" r="6" fill="#f1e2b8" opacity=".7"/><circle cx="262" cy="92" r="4" fill="#f1e2b8" opacity=".6"/>
-    <!-- the giant's castle -->
-    <g fill="#0f2440">
-      <rect x="92" y="120" width="22" height="70"/><path d="M88 120l15-24 15 24z"/>
-      <rect x="118" y="100" width="34" height="90"/><path d="M114 100l21-34 21 34z"/>
-      <rect x="156" y="128" width="22" height="62"/><path d="M152 128l15-22 15 22z"/>
-      <rect x="110" y="150" width="76" height="40"/>
-    </g>
-    <g fill="#ffd46e" opacity=".9"><rect x="131" y="118" width="7" height="11" rx="3"/><rect x="99" y="140" width="6" height="9" rx="3"/><rect x="163" y="146" width="6" height="9" rx="3"/></g>
-    <!-- cloud bank, moonlit -->
-    <g fill="url(#cloudlit)" opacity=".95">
-      <ellipse cx="80" cy="200" rx="70" ry="26"/><ellipse cx="150" cy="190" rx="66" ry="30"/><ellipse cx="225" cy="205" rx="80" ry="26"/>
-      <ellipse cx="300" cy="212" rx="60" ry="20"/><ellipse cx="40" cy="214" rx="46" ry="18"/>
-    </g>
-  </svg>
-</header>
-
-<main>
+{% block main %}
 {% if not user %}
-  <section class="step grown" data-step="0">
-    <div class="leaf"><span>✓</span></div>
-    <div class="panel signin">
-      <h2>Sign in to start your book</h2>
-      <p class="lede">Your books are saved to your account, so you can come back to them any time.</p>
-      <a class="gbtn" href="/login">
-        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
-        Sign in with Google
-      </a>
-      {% if dev_login %}<a class="quiet" href="/login?dev=tester">Local test sign-in</a>{% endif %}
-      {% if password_login %}
-      <form class="pwform" method="post" action="/login/password">
-        <p class="note" style="margin:0">Or sign in with the class password:</p>
-        <div class="pwrow">
-          <input type="text" name="name" placeholder="Your name" aria-label="Your name" minlength="2" maxlength="40" required autocomplete="username">
-          <input type="password" name="password" placeholder="Password" aria-label="Password" required autocomplete="current-password">
-          <button class="quiet" type="submit">Sign in</button>
-        </div>
-        <p class="note" style="margin:0">Use the same name next time to get your books back.</p>
-      </form>
-      {% endif %}
-      {% set why = request.args.get('login') %}
-      {% if why == 'failed' %}<p class="status err">Sign-in didn't finish. Please try again.</p>
-      {% elif why == 'badpw' %}<p class="status err">That password isn't right, or the name is too short.</p>
-      {% elif why == 'locked' %}<p class="status err">Too many wrong passwords. Try again in an hour.</p>{% endif %}
+  <div class="hero">
+    <div>
+      <h1>A 20-page storybook starring your child</h1>
+      <p>Upload one photo. Your child becomes the hero of <i>Jack and the Beanstalk</i> or <i>Little Red Riding Hood</i>, painted on every page, in about a minute. {{ price }} a book.</p>
     </div>
-  </section>
+    {% if ready.jack %}<img src="/scene/jack/8.jpg" alt="" style="border-radius:14px;aspect-ratio:3/2;object-fit:cover;background:#dfe6d8">{% endif %}
+  </div>
+  <div class="card signin">
+    <h2>Sign in to start</h2>
+    <p class="muted">Your books and balance are saved to your account.</p>
+    <a class="btn gbtn" href="/login">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google</a>
+    {% if dev_login %}<p><a href="/login?dev=tester">Local test sign-in</a></p>{% endif %}
+    {% if password_login %}
+    <form method="post" action="/login/password" style="margin-top:18px;text-align:left">
+      <p class="muted small" style="margin:0">Or sign in with the class password:</p>
+      <div class="pwrow">
+        <input type="text" name="name" placeholder="Your name" aria-label="Your name" minlength="2" maxlength="40" required autocomplete="username">
+        <input type="password" name="password" placeholder="Password" aria-label="Password" required autocomplete="current-password">
+        <button class="ghost" type="submit">Sign in</button>
+      </div>
+      <p class="muted small" style="margin:6px 0 0">Use the same name next time to get your books back.</p>
+    </form>
+    {% endif %}
+    {% set why = request.args.get('login') %}
+    {% if why == 'failed' %}<p class="msg err">Sign-in didn't finish. Please try again.</p>
+    {% elif why == 'badpw' %}<p class="msg err">That password isn't right, or the name is too short.</p>
+    {% elif why == 'locked' %}<p class="msg err">Too many wrong passwords. Try again in an hour.</p>{% endif %}
+  </div>
 {% else %}
-  <!-- library -->
-  <section class="step grown" data-step="0" id="sec-0">
-    <div class="leaf"><span>★</span></div>
-    <div class="panel">
-      <h2>Your books</h2>
-      <p class="lede" id="shelfNote">Every book you make is saved here.</p>
-      <div class="shelf" id="shelf">
-        <button class="bookcard newcard" id="newBook" type="button">+ New book</button>
-      </div>
-    </div>
-  </section>
 
-  <!-- 1 -->
-  <section class="step" id="sec-1" data-step="1">
-    <div class="leaf"><span>1</span></div>
-    <div class="panel two">
-      <div>
-        <h2>Who is Jack?</h2>
-        <p class="lede">One clear photo of your child, facing the camera in good light. The photo isn't saved.</p>
+  <section id="makeSec">
+    <h1>Make a storybook</h1>
+    <ol class="steps"><li><b>1</b>Pick a story</li><li><b>2</b>Add a photo</li><li><b>3</b>Tell us about them</li><li><b>4</b>Download the PDF</li></ol>
+    <p class="lede" style="margin-top:12px">20 illustrated pages plus an About Me page. {{ price }} from your balance; ready in about a minute.</p>
 
-        <div id="photoInputs">
-          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo">
-            <svg viewBox="0 0 40 52" aria-hidden="true"><path d="M20 2C8 2 4 16 8 28s2 22 12 22 16-8 14-22S32 2 20 2z" fill="#e8a33d"/></svg>
-            <div><b>Drop a photo here, or click to choose one</b><small>JPG, PNG or WEBP</small></div>
-            <input id="file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
-          </div>
-          <div class="row"><button class="quiet" id="camBtn" type="button">Use my camera</button><button class="go" id="snapBtn" type="button" hidden>Take the photo</button></div>
-        </div>
-
-        <div class="grid-name">
-          <div><label class="f" for="child_name">Child's name</label><input type="text" id="child_name" maxlength="40" autocomplete="off"></div>
-          <div><label class="f" for="age">Age <small>(optional)</small></label><input type="text" id="age" maxlength="20" autocomplete="off"></div>
-        </div>
-        <label class="f" for="likes">Things they love <small>(optional)</small></label>
-        <input type="text" id="likes" maxlength="300" placeholder="Soccer, dinosaurs, pancakes">
-        <label class="f" for="about">About them <small>(optional, for the last page)</small></label>
-        <textarea id="about" rows="3" maxlength="600" placeholder="A few sentences in their own words, or yours."></textarea>
-        <span class="saved" id="savedNote" hidden>Saved</span>
-
-        <button class="go wide" id="heroBtn" disabled>Create Jack and the cast</button>
-        <div id="heroProg" hidden><div class="prog"><i></i></div><div class="proglabel"><span>Drawing the cast sheet</span><span class="t">0s</span></div></div>
-        <div class="status" id="heroStatus"></div>
-        <p class="note">Up to {{ books_per_hour }} new books and {{ edits_per_hour }} changes per hour.</p>
-        <div class="change" id="heroChange" hidden>
-          <input type="text" id="chgText-sheet" maxlength="240" placeholder="Not quite right? e.g. “hair is curlier”, “face is rounder”" aria-label="What to change on the cast sheet">
-          <button class="quiet" data-adjust="sheet" type="button">Change it</button>
-        </div>
-      </div>
-      <div class="portraits">
-        <figure><div class="frame tall" id="photoFrame">Photo</div><figcaption>Photo</figcaption></figure>
-        <figure><div class="frame wide" id="heroFrame">Cast sheet</div><figcaption>The cast sheet: every page copies Jack, his mother and the cow from it</figcaption></figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- 2 -->
-  <section class="step" id="sec-2" data-step="2">
-    <div class="leaf"><span>2</span></div>
-    <div class="panel">
-      <h2>Paint the pages</h2>
-      <p class="lede">All pages paint at the same time from the same cast sheet. Each has its own progress bar. The words are added by the book, not the painter, so they stay sharp.</p>
-      <div class="allbar">
-        <button class="go" id="allBtn" disabled>Paint all {{ pages|length }} pages</button>
-        <div class="prog" id="allProg" hidden><i></i></div>
-        <span class="status" id="allStatus" style="margin:0"></span>
-      </div>
-      <div class="pages">
-        {% for p in pages %}
-        <figure class="bookpage" style="margin:0">
-          <h3>{{ p.title }} <span>· page {{ p.n }}</span></h3>
-          <div class="art {{ p.text_color }}" id="art-{{ p.n }}">
-            <div class="fade {{ p.zone }}"></div>
-            <div class="words {{ p.zone }}">{{ p.text }}</div>
-            <div class="placeholder" id="ph-{{ p.n }}">Page {{ p.n }} appears here</div>
-          </div>
-          <div id="prog-{{ p.n }}" hidden><div class="prog"><i></i></div><div class="proglabel"><span class="what">Painting page {{ p.n }}</span><span class="t">0s</span></div></div>
-          <div class="page-tools">
-            <button class="quiet pageBtn" data-n="{{ p.n }}" disabled>Paint page {{ p.n }}</button>
-            <span class="status" id="st-{{ p.n }}"></span>
-          </div>
-          <div class="change" id="chg-{{ p.n }}" hidden>
-            <input type="text" id="chgText-{{ p.n }}" maxlength="240" placeholder="Change one thing, e.g. “make the cow whiter”" aria-label="What to change on page {{ p.n }}">
-            <button class="quiet" data-adjust="{{ p.n }}" type="button">Change it</button>
-          </div>
-        </figure>
+    <form class="card" id="makeForm" novalidate>
+      <h3><span class="stepno">1</span>Pick a story</h3>
+      <div class="stories" role="group" aria-label="Story">
+        {% for key, s in stories.items() %}
+        <button type="button" class="story" data-story="{{ key }}" aria-pressed="false" {{ 'disabled' if not ready[key] }}>
+          {% if ready[key] %}<img src="/scene/{{ key }}/1.jpg" alt="">{% else %}<div class="noimg"></div>{% endif %}
+          <div><b>{{ s.title }}</b><small>{{ ('Your child as ' + ('Jack' if key == 'jack' else 'Red')) if ready[key] else 'Pictures still being prepared' }}</small></div>
+        </button>
         {% endfor %}
       </div>
-    </div>
+
+      <div class="make" style="margin-top:22px">
+        <div>
+          <h3><span class="stepno">2</span>Add a photo</h3>
+          <label class="drop" id="drop">
+            <span id="dropText"><b>Choose a photo</b><br><span class="muted small">A clear, front-facing face in good light. JPG, PNG or WEBP.</span></span>
+            <img id="preview" alt="Your photo" hidden>
+            <input type="file" id="photo" accept="image/*" aria-label="Photo">
+          </label>
+          <p class="muted small" style="margin:8px 0 0">The photo is used to draw the hero and is never stored.</p>
+        </div>
+        <div>
+          <h3><span class="stepno">3</span>About them <span class="muted small">(for the About Me page)</span></h3>
+          <div class="two">
+            <div class="field"><label for="child_name">First name</label><input type="text" id="child_name" maxlength="40" autocomplete="off" placeholder="e.g. Maya"></div>
+            <div class="field"><label for="age">Age</label><input type="text" id="age" maxlength="20" inputmode="numeric" placeholder="6"></div>
+          </div>
+          <div class="field"><label for="likes">Things they love</label><input type="text" id="likes" maxlength="300" placeholder="Dinosaurs, pancakes, the beach"></div>
+          <div class="field"><label for="about">All about them <span class="muted small">(optional)</span></label><textarea id="about" maxlength="600" placeholder="Loves to climb trees and tell jokes."></textarea></div>
+        </div>
+      </div>
+
+      <div class="go">
+        <button class="big" type="submit" id="makeBtn">Make my book · {{ price }}</button>
+        <span class="muted small">Your balance: <b class="balanceEcho">{{ balance }}</b></span>
+      </div>
+      <div id="makeMsg" role="alert" aria-live="polite"></div>
+    </form>
   </section>
 
-  <!-- 3 -->
-  <section class="step" id="sec-3" data-step="3">
-    <div class="leaf"><span>3</span></div>
-    <div class="viewer" id="viewer" hidden>
-      <h2>Flip through your book</h2>
-      <p class="sub">Click the right side of a page to turn it, the left side to go back, or use the arrow keys.</p>
-      <div class="flipbook" id="flipbook" tabindex="0" role="region" aria-label="Book preview"></div>
-      <div class="flipnav"><button class="quiet" id="flipPrev" type="button">Back</button><span id="flipCount">Cover</span><button class="quiet" id="flipNext" type="button">Next</button></div>
+  <section class="card" id="progSec" hidden aria-live="polite">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="progTitle" style="margin:0">Making your book</h2>
+      <button class="ghost" type="button" id="closeProg">Make another book</button>
     </div>
-    <div class="book">
-      <div>
-        <h2>Download the book</h2>
-        <p>All the pages in order, with an About Me page for <span id="nameEcho">your child</span> at the end.</p>
-        <div class="status" id="pdfStatus"></div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="go" id="pdfBtn" disabled>Download PDF</button>
-        <button class="quiet" id="delBtn" type="button" hidden>Delete this book</button>
-      </div>
+    <div class="stagebar"><span id="stage">Starting</span><span id="clock"></span></div>
+    <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Book progress"><i id="bar"></i></div>
+    <p class="muted small" style="margin:0">Every picture is checked automatically and repainted if it isn't right, up to 3 attempts; if none pass, the best one is kept. Click a picture to see its check.</p>
+    <div class="grid" id="grid"></div>
+    <div id="doneRow" class="done-row" hidden>
+      <a class="btn big" id="pdfLink" href="#">Download the PDF</a>
+      <span id="doneNote"></span>
     </div>
+    <div id="failRow" class="msg err" hidden></div>
   </section>
+
+  <section id="library" style="margin-top:34px">
+    <h2>My books</h2>
+    <p class="lede">Every book is saved to your account. Download it again any time.</p>
+    <div class="books" id="books"><p class="muted">Loading…</p></div>
+  </section>
+
+  <dialog id="dlg"><img id="dlgImg" alt=""><div class="body"><h3 id="dlgTitle"></h3><p id="dlgText" class="muted"></p><button class="ghost" type="button" onclick="this.closest('dialog').close()">Close</button></div></dialog>
 {% endif %}
-</main>
-<footer><a href="/privacy">Privacy policy</a> · MCON 368. Pictures by {{ "free test images (no OpenAI calls)" if fake else "OpenAI " ~ model }}. Photos are used only to make the pictures and are never stored.</footer>
+{% endblock %}
 
+{% block script %}
 {% if user %}
 <script>
 const $ = id => document.getElementById(id);
-const PAGE_NUMS = [{% for p in pages %}{{ p.n }}{{ "," if not loop.last }}{% endfor %}];
-const EST = {{ 6 if fake else 55 }};      // typical seconds per picture, for the progress bars
-const FIELDS = ["child_name","age","likes","about"];
-let photoFile = null, stream = null, book = null;   // book = {id, pages:[...], ...}
-const busy = {};                                    // target -> true while generating
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let story = null, photoBlob = null, watching = null, timer = null, lastBook = null;
+const seen = {};
 
-/* ---------- helpers ---------- */
-function setStatus(el, msg, isErr){ el.textContent = msg || ""; el.classList.toggle("err", !!isErr); }
-async function api(url, opts = {}){
+async function api(url, opts) {
   const r = await fetch(url, opts);
-  if (r.status === 401) { location.reload(); throw new Error("Please sign in again."); }
-  if (r.ok && (r.headers.get("Content-Type")||"").includes("pdf")) return r.blob();
-  let d; try { d = await r.json(); } catch { d = {error:`Server error (${r.status})`}; }
-  if (!r.ok) throw new Error(d.error || `Request failed (${r.status})`);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(d.error || `Something went wrong (${r.status}). Please try again.`); e.data = d; throw e; }
   return d;
 }
-const ver = {};   // bumps when a picture changes, so the browser fetches the new one
-const imgUrl = (target) => `/img/${book.id}/${target}?v=${ver[book.id + ":" + target] || encodeURIComponent(book.updated_at || "")}`;
-const bump = (target) => { ver[book.id + ":" + target] = Date.now(); };
-const PAGES_DATA = {{ pages|tojson }};
-function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function setBalance(b) { if (!b) return; $("balance").textContent = b; document.querySelectorAll(".balanceEcho").forEach(e => e.textContent = b); }
+function msg(el, html, bad) { el.innerHTML = html ? `<div class="msg ${bad ? "err" : ""}">${html}</div>` : ""; }
 
-/* One progress bar per picture. The image API doesn't report progress, so the bar is driven by
-   elapsed time against a typical duration, eases toward 95%, and jumps to 100% when the picture lands. */
-function startProgress(box){
-  box.hidden = false;
-  const bar = box.querySelector(".prog"), fill = bar.querySelector("i"), t = box.querySelector(".t");
-  bar.classList.remove("done","fail"); fill.style.width = "2%";
-  const t0 = Date.now();
-  const id = setInterval(() => {
-    const s = (Date.now() - t0) / 1000;
-    fill.style.width = (95 * (1 - Math.exp(-s / (EST * 0.6)))).toFixed(1) + "%";
-    if (t) t.textContent = Math.round(s) + "s";
-  }, 250);
-  return ok => { clearInterval(id); fill.style.width = ok ? "100%" : fill.style.width;
-                 bar.classList.add(ok ? "done" : "fail"); setTimeout(() => { if (ok) box.hidden = true; }, 900); };
-}
-
-function steps(){
-  const done = book && PAGE_NUMS.every(n => book.pages.includes(n));
-  const n = done ? 3 : book ? 2 : photoFile ? 1 : 0;
-  document.querySelectorAll(".step[data-step]").forEach(el => { if (+el.dataset.step > 0) el.classList.toggle("grown", +el.dataset.step <= n); });
-  const anyBusy = Object.values(busy).some(Boolean);
-  document.querySelectorAll(".pageBtn").forEach(b => b.disabled = !book || busy[b.dataset.n]);
-  $("allBtn").disabled = !book || anyBusy;
-  $("pdfBtn").disabled = !done || anyBusy;
-  $("heroBtn").disabled = !photoFile || busy.sheet;
-}
-
-/* ---------- library ---------- */
-async function loadShelf(selectId){
-  const list = await api("/api/books");
-  const shelf = $("shelf");
-  shelf.querySelectorAll(".bookcard:not(.newcard)").forEach(e => e.remove());
-  for (const b of list) {
-    const el = document.createElement("button");
-    el.type = "button"; el.className = "bookcard" + (book && book.id === b.id ? " on" : "");
-    el.innerHTML = `<div class="thumb" style="background-image:url('/img/${b.id}/sheet')"></div>
-      <div class="meta"><b>${esc(b.child_name || "Untitled book")}</b><small>${b.pages} of ${PAGE_NUMS.length} pages · ${new Date(b.updated).toLocaleDateString()}</small></div>`;
-    el.addEventListener("click", () => openBook(b.id));
-    shelf.appendChild(el);
-  }
-  $("shelfNote").textContent = list.length ? "Pick up where you left off, or start a new book." : "You don't have any books yet. Start one below.";
-  if (selectId) await openBook(selectId);
-  else if (!book && list.length) await openBook(list[0].id);
-}
-
-async function openBook(id){
-  book = await api(`/api/books/${id}`);
-  for (const f of FIELDS) $(f).value = book[f] || "";
-  $("nameEcho").textContent = book.child_name || "your child";
-  $("heroFrame").innerHTML = `<img alt="Cast sheet" src="${imgUrl("sheet")}">`;
-  $("heroChange").hidden = false;
-  for (const n of PAGE_NUMS) showPage(n, book.pages.includes(n));
-  document.querySelectorAll(".bookcard").forEach(c => c.classList.remove("on"));
-  [...document.querySelectorAll(".bookcard:not(.newcard)")].find(c => c.querySelector(".thumb").style.backgroundImage.includes(`/img/${id}/`))?.classList.add("on");
-  $("delBtn").hidden = false;
-  flipCur = 0; buildFlip();
-  steps();
-}
-
-$("delBtn").addEventListener("click", async () => {
-  if (!book) return;
-  const name = book.child_name || "this book";
-  if (!confirm(`Delete ${name}? Its pictures and details will be removed for good.`)) return;
-  try {
-    await api(`/api/books/${book.id}`, {method:"DELETE"});
-    book = null; $("delBtn").hidden = true;
-    $("newBook").click();
-    setStatus($("heroStatus"), "Book deleted.");
-    await loadShelf();
-  } catch (err) { setStatus($("pdfStatus"), err.message, true); }
-});
-
-$("newBook").addEventListener("click", () => {
-  book = null; photoFile = null; $("delBtn").hidden = true;
-  for (const f of FIELDS) $(f).value = "";
-  $("photoFrame").textContent = "Photo"; $("heroFrame").textContent = "Cast sheet"; $("heroChange").hidden = true;
-  for (const n of PAGE_NUMS) showPage(n, false);
-  document.querySelectorAll(".bookcard").forEach(c => c.classList.remove("on"));
-  setStatus($("heroStatus"), "New book: add a photo to begin.");
-  buildFlip();
-  $("sec-1").scrollIntoView({behavior:"smooth"});
-  steps();
-});
-
-/* ---------- About Me details: saved automatically ---------- */
-let saveTimer = null;
-function details(){ const d = {}; for (const f of FIELDS) d[f] = $(f).value; return d; }
-async function saveDetails(){
-  clearTimeout(saveTimer); saveTimer = null;
-  if (!book) return;
-  await api(`/api/books/${book.id}`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(details())});
-  Object.assign(book, details());
-  buildFlip();
-  $("savedNote").hidden = false; setTimeout(() => $("savedNote").hidden = true, 1500);
-}
-for (const f of FIELDS) $(f).addEventListener("input", () => {
-  if (f === "child_name") $("nameEcho").textContent = $(f).value.trim() || "your child";
-  clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDetails().catch(()=>{}), 800);
-});
-
-/* ---------- photo ---------- */
-function shrink(file, max = 1024){
-  return new Promise(resolve => {
-    const url = URL.createObjectURL(file), img = new Image();
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-      c.toBlob(b => resolve(b ? new File([b], "photo.jpg", {type:"image/jpeg"}) : file), "image/jpeg", .9);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-    img.src = url;
-  });
-}
-async function setPhoto(file){
-  if (!file || !file.type.startsWith("image/")) return;
-  photoFile = await shrink(file); stopCam();
-  $("photoFrame").innerHTML = `<img alt="Uploaded photo" src="${URL.createObjectURL(photoFile)}">`;
-  setStatus($("heroStatus"), book ? "Creating Jack from this photo starts a new book; this one stays on your shelf." : "");
-  steps();
-}
-const drop = $("drop");
-drop.addEventListener("click", () => $("file").click());
-drop.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); $("file").click(); }});
-$("file").addEventListener("change", e => setPhoto(e.target.files[0]));
-["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
-["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", e => setPhoto(e.dataTransfer.files[0]));
-$("camBtn").addEventListener("click", async () => {
-  if (stream) return stopCam();
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user", width:{ideal:1024}}});
-    $("photoFrame").innerHTML = `<video autoplay playsinline muted style="transform:scaleX(-1)"></video>`;
-    $("photoFrame").querySelector("video").srcObject = stream;
-    $("snapBtn").hidden = false; $("camBtn").textContent = "Turn off camera";
-  } catch { setStatus($("heroStatus"), "Couldn't open the camera. Upload a photo instead.", true); }
-});
-$("snapBtn").addEventListener("click", () => {
-  const v = $("photoFrame").querySelector("video"); if (!v) return;
-  const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
-  const x = c.getContext("2d"); x.translate(c.width,0); x.scale(-1,1); x.drawImage(v,0,0);
-  c.toBlob(b => setPhoto(new File([b], "camera.jpg", {type:"image/jpeg"})), "image/jpeg", .92);
-});
-function stopCam(){ if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $("snapBtn").hidden = true; $("camBtn").textContent = "Use my camera"; }
-
-/* ---------- cast sheet: creates a new saved book (one API call) ---------- */
-$("heroBtn").addEventListener("click", async () => {
-  const st = $("heroStatus");
-  busy.sheet = true; steps(); setStatus(st, "");
-  const finish = startProgress($("heroProg"));
-  const fd = new FormData(); fd.append("photo", photoFile);
-  for (const [k, v] of Object.entries(details())) fd.append(k, v);
-  try {
-    const d = await api("/api/books", {method:"POST", body:fd});
-    finish(true);
-    photoFile = null;
-    setStatus(st, d.books_left === 0 ? "Saved to your books. That was your last new book this hour."
-                                     : `Saved to your books. You can start ${d.books_left} more this hour.`);
-    await loadShelf(d.id);
-    $("heroFrame").querySelector("img")?.classList.add("reveal");
-    window.sparkle && sparkle($("heroFrame"), 22);
-  } catch (err) { finish(false); setStatus(st, err.message, true); }
-  finally { busy.sheet = false; steps(); }
-});
-
-/* ---------- pages ---------- */
-function showPage(n, exists, animate){
-  const art = $("art-"+n);
-  art.querySelector("img")?.remove();
-  $("ph-"+n).hidden = exists;
-  if (exists) art.insertAdjacentHTML("afterbegin", `<img alt="Page ${n}" src="${imgUrl(n)}"${animate ? ' class="reveal"' : ""}>`);
-  $("chg-"+n).hidden = !exists;
-  document.querySelector(`.pageBtn[data-n="${n}"]`).textContent = exists ? `Paint page ${n} again` : `Paint page ${n}`;
-}
-
-async function paint(n){
-  // One page = one request = one image call. Several of these run at once for "Paint all".
-  const st = $("st-"+n);
-  busy[n] = true; steps(); setStatus(st, "");
-  const finish = startProgress($("prog-"+n));
-  try {
-    await api(`/api/books/${book.id}/pages/${n}`, {method:"POST"});
-    finish(true);
-    if (!book.pages.includes(n)) book.pages.push(n);
-    bump(n); showPage(n, true, true);
-    window.sparkle && sparkle($("art-"+n), 26);
-    buildFlip();
-    return true;
-  } catch (err) { finish(false); setStatus(st, err.message, true); return false; }
-  finally { busy[n] = false; steps(); }
-}
-document.querySelectorAll(".pageBtn").forEach(b => b.addEventListener("click", () => paint(+b.dataset.n)));
-
-$("allBtn").addEventListener("click", async () => {
-  const fill = $("allProg").querySelector("i"), st = $("allStatus");
-  $("allProg").hidden = false; fill.style.width = "0%";
-  let done = 0, ok = 0;
-  setStatus(st, `0 of ${PAGE_NUMS.length} pages painted`);
-  await Promise.all(PAGE_NUMS.map(n => paint(n).then(res => {
-    done++; ok += res ? 1 : 0;
-    fill.style.width = (100 * done / PAGE_NUMS.length) + "%";
-    setStatus(st, `${ok} of ${PAGE_NUMS.length} pages painted`);
-  })));
-  setStatus(st, ok === PAGE_NUMS.length ? "All pages painted and saved." : `${ok} of ${PAGE_NUMS.length} painted. Repaint the others below.`, ok !== PAGE_NUMS.length);
-  if (ok === PAGE_NUMS.length) { window.beanShower && beanShower(); }
-  loadShelf().catch(()=>{});
-});
-
-/* ---------- change one thing (edit endpoint, one API call) ---------- */
-document.querySelectorAll("[data-adjust]").forEach(btn => btn.addEventListener("click", async () => {
-  const target = btn.dataset.adjust, isSheet = target === "sheet";
-  const input = $("chgText-"+target), st = isSheet ? $("heroStatus") : $("st-"+target);
-  const change = input.value.trim();
-  if (!change) { setStatus(st, "Type what to change first.", true); input.focus(); return; }
-  btn.disabled = true; busy[target] = true; steps(); setStatus(st, "");
-  const finish = startProgress(isSheet ? $("heroProg") : $("prog-"+target));
-  try {
-    const d = await api(`/api/books/${book.id}/adjust`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({target, change})});
-    finish(true);
-    bump(target);
-    if (isSheet) $("heroFrame").innerHTML = `<img alt="Cast sheet" class="reveal" src="${imgUrl("sheet")}">`; else showPage(+target, true, true);
-    buildFlip();
-    input.value = "";
-    setStatus(st, d.edits_left === 0 ? "Changed. That was your last change this hour." : `Changed. ${d.edits_left} change${d.edits_left === 1 ? "" : "s"} left this hour.`);
-  } catch (err) { finish(false); setStatus(st, err.message, true); }
-  finally { btn.disabled = false; busy[target] = false; steps(); }
+/* story choice */
+document.querySelectorAll(".story").forEach(b => b.addEventListener("click", () => {
+  story = b.dataset.story;
+  document.querySelectorAll(".story").forEach(x => x.setAttribute("aria-pressed", x === b));
 }));
 
-/* ---------- PDF (no API call; built on the server from your saved book) ---------- */
-$("pdfBtn").addEventListener("click", async () => {
-  const st = $("pdfStatus");
-  if (!$("child_name").value.trim()) { setStatus(st, "Add the child's name in step 1 first.", true); $("child_name").focus(); return; }
-  $("pdfBtn").disabled = true; setStatus(st, "Making the PDF…");
+/* photo: shrink in the browser so the upload is quick */
+async function shrink(file) {
+  const img = await createImageBitmap(file).catch(() => null);
+  if (!img) return file;
+  const s = Math.min(1, 1024 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(res => c.toBlob(b => res(b || file), "image/jpeg", 0.9));
+}
+$("photo").addEventListener("change", async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  photoBlob = await shrink(f);
+  $("preview").src = URL.createObjectURL(photoBlob);
+  $("preview").hidden = false; $("dropText").hidden = true;
+});
+const drop = $("drop");
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, () => drop.classList.add("over")));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, () => drop.classList.remove("over")));
+
+/* make the book */
+$("makeForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const m = $("makeMsg");
+  if (!story) return msg(m, "Pick a story first (step 1).", true);
+  if (!photoBlob) return msg(m, "Add a photo first (step 2).", true);
+  if (!$("child_name").value.trim()) { $("child_name").focus(); return msg(m, "Add their first name for the About Me page (step 3).", true); }
+  const fd = new FormData();
+  fd.append("story", story);
+  fd.append("photo", photoBlob, "photo.jpg");
+  for (const k of ["child_name","age","likes","about"]) fd.append(k, $(k).value);
+  $("makeBtn").disabled = true; msg(m, "Uploading your photo…");
   try {
-    await saveDetails();
-    const blob = await api(`/api/books/${book.id}/pdf`);
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "JackAndTheBeanstalk.pdf"; a.click();
-    setStatus(st, ""); window.beanShower && beanShower();
-  } catch (err) { setStatus(st, err.message, true); }
-  finally { steps(); }
+    const d = await api("/api/books", {method: "POST", body: fd});
+    setBalance(d.balance); msg(m, "");
+    watch(d.id);
+    loadBooks();
+  } catch (err) {
+    msg(m, esc(err.message) + (err.data && err.data.need_funds ? `<br><a class="btn" href="/wallet">Add funds</a>` : ""), true);
+  } finally { $("makeBtn").disabled = false; }
 });
 
-/* ---------- flip-through book ---------- */
-let flipCur = 0;
-function flipLeaves(){
-  const name = esc(book.child_name || "your child");
-  const face = `<div class="face" style="background-image:url('${imgUrl("sheet")}')"></div>`;
-  const out = [`<div class="fcover">${face}<b>Jack and the Beanstalk</b><span>starring ${name}</span></div>`];
-  for (const p of PAGES_DATA) {
-    out.push(book.pages.includes(p.n)
-      ? `<div class="art ${p.text_color}"><img alt="Page ${p.n}" src="${imgUrl(p.n)}"><div class="fade ${p.zone}"></div><div class="words ${p.zone}">${esc(p.text)}</div></div>`
-      : `<div class="fempty">Page ${p.n} hasn't been painted yet</div>`);
+/* progress: poll the server; thumbnails appear as each page finishes */
+function tileHTML(bookId, p) {
+  const busy = p.status === "painting" || p.status === "checking";
+  const warn = !!(p.issues && p.issues.startsWith("no try passed"));
+  let badge;
+  if (p.premade) badge = `<span>Pre-made scene</span><span>✓</span>`;
+  else if (p.status === "waiting") badge = `<span>Waiting</span><span>try 0/3</span>`;
+  else if (p.status === "painting") badge = `<span>Painting</span><span>try ${p.attempts}/3</span>`;
+  else if (p.status === "checking") badge = `<span>Checking</span><span>try ${p.attempts}/3</span>`;
+  else if (p.issues && p.issues.startsWith("the automatic check was unavailable")) badge = `<span>Not checked</span><span>try ${p.attempts}/3</span>`;
+  else badge = `<span>${warn ? "Best of " + p.attempts : "Passed ✓"}</span><span>try ${p.attempts}/3${p.score != null ? " · " + p.score : ""}</span>`;
+  const img = (p.status === "checking" || p.status === "done")
+    ? `<img alt="Page ${p.n}" src="/api/books/${bookId}/thumb/${p.n}?v=${p.updated_at}">`
+    : `<span class="wait">${p.status === "waiting" ? "Waiting" : "Painting…"}</span>`;
+  return `<button type="button" class="tile${busy ? " busy" : ""}" data-n="${p.n}" aria-label="Page ${p.n}">${img}<span class="n">${p.n}</span><span class="badge${warn ? " warn" : ""}">${badge}</span></button>`;
+}
+function heroTile(b) {
+  const img = b.has_hero ? `<img alt="Hero" src="/api/books/${b.id}/hero">` : `<span class="wait">Drawing…</span>`;
+  const label = b.has_hero ? (b.hero_passed ? "Passed ✓" : "Best of " + b.hero_attempts) : "Drawing";
+  return `<button type="button" class="tile${b.has_hero ? "" : " busy"}" data-n="0" aria-label="Hero sheet">${img}<span class="n">Hero</span><span class="badge${b.has_hero && !b.hero_passed ? " warn" : ""}"><span>${label}</span><span>try ${b.hero_attempts || 1}/3</span></span></button>`;
+}
+function percent(b) {
+  if (b.status === "done") return 100;
+  if (!b.has_hero) return 3 + Math.min(12, (b.elapsed || 0) * 0.6);
+  if (b.stage === "Putting the book together") return 96;
+  return 15 + 80 * (b.done_pages / 20);
+}
+function render(b) {
+  lastBook = b;
+  $("progTitle").textContent = `${b.title}, starring ${b.child_name || "your child"}`;
+  $("stage").textContent = b.status === "done" ? "Done: your book is ready" : b.status === "failed" ? "Stopped" : b.stage;
+  $("clock").textContent = b.elapsed != null ? `${Math.round(b.elapsed)} s since upload` : "";
+  const pct = Math.round(percent(b));
+  $("bar").style.width = pct + "%";
+  $("bar").parentElement.setAttribute("aria-valuenow", pct);
+  const grid = $("grid");
+  const put = (key, n, html) => {
+    const el = grid.querySelector(`[data-n="${n}"]`);
+    if (!el) grid.insertAdjacentHTML(n === 0 ? "afterbegin" : "beforeend", html);
+    else if (seen[key] !== html) el.outerHTML = html;
+    seen[key] = html;
+  };
+  put(b.id + ":0", 0, heroTile(b));
+  for (const p of b.pages) put(b.id + ":" + p.n, p.n, tileHTML(b.id, p));
+  $("doneRow").hidden = b.status !== "done";
+  if (b.status === "done") {
+    $("pdfLink").href = `/api/books/${b.id}/pdf`;
+    $("doneNote").innerHTML = `Ready <b>${Math.round(b.elapsed)} seconds</b> after upload. It's saved in My books.`;
   }
-  const line = (label, v) => v ? `<p><small>${label}</small>${esc(v)}</p>` : "";
-  out.push(`<div class="fabout">${face}<div><small>About me</small><h4>${name}</h4>${book.age ? `<p>Age ${esc(book.age)}</p>` : ""}${line("Things I love", book.likes)}${line("All about me", book.about)}</div></div>`);
-  return out;
+  $("failRow").hidden = b.status !== "failed";
+  if (b.status === "failed") $("failRow").textContent = (b.error || "The book couldn't be made.") + " Your $0.99 has been put back in your balance.";
 }
-function buildFlip(){
-  const v = $("viewer");
-  if (!book) { v.hidden = true; return; }
-  v.hidden = false;
-  const leaves = flipLeaves();
-  flipCur = Math.min(flipCur, leaves.length - 1);
-  $("flipbook").innerHTML = leaves.map((h, i) =>
-    `<div class="fleaf${i < flipCur ? " turned" : ""}" style="z-index:${100 - i}"><div class="ff">${h}</div><div class="fb"></div></div>`).join("");
-  flipNav();
+async function poll() {
+  if (!watching) return;
+  const id = watching;
+  try {
+    const b = await api(`/api/books/${id}`);
+    if (id !== watching) return;
+    render(b);
+    if (b.status === "running") { timer = setTimeout(poll, 800); return; }
+    loadBooks(); refreshBalance();
+  } catch (e) { timer = setTimeout(poll, 2500); }
 }
-function flipNav(){
-  const total = $("flipbook").children.length;
-  $("flipCount").textContent = flipCur === 0 ? "Cover" : flipCur === total - 1 ? "About me" : `Page ${flipCur} of ${total - 2}`;
-  $("flipPrev").disabled = flipCur === 0; $("flipNext").disabled = flipCur === total - 1;
+function watch(id) {
+  clearTimeout(timer);
+  watching = id;
+  $("grid").innerHTML = "";
+  $("progSec").hidden = false; $("makeSec").hidden = true;
+  history.replaceState(null, "", "#book-" + id);
+  window.scrollTo({top: 0, behavior: "smooth"});
+  poll();
 }
-function flipTo(i){
-  const leaves = [...$("flipbook").children];
-  flipCur = Math.max(0, Math.min(leaves.length - 1, i));
-  leaves.forEach((el, k) => el.classList.toggle("turned", k < flipCur));
-  flipNav();
-}
-$("flipNext").addEventListener("click", () => flipTo(flipCur + 1));
-$("flipPrev").addEventListener("click", () => flipTo(flipCur - 1));
-$("flipbook").addEventListener("click", e => {
-  const r = $("flipbook").getBoundingClientRect();
-  flipTo(flipCur + (e.clientX - r.left > r.width / 2 ? 1 : -1));
+$("closeProg").addEventListener("click", () => {
+  clearTimeout(timer); watching = null;
+  $("progSec").hidden = true; $("makeSec").hidden = false;
+  history.replaceState(null, "", "/");
 });
-$("flipbook").addEventListener("keydown", e => {
-  if (e.key === "ArrowRight") { e.preventDefault(); flipTo(flipCur + 1); }
-  if (e.key === "ArrowLeft") { e.preventDefault(); flipTo(flipCur - 1); }
+$("grid").addEventListener("click", e => {
+  const t = e.target.closest(".tile"); if (!t || !lastBook) return;
+  const n = +t.dataset.n;
+  if (n === 0) {
+    if (!lastBook.has_hero) return;
+    $("dlgImg").src = `/api/books/${lastBook.id}/hero`;
+    $("dlgTitle").textContent = "The hero sheet";
+    $("dlgText").textContent = `Drawn from your photo; every page copies it. Attempts: ${lastBook.hero_attempts} of 3` +
+      (lastBook.hero_score != null ? `, best score ${lastBook.hero_score}/10.` : ".");
+  } else {
+    const p = lastBook.pages.find(x => x.n === n);
+    if (!p || !(p.status === "done" || p.status === "checking")) return;
+    $("dlgImg").src = `/api/books/${lastBook.id}/page/${n}?v=${p.updated_at}`;
+    $("dlgTitle").textContent = `Page ${n}`;
+    const where = {top: "top of the picture", middle: "middle of the picture", bottom: "bottom of the picture", below: "paper below the picture"}[p.zone] || "";
+    $("dlgText").innerHTML = `“${esc(p.text)}”<br>` + (p.premade ? "A pre-made scene, checked when it was made." :
+      `Attempts: <b>${p.attempts} of 3</b>${p.score != null ? `, score <b>${p.score}/10</b>` : ""}. ${p.issues ? "Check notes: " + esc(p.issues) : "No problems found."}`) +
+      (where ? `<br>The words go on the ${where}, where the check found no faces or important things.` : "");
+  }
+  $("dlg").showModal();
 });
 
-loadShelf().catch(err => setStatus($("heroStatus"), err.message, true));
-steps();
+/* library */
+async function loadBooks() {
+  try {
+    const rows = await api("/api/books");
+    const el = $("books");
+    if (!rows.length) { el.innerHTML = `<p class="muted">No books yet. Make your first one above.</p>`; return; }
+    el.innerHTML = rows.map(r => `<div class="bk">
+      <img alt="" src="${r.status === "done" ? `/api/books/${r.id}/thumb/1` : `/scene/${r.story}/1.jpg`}" loading="lazy">
+      <div class="t"><b>${esc(r.title)}</b><br><span class="muted small">Starring ${esc(r.child_name || "—")} · ${new Date(r.created_at).toLocaleString()}${r.seconds ? ` · made in ${r.seconds} s` : ""}${r.status === "running" ? " · being made now" : r.status === "failed" ? " · failed (refunded)" : ""}</span></div>
+      ${r.has_pdf ? `<a class="btn" href="/api/books/${r.id}/pdf">Download PDF</a>` : ""}
+      <button class="ghost" type="button" data-view="${r.id}">${r.status === "running" ? "Watch" : "See pages"}</button>
+      ${r.status !== "running" ? `<button class="danger" type="button" data-del="${r.id}">Delete</button>` : ""}
+    </div>`).join("");
+    if (!watching) { const run = rows.find(r => r.status === "running"); if (run) watch(run.id); }
+  } catch (e) { $("books").innerHTML = `<p class="msg err">${esc(e.message)}</p>`; }
+}
+$("books").addEventListener("click", async e => {
+  const v = e.target.closest("[data-view]"), d = e.target.closest("[data-del]");
+  if (v) watch(+v.dataset.view);
+  if (d && !d.dataset.sure) { d.dataset.sure = "1"; d.textContent = "Delete for good?"; return; }
+  if (d) {
+    try { await api(`/api/books/${d.dataset.del}`, {method: "DELETE"}); loadBooks(); }
+    catch (err) { d.textContent = err.message; }
+  }
+});
+async function refreshBalance() { try { setBalance((await api("/api/wallet")).balance); } catch {} }
+
+loadBooks();
+const hm = location.hash.match(/^#book-(\d+)/);
+if (hm) watch(+hm[1]);
 </script>
 {% endif %}
-
-<svg id="giantStalk" aria-hidden="true"><defs><linearGradient id="stemgrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3e9a48"/><stop offset=".5" stop-color="#7fdc7a"/><stop offset="1" stop-color="#2f7a3a"/></linearGradient></defs></svg>
-<script>
-(() => {
-  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const svg = document.getElementById("giantStalk"), NS = "http://www.w3.org/2000/svg";
-  let stem, tip, len = 0, leaves = [], startY = 0, table = [];
-
-  /* Build a wavy stalk the height of the whole page, with leaves every ~150px. */
-  function build(){
-    svg.setAttribute("height", 0);                       // measure the page without the stalk itself
-    const H = document.documentElement.scrollHeight;
-    svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 96 ${H}`);
-    svg.querySelectorAll(".stem,.lf").forEach(e => e.remove());
-    /* Start under the right end of the castle's cloud bank, then swing out to the side of the page. */
-    let y0 = 0, x0 = 48;
-    const cc = document.getElementById("castleCloud");
-    if (cc) {
-      const r = cc.getBoundingClientRect(), me = svg.getBoundingClientRect(), k = r.width / 360;
-      x0 = r.left + 296 * k - me.left; y0 = r.top + 214 * k - me.top;
-    }
-    const top = y0 + 240;
-    let d = `M${x0.toFixed(1)} ${y0.toFixed(1)} C${x0.toFixed(1)} ${(y0 + 110).toFixed(1)} 48 ${(top - 130).toFixed(1)} ${(48 + Math.sin(top / 180) * 26).toFixed(1)} ${top.toFixed(1)}`, pts = [];
-    startY = y0;
-    for (let y = top + 120; y <= H; y += 120) {
-      const x = 48 + Math.sin(y / 180) * 26;
-      d += ` S${(48 + Math.sin((y - 60) / 180) * 34).toFixed(1)} ${y - 60} ${x.toFixed(1)} ${y}`;
-      pts.push([x, y]);
-    }
-    const last = pts.length ? pts[pts.length - 1] : [48, top];
-    if (last[1] < H) d += ` S${last[0].toFixed(1)} ${((last[1] + H) / 2).toFixed(1)} 48 ${H}`;
-    stem = document.createElementNS(NS, "path"); stem.setAttribute("class", "stem"); stem.setAttribute("d", d);
-    svg.appendChild(stem); len = stem.getTotalLength();
-    tip = document.createElementNS(NS, "circle"); tip.setAttribute("class", "tip"); tip.setAttribute("r", 7);
-    stem.style.strokeDasharray = len;
-    table = [];
-    for (let l = 0; l <= len; l += 8) table.push([stem.getPointAtLength(l).y, l]);
-    table.push([H, len]);
-    leaves = pts.map(([x, y], i) => {
-      const left = i % 2 === 0, l = document.createElementNS(NS, "path");
-      l.setAttribute("class", "lf");
-      l.setAttribute("d", left ? `M${x} ${y}c-30 -4 -44 -20 -44 -34 20 0 38 14 44 34z` : `M${x} ${y}c30 -4 44 -20 44 -34 -20 0 -38 14 -44 34z`);
-      l.style.setProperty("--ox", left ? "100%" : "0%");
-      svg.appendChild(l); return [l, y];
-    });
-    svg.appendChild(tip);
-    /* Put the cottage just to the left of where the beanstalk meets the ground. */
-    const hills = document.getElementById("hills"), cot = document.getElementById("cottage");
-    if (hills && cot && getComputedStyle(svg).display !== "none") {
-      const pt = hills.createSVGPoint(), m = hills.getScreenCTM();
-      pt.x = svg.getBoundingClientRect().left + 48 - 120; pt.y = 0;
-      if (m) cot.setAttribute("transform", `translate(${pt.matrixTransform(m.inverse()).x.toFixed(0)} 150)`);
-    }
-    update();
-  }
-  /* Reveal the stalk down to the bottom of the screen, so it grows as you scroll. */
-  function update(){
-    if (!stem) return;
-    const H = document.documentElement.scrollHeight;
-    const atBottom = scrollY + innerHeight >= H - 4;
-    const shown = calm || atBottom ? H : Math.min(H, scrollY + innerHeight * 0.92);
-    let L = 0;
-    for (const [y, l] of table) { if (y > shown) break; L = l; }
-    if (shown >= H) L = len;
-    const f = len ? L / len : 0;
-    stem.style.strokeDashoffset = len - len * f;
-    leaves.forEach(([l, y]) => l.classList.toggle("on", y < shown - 20));
-    const pt = stem.getPointAtLength(len * f);
-    tip.setAttribute("cx", pt.x); tip.setAttribute("cy", pt.y);
-    tip.style.opacity = shown >= H - 4 ? 0 : 1;
-  }
-  addEventListener("scroll", () => requestAnimationFrame(update), {passive:true});
-  addEventListener("resize", () => requestAnimationFrame(build));
-  new ResizeObserver(() => requestAnimationFrame(build)).observe(document.body);
-  build();
-
-  if (calm) return;
-
-  /* Parallax: each layer moves by its depth as you scroll and move the mouse. */
-  const layers = [...document.querySelectorAll("[data-depth]")].map(el => [el, +el.dataset.depth]);
-  let mx = 0, my = 0, ticking = false;
-  function parallax(){
-    ticking = false;
-    const sy = scrollY;
-    for (const [el, d] of layers) {
-      const y = Math.min(sy * d * 0.12, 140 * d) + my * d * -18;
-      el.style.transform = `translate3d(${(mx * d * -30).toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
-    }
-  }
-  const kick = () => { if (!ticking) { ticking = true; requestAnimationFrame(parallax); } };
-  addEventListener("scroll", kick, {passive:true});
-  if (matchMedia("(pointer:fine)").matches)
-    addEventListener("pointermove", e => { mx = e.clientX / innerWidth * 2 - 1; my = e.clientY / innerHeight * 2 - 1; kick(); }, {passive:true});
-  parallax();
-
-  /* A shower of the five magic beans when the book is finished. */
-  const BEAN_COLORS = [["#ff9a8a","#e0453a"],["#fff1a0","#e8b52c"],["#b8f2a0","#4fae47"],["#a8d4ff","#3c7fd6"],["#e3b8ff","#8d4fd1"]];
-  window.beanShower = (n = 46) => {
-    for (let i = 0; i < n; i++) {
-      const b = document.createElement("span"), [hi, lo] = BEAN_COLORS[i % 5];
-      b.className = "fallbean";
-      b.style.left = (Math.random() * 100) + "vw";
-      b.style.background = `radial-gradient(circle at 35% 30%, #fffbe6, ${hi} 35%, ${lo})`;
-      b.style.setProperty("--x", ((Math.random() - .5) * 160) + "px");
-      b.style.setProperty("--r", ((Math.random() > .5 ? 1 : -1) * (300 + Math.random() * 500)) + "deg");
-      b.style.setProperty("--t", (2 + Math.random() * 1.8) + "s");
-      b.style.setProperty("--d", (Math.random() * .9) + "s");
-      document.body.appendChild(b); setTimeout(() => b.remove(), 5000);
-    }
-  };
-
-  /* Shooting stars, now and then. */
-  (function shoot(){
-    const s = document.createElement("div"); s.className = "shooting";
-    s.style.left = (30 + Math.random() * 70) + "vw"; s.style.top = (Math.random() * 30) + "vh";
-    document.body.appendChild(s); setTimeout(() => s.remove(), 1200);
-    setTimeout(shoot, 5000 + Math.random() * 9000);
-  })();
-
-  /* Gold sparkles: from buttons on hover/click, and from a page when it finishes painting. */
-  window.sparkle = (el, n = 12) => {
-    const r = el.getBoundingClientRect();
-    for (let i = 0; i < n; i++) {
-      const s = document.createElement("span"); s.className = "spark" + (i % 3 === 0 ? " star" : "");
-      const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * Math.max(40, r.width / 3);
-      s.style.left = (r.left + r.width * (0.2 + Math.random() * 0.6)) + "px";
-      s.style.top = (r.top + r.height * (0.2 + Math.random() * 0.6)) + "px";
-      s.style.setProperty("--sx", Math.cos(a) * d + "px"); s.style.setProperty("--sy", Math.sin(a) * d + "px");
-      document.body.appendChild(s); setTimeout(() => s.remove(), 900);
-    }
-  };
-  document.addEventListener("pointerenter", e => { if (e.target.matches?.(".go:not(:disabled)")) sparkle(e.target, 6); }, true);
-  document.addEventListener("click", e => { const b = e.target.closest?.(".go"); if (b && !b.disabled) sparkle(b, 14); });
-})();
-</script>
-</body>
-</html>
+{% endblock %}

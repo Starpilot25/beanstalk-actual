@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Admin · Storybook{% endblock %}
+{% block style %}
+  .sc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+  .sc figure{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .sc img,.sc .noimg{aspect-ratio:3/2;width:100%;object-fit:cover;background:#eee6d4}
+  .sc figcaption{padding:6px 8px;font-size:.8rem;display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .sc figcaption button{min-height:0;padding:3px 8px;font-size:.75rem}
+  pre{background:#0f2240;color:#dfe7f5;border-radius:10px;padding:12px;max-height:260px;overflow:auto;font-size:.8rem}
+{% endblock %}
+{% block main %}
+  <h1>Shared art</h1>
+  <p class="lede">Draw the character bible and the 20 pre-made scenes for each story, once. Every book reuses them. Each scene is checked like a page (up to 3 attempts) and must leave its words' band clear.</p>
+  <p id="info" class="muted"></p>
+  {% for key, s in stories.items() %}
+  <section class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">{{ s.title }}</h2>
+      <div class="row">
+        <button type="button" data-run="{{ key }}">Draw everything missing</button>
+        <button type="button" class="ghost" data-bible="{{ key }}">Redraw the bible</button>
+      </div>
+    </div>
+    <h3 style="margin-top:16px">Bible</h3>
+    <div class="sc" id="bible-{{ key }}"></div>
+    <h3 style="margin-top:16px">Scenes</h3>
+    <div class="sc" id="scenes-{{ key }}"></div>
+  </section>
+  {% endfor %}
+  <section class="card"><h2>Log</h2><pre id="log">…</pre></section>
+{% endblock %}
+{% block script %}
+<script>
+const $ = id => document.getElementById(id);
+const BIBLE = {{ bible|tojson }};
+const ver = Date.now();
+async function api(url, opts) {
+  const r = await fetch(url, opts); const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.status); return d;
+}
+async function run(body) {
+  try { await api("/api/admin/pregen", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}); }
+  catch (e) { $("info").textContent = "Couldn't start: " + e.message; }
+  tick();
+}
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-run]"), b = e.target.closest("[data-bible]"), s = e.target.closest("[data-redo]");
+  if (a) run({story: a.dataset.run});
+  if (b) run({story: b.dataset.bible, only: "bible", redo: true});
+  if (s) run({story: s.dataset.story, only: [+s.dataset.redo], redo: true});
+});
+async function tick() {
+  const d = await api("/api/admin/status");
+  $("info").textContent = `Model ${d.model}, quality ${d.quality}, ${d.ipm} images/minute. ` +
+    (d.running ? `Working: ${d.done} of ${d.total} done.` : "Idle.") +
+    (d.cost.shared_calls ? ` Shared art so far: ${d.cost.shared_calls} calls, $${d.cost.shared_cost.toFixed(2)}.` : "");
+  $("log").textContent = d.log.join("\n") || "Nothing yet.";
+  for (const story of Object.keys(BIBLE)) {
+    $("bible-" + story).innerHTML = Object.keys(BIBLE[story]).map(k => {
+      const has = d.bible.includes(`${story}:${k}`);
+      return `<figure>${has ? `<img src="/bible/${story}/${k}.jpg?v=${ver}${d.running ? Date.now() : ""}" alt="">` : `<div class="noimg"></div>`}<figcaption><span>${BIBLE[story][k][0]}</span></figcaption></figure>`;
+    }).join("");
+    $("scenes-" + story).innerHTML = Array.from({length: 20}, (_, i) => i + 1).map(n => {
+      const s = d.scenes[`${story}:${n}`];
+      return `<figure>${s ? `<a href="/scene/${story}/${n}.jpg?full=1" target="_blank"><img src="/scene/${story}/${n}.jpg?v=${s.score}-${s.attempts}" alt=""></a>` : `<div class="noimg"></div>`}
+        <figcaption><span>${n}${s ? ` · ${s.score}/10 · try ${s.attempts}` : ""}</span><button class="ghost" type="button" data-story="${story}" data-redo="${n}">Redo</button></figcaption></figure>`;
+    }).join("");
+  }
+  if (d.running) setTimeout(tick, 2500);
+}
+tick();
+</script>
+{% endblock %}

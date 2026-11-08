@@ -1,49 +1,36 @@
 # To do
 
-What still needs work in this build, most important first.
+Known defects and open questions in the 20-page build, most costly first. Updated after every review run
+(see `review-log.md`).
 
-## Consistency (the book fails without this)
-- **Faces haven't been checked across all three pages with several kids yet.** Jack is copied from one
-  cast sheet, but `gpt-image-2.5-flare` has no face-fidelity setting, so the face can still drift,
-  especially on page 3, where it's dusk and Jack is small in the doorway. Test with at least 5 different
-  photos and log results in `PROMPTS.md`.
-- **The cow looked different on pages 1 and 2** because only Jack had a reference image. Fixed by turning
-  Jack's sheet into a cast sheet (Jack's face close-up + full-body Jack, mother and cow). The old man was
-  taken off the sheet because he only appears once; that gives the others more room. Still to check: whether
-  the old man looks right drawn only from his description.
-- **The required style fights likeness.** "Large expressive eyes" pushes faces toward a generic
-  cartoon kid. The hero prompt asks to keep real proportions, but the balance needs more Playground
-  testing.
+## Not measured yet on the live site
+- **The 60-second target hasn't been timed with real image calls.** With 1 hero call, 15 page calls and 16
+  checks, the floor is roughly: hero (~15–25 s) + slowest page (~15–25 s) + its check (~3–6 s) + PDF (~1 s).
+  Repaints only fit if the first tries are fast; after `RETRY_DEADLINE` (48 s) no new repaint starts.
+- **The account's images-per-minute limit is 20 on OpenAI's lowest tier.** One book is 16 images on a good run,
+  so two books started in the same minute, or a book with several repaints, will queue and miss 60 s.
+  Raising the tier (or `IMAGES_PER_MINUTE` once raised) is the only real fix.
+- **The analysis model's grid is coarse.** Words go in a band only if the vision check marks all three cells
+  of that band empty. If the check misses a face, the words could cover it. The scenes' bands are checked when
+  they're drawn, and the hero is placed outside the band by the prompt, but this needs checking page by page
+  in real PDFs of both stories.
+- **Likeness across 15 pages.** The hero is edited into each scene from one hero sheet. Compare pages 1, 10
+  and 20 with several photos (glasses, curly hair, darker and lighter skin, a girl and a boy).
 
-## Pages and text
-- **Hands still sometimes have the wrong number of fingers.** Every page now describes correct hands and
-  uses simple hand poses, and "Change it" can repair hands on one page, but it isn't guaranteed. Page 2 (the old man's
-  open palm) is the riskiest.
-- **The number of beans can still be wrong.** The story says five. Pages 2 and 3 now describe the same
-  five beans in five named colors (red, yellow, green, blue, purple), which helps a lot, but image models
-  still can't count reliably.
-- **The text area isn't guaranteed to be calm.** The prompt asks for a quiet lower third / sky / dark grass,
-  but nothing checks it. A busy floor or sky makes the words hard to read. Possible fix: measure how busy
-  that strip is and warn the user to repaint.
-- **Story text always says "Jack" and "his".** The child is always Jack, even if the uploader's child is a girl.
-  Decide whether to offer the child's name or other pronouns.
-- No cover or title page yet.
-- Page 4 (the beanstalk at dawn) isn't built. It's one more entry in `PAGES` in `storyboard.py`.
+## Book
+- Five pages per story are pre-made scenes without the hero. Check that a reader doesn't feel the hero
+  disappears (Jack pp. 7, 10, 13, 16, 19; Red the same).
+- The words never use "he" or "she" for the hero (it's always "Jack", "Red" or "Mother"), so they fit a boy or a
+  girl. The hero is still called Jack or Red, not the child's own name; the About Me page carries the name.
+- No cover page: the PDF opens on page 1. Kept out on purpose so the page count is exactly 20 + About Me.
 
-## Scaling to 20 pages
-- **Everything lives in the browser.** Refreshing the page loses Jack and all pages. For 20 pages that's
-  ~20 paid images gone. Save them server-side (or in browser storage) per book.
-- **The PDF request sends every image at once.** That's ~1–3 MB now; at 20 pages it gets big. Store pages on the server
-  and build the PDF from there.
-- Each page is one click on purpose (no loops around the API). With 20 pages that's a lot of clicking,
-  so I need a design that stays within the rule.
+## Money
+- Refund processing is done by the same user who asked for it (there's no separate store owner in this
+  sandbox), so "request" and "process" are two clicks by one person.
+- Card refunds need the deposit's Stripe checkout session; deposits made before this version can't be refunded
+  to the card.
 
-## Cost and limits
-- **A book costs about 20¢** (`gpt-image-2.5-flare` at medium: the cast sheet plus 3 pages, ~5¢ each).
-  At 20 pages that's about $1 per book. `low` quality was much cheaper but looked smeared and waxy.
-- **The usage limits live in memory** (3 books, 5 changes and 20 pictures per person per hour; 20 books per hour
-  site-wide), so they reset whenever Render restarts the app, including after every deploy. A small database
-  would make them stick.
-
-## Smaller things
-- The PDF has no alt text for the pictures.
+## Limits
+- Per-hour limits live in memory and reset on every deploy.
+- If the server restarts while a book is being made, the book is marked failed on the next start and the $0.99
+  is refunded; the user has to start again.

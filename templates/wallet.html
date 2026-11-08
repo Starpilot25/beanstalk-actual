@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Wallet · Storybook{% endblock %}
+{% block style %}
+  .bal{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap}
+  .bal .amt{font:400 3rem/1 var(--story);font-variant-numeric:tabular-nums}
+  .funds{display:flex;gap:10px;flex-wrap:wrap}
+  .funds button{min-width:96px}
+  .kind{display:inline-block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:6px;padding:1px 6px;background:#eee;color:#444;margin-right:6px}
+  .k-deposit{background:#e3f3e6;color:#1d5c2f} .k-book{background:#eef0fb;color:#2c3a7a}
+  .k-book_refund,.k-card_refund,.k-reversal{background:#fff1d6;color:#7a4b00}
+  .st-requested{color:#7a4b00;font-weight:600} .st-processed{color:var(--ok);font-weight:600} .st-failed{color:var(--red);font-weight:600}
+  .refform{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .refform input{flex:1;min-width:160px}
+  .costs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0}
+  .stat{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fffdf8}
+  .stat b{display:block;font:400 1.6rem var(--story);font-variant-numeric:tabular-nums}
+  .stat span{color:var(--soft);font-size:.85rem}
+  .recon{margin-top:10px;font-size:.9rem}
+{% endblock %}
+{% block main %}
+  <h1>Wallet</h1>
+  {% if note %}<p class="msg {{ 'err' if bad }}">{{ note }}</p>{% endif %}
+
+  <section class="card">
+    <div class="bal">
+      <div><div class="muted small">Your balance</div><div class="amt" id="bigBal">{{ balance }}</div></div>
+      <div class="muted">A book costs {{ price }}. It's taken from your balance when you make the book.</div>
+    </div>
+    <h3 style="margin-top:22px">Add funds</h3>
+    <form class="funds" method="post" action="/billing/checkout">
+      {% for a in amounts %}<button name="amount" value="{{ a }}" type="submit">Add {{ money(a) }}</button>{% endfor %}
+    </form>
+    <p class="muted small" style="margin:10px 0 0">
+      {% if fake_stripe %}<b>Offline test mode:</b> Stripe isn't connected, so a pretend checkout page is used.
+      {% else %}Payments use Stripe <b>test mode</b>. Use the test card <b>4242 4242 4242 4242</b>, any future date, any CVC and any ZIP.{% endif %}
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Refunds</h2>
+    <p class="muted" style="margin-top:0">Ask for a refund from the history below: a book's {{ price }} goes back to your balance, or unused balance goes back to the card it came from. Then process the request here.</p>
+    <div id="refMsg" aria-live="polite"></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Requested</th><th>What</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead>
+      <tbody id="refunds"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="history">
+    <h2>Transaction history</h2>
+    <p class="muted" style="margin-top:0">Every credit and debit, newest first, with what caused it.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>When</th><th>What</th><th class="num">Amount</th><th class="num">Balance after</th><th></th></tr></thead>
+      <tbody id="hist"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+    </table></div>
+    <p class="recon muted" id="recon"></p>
+  </section>
+
+  <section class="card">
+    <h2>What a book costs to make</h2>
+    <p class="muted" style="margin-top:0">Every API call is logged with its real cost from the token usage OpenAI reports: the hero picture, every page, every repaint, and every analysis check.</p>
+    <div class="costs" id="costs"></div>
+    <div class="tablewrap"><table id="costTable"></table></div>
+    <p class="muted small" id="shared"></p>
+  </section>
+{% endblock %}
+{% block script %}
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const when = iso => iso ? new Date(iso).toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit", second:"2-digit"}) : "";
+const KIND = {deposit:"Deposit", book:"Book", book_refund:"Refund", card_refund:"Refund to card", reversal:"Refund"};
+const usd = x => "$" + (x ?? 0).toFixed(x < 0.1 ? 4 : 2);
+let openForm = null;
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `Something went wrong (${r.status}).`);
+  return d;
+}
+function setBal(b) { $("bigBal").textContent = b; $("balance").textContent = b; }
+
+async function load() {
+  const d = await api("/api/wallet");
+  setBal(d.balance);
+  // history
+  $("hist").innerHTML = d.history.length ? d.history.map(r => `<tr>
+      <td>${when(r.at)}</td>
+      <td><span class="kind k-${r.kind}">${KIND[r.kind] || r.kind}</span>${esc(r.note)}
+        ${openForm === r.id ? `<form class="refform" data-ledger="${r.id}"><input type="text" name="reason" maxlength="200" placeholder="Reason (optional)" aria-label="Reason for refund"><button type="submit">Request refund of ${esc(r.refundable)}</button><button type="button" class="ghost" data-cancel>Cancel</button></form>` : ""}</td>
+      <td class="num ${r.amount_cents < 0 ? "neg" : "pos"}">${r.amount_cents > 0 ? "+" : ""}${esc(r.amount)}</td>
+      <td class="num">${esc(r.balance)}</td>
+      <td>${r.can_refund && openForm !== r.id ? `<button class="ghost" type="button" data-ask="${r.id}">Request refund</button>` : ""}</td>
+    </tr>`).join("") : `<tr><td colspan="5" class="muted">Nothing yet. Add funds to get started.</td></tr>`;
+  const sum = d.history.reduce((s, r) => s + r.amount_cents, 0);
+  $("recon").innerHTML = d.history.length ? `Check: the ${d.history.length} rows add up to <b>${(sum < 0 ? "-$" : "$") + (Math.abs(sum) / 100).toFixed(2)}</b>, which ${sum === d.balance_cents ? "matches" : "does <b>not</b> match"} your balance of <b>${esc(d.balance)}</b>.` : "";
+  // refunds
+  $("refunds").innerHTML = d.refunds.length ? d.refunds.map(r => `<tr>
+      <td>${when(r.requested_at)}</td>
+      <td>${r.kind === "card" ? "Unused balance back to the card" : "A book's price back to the balance"}${r.reason ? `<br><span class="muted small">“${esc(r.reason)}”</span>` : ""}${r.error ? `<br><span class="small neg">${esc(r.error)}</span>` : ""}</td>
+      <td class="num">${esc(r.amount)}</td>
+      <td class="st-${r.status}">${r.status === "requested" ? "Requested" : r.status === "processed" ? "Processed " + when(r.processed_at) : "Failed"}${r.stripe_ref && r.kind === "card" ? `<br><span class="muted small">Stripe ${esc(r.stripe_ref)}</span>` : ""}</td>
+      <td>${r.status === "requested" ? `<button type="button" data-process="${r.id}">Process refund</button>` : ""}</td>
+    </tr>`).join("") : `<tr><td colspan="5" class="muted">No refunds requested. Use “Request refund” on a deposit or a book in the history below.</td></tr>`;
+  // costs
+  const c = d.cost;
+  const avg = c.avg_cost;
+  $("costs").innerHTML = `
+    <div class="stat"><b>${avg != null ? usd(avg) : "—"}</b><span>average API cost per book${c.books ? `, over ${c.books} finished book${c.books > 1 ? "s" : ""}` : ""}</span></div>
+    <div class="stat"><b>$${d.price.toFixed(2)}</b><span>what we charge per book</span></div>
+    <div class="stat"><b class="${avg != null && avg > d.price ? "neg" : "pos"}">${avg != null ? (avg <= d.price ? "+" : "") + usd(d.price - avg) : "—"}</b><span>margin per book</span></div>
+    <div class="stat"><b>${c.avg_seconds != null ? Math.round(c.avg_seconds) + " s" : "—"}</b><span>average time, upload to PDF${c.fastest_seconds != null ? ` (fastest ${Math.round(c.fastest_seconds)} s)` : ""}</span></div>`;
+  const names = {hero: "Hero picture (first try)", page: "Pages (first try)", retry: "Repaints (tries 2 and 3)", analysis: "Analysis checks"};
+  const rows = Object.entries(c.by_kind || {});
+  $("costTable").innerHTML = rows.length ? `<thead><tr><th>Per book, on average</th><th class="num">Calls</th><th class="num">Cost</th></tr></thead><tbody>` +
+    rows.sort().map(([k, v]) => `<tr><td>${names[k] || k}</td><td class="num">${v.avg_calls.toFixed(1)}</td><td class="num">${usd(v.avg_cost)}</td></tr>`).join("") +
+    `<tr><td><b>Total</b></td><td class="num"><b>${rows.reduce((s, [, v]) => s + v.avg_calls, 0).toFixed(1)}</b></td><td class="num"><b>${usd(avg)}</b></td></tr></tbody>` : "";
+  $("shared").textContent = c.shared_calls ? `Not included above: the shared character bible and pre-made scenes, drawn once for every book (${c.shared_calls} calls, ${usd(c.shared_cost)} in total).` : "";
+}
+
+document.addEventListener("click", async e => {
+  const ask = e.target.closest("[data-ask]"), proc = e.target.closest("[data-process]"), cancel = e.target.closest("[data-cancel]");
+  if (ask) { openForm = +ask.dataset.ask; await load(); document.querySelector(".refform input")?.focus(); }
+  if (cancel) { openForm = null; await load(); }
+  if (proc) {
+    proc.disabled = true; proc.textContent = "Processing…";
+    try {
+      const d = await api(`/api/refunds/${proc.dataset.process}/process`, {method: "POST"});
+      $("refMsg").innerHTML = `<div class="msg">Refund of ${esc(d.amount)} processed. Your balance is now <b>${esc(d.balance)}</b>.</div>`;
+    } catch (err) { $("refMsg").innerHTML = `<div class="msg err">${esc(err.message)}</div>`; }
+    await load();
+  }
+});
+document.addEventListener("submit", async e => {
+  const f = e.target.closest(".refform"); if (!f) return;
+  e.preventDefault();
+  try {
+    await api("/api/refunds", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ledger_id: +f.dataset.ledger, reason: f.reason.value})});
+    $("refMsg").innerHTML = `<div class="msg">Refund requested. Click <b>Process refund</b> to complete it.</div>`;
+    openForm = null;
+  } catch (err) { $("refMsg").innerHTML = `<div class="msg err">${esc(err.message)}</div>`; }
+  await load();
+  $("refMsg").scrollIntoView({behavior: "smooth", block: "center"});
+});
+load().catch(e => { $("hist").innerHTML = `<tr><td colspan="5" class="msg err">${esc(e.message)}</td></tr>`; });
+</script>
+{% endblock %}

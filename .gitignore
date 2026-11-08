@@ -8,3 +8,5 @@ venv/
 test-photos/
 local.db
 *.db
+.env.example
+.env.example

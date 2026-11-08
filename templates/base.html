@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Storybook starring your child{% endblock %}</title>
+<link rel="preload" href="/font/young-serif.ttf" as="font" type="font/ttf" crossorigin>
+<style>
+  @font-face{font-family:"Young Serif";src:url(/font/young-serif.ttf) format("truetype");font-display:swap}
+  :root{
+    --night:#0f2240; --night-2:#183563; --paper:#fbf7ee; --card:#fff; --ink:#1f2933; --soft:#5b6673;
+    --line:#e6dfd0; --leaf:#2f7d46; --leaf-d:#22603a; --gold:#e3a72f; --red:#b3261e; --ok:#1e7a3c;
+    --story:"Young Serif",Georgia,serif; --ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:16px/1.5 var(--ui);color:var(--ink);background:var(--paper);min-height:100vh}
+  a{color:var(--leaf-d)}
+  img{max-width:100%;display:block}
+  [hidden]{display:none!important}
+
+  /* top bar */
+  .top{background:linear-gradient(180deg,var(--night),var(--night-2));color:#fff;position:relative;overflow:hidden}
+  .top::before{content:"";position:absolute;inset:0;opacity:.55;pointer-events:none;
+    background-image:radial-gradient(1px 1px at 12% 30%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 28% 70%,#fff 50%,transparent 51%),
+      radial-gradient(1.4px 1.4px at 46% 22%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 63% 64%,#fff 50%,transparent 51%),
+      radial-gradient(1.2px 1.2px at 78% 28%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 91% 60%,#fff 50%,transparent 51%)}
+  .bar{position:relative;max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{font:400 1.25rem var(--story);color:#fff;text-decoration:none;margin-right:auto;display:flex;align-items:center;gap:8px}
+  .brand svg{width:24px;height:24px}
+  .nav{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .nav a{color:#dfe7f5;text-decoration:none;padding:6px 10px;border-radius:8px;font-size:.95rem}
+  .nav a:hover,.nav a.on{background:rgba(255,255,255,.12);color:#fff}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--ink);border-radius:999px;padding:5px 6px 5px 14px;font-weight:600;text-decoration:none}
+  .pill b{font-variant-numeric:tabular-nums}
+  .pill span{background:var(--leaf);color:#fff;border-radius:999px;padding:3px 10px;font-size:.85rem;font-weight:600}
+
+  main{max-width:1080px;margin:0 auto;padding:28px 20px 60px}
+  h1,h2,h3{font-family:var(--story);font-weight:400;line-height:1.15;margin:0 0 .4em}
+  h1{font-size:clamp(1.8rem,4vw,2.6rem)}
+  h2{font-size:1.5rem}
+  h3{font-size:1.15rem}
+  .lede{color:var(--soft);margin:0 0 20px;max-width:62ch}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin:0 0 20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .muted{color:var(--soft)}
+  .small{font-size:.875rem}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+  button,.btn{font:600 1rem var(--ui);border:0;border-radius:10px;padding:11px 18px;cursor:pointer;text-decoration:none;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--leaf);color:#fff;min-height:44px}
+  button:hover,.btn:hover{background:var(--leaf-d)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .ghost:hover{background:#f3eee2}
+  .danger{background:transparent;color:var(--red);border:1px solid #f0c9c6}
+  .danger:hover{background:#fdf0ef}
+  .big{font-size:1.1rem;padding:14px 24px}
+  input[type=text],input[type=number],textarea,select{font:inherit;width:100%;padding:10px 12px;border:1px solid #d6cfbf;border-radius:10px;background:#fff;color:var(--ink)}
+  textarea{resize:vertical;min-height:72px}
+  label{display:block;font-weight:600;margin:0 0 6px;font-size:.95rem}
+  .field{margin:0 0 14px}
+  .msg{padding:12px 14px;border-radius:10px;margin:12px 0;background:#eef6ef;color:#1d4d2c;border:1px solid #cfe5d4}
+  .msg.err{background:#fdf0ef;color:#7d1d17;border-color:#f3c6c2}
+  .msg .btn{margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--soft);font-weight:600}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pos{color:var(--ok)} .neg{color:var(--red)}
+  footer{text-align:center;color:var(--soft);font-size:.85rem;padding:20px}
+  @media (max-width:600px){
+    main{padding:20px 16px 48px}
+    .card{padding:16px}
+    .bar{padding:10px 16px}
+    .nav a{padding:6px 8px}
+    .tablewrap{overflow-x:auto}
+  }
+  {% block style %}{% endblock %}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22C10 17 13 14 11 9S12 3 13 2" fill="none" stroke="#7cd67a" stroke-width="2.2" stroke-linecap="round"/><path d="M12 14c3-1 5-3 5-5-2 0-4 2-5 5zM11 10C8 9 6 7 6 5c2 0 4 2 5 5z" fill="#7cd67a"/></svg>Storybook</a>
+    {% if user %}
+    <nav class="nav" aria-label="Main">
+      <a href="/" class="{{ 'on' if request.path == '/' }}">Make a book</a>
+      <a href="/#library">My books</a>
+      <a href="/wallet" class="{{ 'on' if request.path == '/wallet' }}">Wallet</a>
+      <a href="/characters" class="{{ 'on' if request.path == '/characters' }}">Characters</a>
+      {% if admin %}<a href="/admin" class="{{ 'on' if request.path == '/admin' }}">Admin</a>{% endif %}
+      <a href="/logout">Sign out</a>
+    </nav>
+    <a class="pill" href="/wallet" title="Your balance">Balance <b id="balance">{{ balance }}</b><span>Add funds</span></a>
+    {% else %}
+    <nav class="nav"><a href="/characters">Characters</a></nav>
+    {% endif %}
+  </div>
+</header>
+<main>{% block main %}{% endblock %}</main>
+<footer>Student project for MCON 368 · Payments are Stripe <b>test mode</b>: no real money moves · <a href="/privacy">Privacy</a></footer>
+{% block script %}{% endblock %}
+</body>
+</html>

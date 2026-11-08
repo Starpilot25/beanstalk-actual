@@ -1,67 +1,95 @@
-# Jack and the Beanstalk, starring your child — MCON 368
+# Storybook starring your child — MCON 368
 
-Upload one photo → the child becomes Jack → paint pages 1–3 → download `JackAndTheBeanstalk.pdf`
-(3 story pages + an About Me page).
+Upload one photo, pick *Jack and the Beanstalk* or *Little Red Riding Hood*, and get a 20-page illustrated PDF
+(plus an About Me page) with the child as the hero. $0.99 a book, paid from a balance funded through Stripe
+(test mode).
 
-## How it works
-Sign in with Google. Every book you make is saved to your account (cast sheet, pages, About Me), so it is
-still there when you come back. Each picture is one API call with no retries; "Paint all pages" sends the
-page requests at the same time and the server paints them in parallel threads, each with its own progress bar.
+Live: https://beanstalk.autosignusa.com
 
-| Step | Endpoint | API calls |
+## How a book is made
+
+| Step | When | Calls |
 |---|---|---|
-| Make the cast sheet (starts a new saved book) | `POST /api/books` | 1 image edit |
-| Paint page *n* | `POST /api/books/<id>/pages/<n>` | 1 image edit |
-| Change one thing on the sheet or a page | `POST /api/books/<id>/adjust` | 1 image edit |
-| Save About Me details | `PATCH /api/books/<id>` | none |
-| Download the PDF (built from the saved book) | `GET /api/books/<id>/pdf` | none |
-| Your recent activity log | `GET /api/activity` | none |
+| **Character bible**: every supporting character (Jack's mother, Milky-White, the giant, the wolf, Grandma…) drawn once on a plain background | once, from `/admin` | 1 image each |
+| **Pre-made scenes**: all 20 pages of each story drawn with those characters as references, leaving an empty spot for the hero; each is checked and redrawn up to 3 times | once, from `/admin` | 1 image + 1 check each |
+| **Hero sheet**: the photo becomes the hero (face close-up + full length, in the story's costume) | per book | 1 image + 1 check (up to 3) |
+| **Pages**: the hero is edited into the 15 pre-made scenes that have a hero slot, all at once | per book | 1 image + 1 check per page, up to 3 tries |
+| **PDF**: laid out by the shared template, stored in the database | per book | none |
 
-**Storage:** Postgres (`DATABASE_URL`). Tables are `users`, `books`, `pages` (JPEG images) and `events` (the
-generation log). The uploaded photo is never stored. Locally, without `DATABASE_URL`, a SQLite file is used.
+Five pages per story (the beanstalk growing overnight, the castle, the wolf in the bed…) have no hero, so
+they are the pre-made scenes as they are. That keeps a book to 16 image calls on a good run, which matters
+for the 60-second target and the account's images-per-minute limit.
 
-**Logging:** every image call, PDF and sign-in is written to the server log (Render → Logs) and the
-`events` table, with the user, book, action, model, duration and success or failure.
+**One template, two stories.** `TEMPLATE` in `stories.py` fixes, for each of the 20 pages, the layout, the
+camera shot, where the hero stands and where words may go. Both stories fill the same 20 slots, so page *k* of
+either book has the same layout.
 
-**Limits (per signed-in user, per hour):** 3 new books, 5 changes and 20 pictures in total; 20 new
-books per hour site-wide. They are kept in memory and reset when the app restarts.
+**The quality loop.** Every generated picture goes to a vision model (`ANALYSIS_MODEL`, default `gpt-5-mini`)
+that scores the hero's likeness to the hero sheet, whether the page shows the right scene, anatomy (hands),
+and cleanliness (no drawn letters), and maps where faces and important things are on a 3×3 grid. A page
+that doesn't pass is repainted, up to 3 attempts in total; if none pass, the best-scoring one is kept. Every
+attempt is stored (`page_attempts`), and the UI shows the attempt count on every picture.
 
-## Keeping the book consistent
-- **One reference image.** A cast sheet is drawn once: a large close-up of the child as Jack on the left, and full-body Jack, his mother and Milky-White on the right (the old man appears only once, so he is drawn from his description). Every page call sends that same image, so the whole cast stays the same from page to page.
-- **One style string.** `STYLE` in `storyboard.py` is sent word for word in every call and never changes.
-- **Fixed cast descriptions.** The mother, Milky-White and the old man are described in `CAST` once and reused word for word.
-- **No words in the art.** The image model never draws text. The PDF layer (`book_pdf.py`) prints the story text in Young Serif over a soft fade in each page's quiet area (lower third, sky, or dark grass).
+**Text never hides the story.** The image model never draws words; the PDF prints them in Young Serif. On a
+full-bleed page the words go in the template's preferred band (top, middle or bottom third) only if the
+analysis found no faces or important things in that band; the pre-made scenes are checked for that band
+too. If no allowed band is clear, the page switches to the framed layout: the art sits in a frame and the
+words go on the paper below it, where they cannot cover anything.
+
+**Speed.** The book is made by a background thread on the server, so it survives a refresh. The browser
+polls the progress (stage name, every page's status and attempt count) and shows each thumbnail as soon as
+it exists. Pages are painted in parallel (`PAGE_WORKERS`), paced by `IMAGES_PER_MINUTE`. No new repaint
+starts after `RETRY_DEADLINE` seconds, so a slow book still finishes. The PDF is built once and stored, so
+downloads are instant, also after signing out and back in.
+
+## Money (Stripe test mode)
+
+- **Add funds** → Stripe Checkout (test card `4242 4242 4242 4242`). When Stripe sends the user back, the
+  session is looked up on Stripe's side and credited once (the session id is a unique key in the ledger).
+- **A book** takes $0.99 when it starts, in the same locked transaction that checks the balance, so the
+  balance can never go negative. If the book fails, the $0.99 is put back automatically.
+- **Refunds** are requested from the history, then processed: a book's $0.99 back to the balance, or unused
+  balance back to the card through Stripe's Refund API.
+- **History** (`/wallet`): every credit and debit with its cause, amount, time and the balance after it,
+  plus a check that the rows add up to the balance.
+- **Cost per book**: every API call is logged in `api_calls` with its dollar cost, computed from the token
+  usage OpenAI returns. `/wallet` shows the average cost per finished book (first tries, repaints and
+  analysis checks, split out) next to the $0.99 price. The one-time cost of the shared art is shown separately.
 
 ## Files
-- `storyboard.py` — the book as data: style, cast, and one entry per page. Add page 4 by appending to `PAGES`.
-- `app.py` — Flask routes and prompt assembly.
-- `book_pdf.py` — PDF layout (reportlab).
-- `templates/index.html` — the web page.
-- `PROMPTS.md` — how the prompts were developed and tested.
-- `to-do.md` — what still needs work.
+- `stories.py` — the template, both stories, the character bible text, and every prompt.
+- `pipeline.py` — image and analysis calls with cost logging, the rate limiter, the quality loop, the book job.
+- `billing.py` — Stripe checkout, charging, refunds.
+- `book_pdf.py` — the PDF layouts.
+- `db.py` — tables: `users`, `storybooks`, `book_pages`, `page_attempts`, `bible`, `scenes`, `ledger`, `refunds`, `api_calls`.
+- `app.py` — routes. `templates/` — the pages.
+- `review-log.md` — every run of the grading skill, oldest first. `to-do.md` — known defects.
 
 ## Settings (Render → Environment)
 | Variable | Default | Notes |
 |---|---|---|
 | `OPENAI_API_KEY` | — | required; never in code or the repo |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | from Google Cloud → Credentials (OAuth client, Web application) |
+| `STRIPE_SECRET_KEY` | — | the class **test** key (`sk_test_…`); never in code or the repo. Without it a pretend checkout is used |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google sign-in |
 | `SECRET_KEY` | — | long random string; signs the login cookie |
-| `CONTACT_EMAIL` | — | shown on the privacy page as the contact for account deletion |
-| `LOGIN_PASSWORD` | off | optional shared password sign-in (name + password). Set it only in Render, never in the repo |
+| `ADMIN_EMAILS` | — | comma-separated emails that can open `/admin` |
 | `DATABASE_URL` | local SQLite | Render Postgres "Internal Database URL" |
-| `IMAGE_MODEL` | `gpt-image-2.5-flare` | `fake` = free placeholder pictures for testing (no OpenAI calls). `gpt-image-1-mini` is cheaper but gave waxy, broken scenes |
-| `PAGE_QUALITY` | `medium` | quality for every picture: cast sheet, pages and "Change it" edits (~5¢ each); `low` looked smeared |
-| `BOOKS_PER_HOUR` | `3` | new books (cast sheets) per person per hour; failed attempts don't count |
-| `SITE_BOOKS_PER_HOUR` | `20` | new books per hour across everyone, a ceiling on spending (~20¢ per book) |
-| `EDITS_PER_HOUR` | `5` | "Change it" edits per person per hour; failed attempts don't count |
-| `HOURLY_LIMIT` | `20` | all pictures per person per hour (sheets, pages, edits): enough for 3 books plus a few repaints, ~$1/hour max |
+| `LOGIN_PASSWORD` | off | optional shared password sign-in |
+| `IMAGE_MODEL` | `gpt-image-2.5-flare` | `fake` = free placeholder pictures and fake checks, for testing |
+| `PAGE_QUALITY` / `HERO_QUALITY` / `SCENE_QUALITY` | `medium` (all three) | image quality per kind of call; keep scenes and pages the same so every page matches |
+| `ANALYSIS_MODEL` | `gpt-5-mini` | the vision model that checks every picture |
+| `IMAGES_PER_MINUTE` | `20` | your OpenAI tier's image limit for the model |
+| `PAGE_WORKERS` | `16` | pages painted at the same time |
+| `RETRY_DEADLINE` | `48` | seconds after upload after which no new repaint starts |
+| `BOOKS_PER_HOUR` / `SITE_BOOKS_PER_HOUR` | `6` / `30` | limits per person and site-wide |
+| `PRICE_*` | Nov 2026 prices | $ per 1M tokens used for the cost log |
 
 ## Run locally
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-IMAGE_MODEL=fake DEV_LOGIN=1 python app.py   # free test images + a local test sign-in, http://localhost:5000
+IMAGE_MODEL=fake DEV_LOGIN=1 IMAGES_PER_MINUTE=500 python app.py   # free pictures, pretend Stripe, local sign-in
 ```
-`DEV_LOGIN` is ignored on Render, so the test sign-in can never be used on the live site.
+Then sign in with the local test sign-in, open `/admin` and draw the shared art (free in fake mode).
 
 Font: Young Serif, SIL Open Font License (`fonts/OFL-YoungSerif.txt`).
