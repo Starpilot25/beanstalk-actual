@@ -213,8 +213,8 @@ STORIES = {
                  action="reaching toward the golden harp", mood="enchanted"),
             dict(text="\"MASTER! MASTER!\" cried the harp. The giant woke with a roar.",
                  cast=["giant", "harp"],
-                 scene="The giant springing up from his chair, wide awake, eyebrows raised in comic surprise and "
-                       "mouth open in a big cartoon shout; the golden harp glows on the table."),
+                 scene="The giant standing up beside his big wooden chair, blinking awake and looking around in "
+                       "surprise; the golden harp glows on the table."),
             dict(text="Jack raced down the beanstalk as fast as could be, with the giant close behind!",
                  cast=["giant"],
                  scene="The beanstalk against the sky; high above, the giant climbs down after someone, "
@@ -357,6 +357,13 @@ def bible_prompt(story, key):
     return (f"Art style: {STYLE} A character model sheet for a picture book: {name}, {desc}. One full-body view "
             f"standing, facing the viewer at a slight three-quarter angle, centered, on a plain light background. "
             f"Neutral, friendly expression. {HANDS} {NO_WORDS}")
+
+
+def bible_from_scene_prompt(story, key):
+    name, desc = BIBLE[story][key]
+    return (f"Art style: {STYLE} Image 1 is a page from a picture book. Make a character model sheet of {name} "
+            f"from this picture ({desc}): the same character with the same face, hair, clothes and colors, alone, "
+            f"one full-body view standing, centered, on a plain light background. {HANDS} {NO_WORDS}")
 
 
 def scene_prompt(story, p):

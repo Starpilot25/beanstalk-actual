@@ -106,6 +106,8 @@ def thumb(raw, w=360):
 
 def _fake_image(label, base=None, hero_at=None):
     time.sleep(float(os.environ.get("FAKE_DELAY", "3")) * random.uniform(0.6, 1.4))
+    if any(x and label.startswith(x) for x in os.environ.get("FAKE_REFUSE", "").split("|")):   # testing only
+        raise RuntimeError("Error code: 400 - Your request was rejected by the safety system (fake)")
     rng = random.Random(label)
     if base:
         im = Image.open(io.BytesIO(base)).convert("RGB").resize((1536, 1024))
@@ -460,8 +462,21 @@ def run_pregen(story, only=None, redo=False):
             img = image_call([], S.bible_prompt(story, k), purpose="bible", label=f"{story} bible {k}",
                              quality=SCENE_QUALITY)
         except Exception as e:                  # one failure must not stop the rest
-            _plog(f"{story}: {name} FAILED: {str(e)[:400]}")
-            return
+            _plog(f"{story}: {name} FAILED: {str(e)[:300]}")
+            # Fallback: lift the character out of a scene they already appear in (an edit, not a fresh drawing).
+            have, _ = db.scene_status()
+            src = next((q["n"] for q in S.STORIES[story]["pages"] if k in q["cast"] and f"{story}:{q['n']}" in have), None)
+            if src is None:
+                _plog(f"{story}: {name} will be drawn from the description in each scene for now")
+                return
+            try:
+                scene_img, _ = db.get_scene(story, src)
+                img = image_call([to_png(scene_img, 1024)], S.bible_from_scene_prompt(story, k), purpose="bible",
+                                 label=f"{story} bible {k} from scene {src}", quality=SCENE_QUALITY)
+                _plog(f"{story}: drew {name} from scene {src} instead")
+            except Exception as e2:
+                _plog(f"{story}: {name} FAILED again from scene {src}: {str(e2)[:200]}")
+                return
         db.save_bible(story, k, name, desc, img)
         pregen_state["done"] += 1
         _plog(f"{story}: drew {name}")
@@ -478,13 +493,17 @@ def run_pregen(story, only=None, redo=False):
     def _scene(p):
         missing = [c for c in p["cast"] if c not in S.TEXT_ONLY and not db.bible_image(story, c)]
         if missing:
-            raise RuntimeError(f"draw these bible characters first: {', '.join(missing)}")
+            _plog(f"{story}: scene {p['n']}: drawing {', '.join(missing)} from the description (no bible picture yet)")
         refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"]
                 if c not in S.TEXT_ONLY and db.bible_image(story, c)]
-        best = None
+        best, last_err = None, ""
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            img = image_call(refs, S.scene_prompt(story, p), purpose="scene",
-                             label=f"{story} scene {p['n']} try {attempt}", quality=SCENE_QUALITY)
+            try:
+                img = image_call(refs, S.scene_prompt(story, p), purpose="scene",
+                                 label=f"{story} scene {p['n']} try {attempt}", quality=SCENE_QUALITY)
+            except Exception as e:              # a refused try is a failed attempt; earlier good tries are kept
+                last_err = str(e)
+                continue
             a = safe_analysis([img] + [db.bible_image(story, c) for c in p["cast"] if c not in S.TEXT_ONLY][:3],
                               scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}")
             score, ok = grade(a)
@@ -497,6 +516,8 @@ def run_pregen(story, only=None, redo=False):
                 best = (ok, score, img, a, attempt)
             if ok:
                 break
+        if best is None:
+            raise RuntimeError(f"all 3 tries refused: {last_err[:300]}")
         ok, score, img, a, att = best
         db.save_scene(story, p["n"], img, thumb(img), att, score, a)
         pregen_state["done"] += 1
