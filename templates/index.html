@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block style %}
-  .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center;margin:0 0 26px}
-  .hero p{color:var(--soft);font-size:1.08rem;margin:0}
+  .hero{margin:0 0 26px}
+  .hero p{color:#c3cfe6;font-size:1.08rem;margin:0}
   .steps{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 0;padding:0;list-style:none;color:var(--soft);font-size:.95rem}
   .steps b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--leaf);color:#fff;font-size:.8rem;margin-right:6px}
   .stories{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -57,18 +57,42 @@
   .gbtn svg{width:20px;height:20px}
   .pwrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .pwrow input{flex:1;min-width:140px}
-  @media (max-width:800px){ .hero,.make{grid-template-columns:1fr} }
+  @media (max-width:800px){ .make{grid-template-columns:1fr} }
   @media (max-width:480px){ .stories{gap:10px} .story div{padding:8px} .story b{font-size:.98rem} .two{grid-template-columns:1fr} .grid{grid-template-columns:repeat(2,1fr)} }
 {% endblock %}
 
 {% block main %}
 {% if not user %}
-  <div class="hero">
+  <div class="hero intro">
     <div>
       <h1>A 20-page storybook starring your child</h1>
       <p>Upload one photo. Your child becomes the hero of <i>Jack and the Beanstalk</i> or <i>Little Red Riding Hood</i>, painted on every page, in about a minute. {{ price }} a book.</p>
     </div>
-    {% if ready.jack %}<img src="/scene/jack/8.jpg" alt="" style="border-radius:14px;aspect-ratio:3/2;object-fit:cover;background:#dfe6d8">{% endif %}
+  <svg class="castle" id="castleCloud" viewBox="0 0 360 260" aria-hidden="true">
+    <defs>
+      <radialGradient id="moonglow" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#fff6d8" stop-opacity=".9"/><stop offset=".45" stop-color="#ffe2a0" stop-opacity=".25"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="cloudlit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3ebff"/><stop offset="1" stop-color="#7d93c4"/></linearGradient>
+    </defs>
+    <circle cx="250" cy="80" r="78" fill="url(#moonglow)"/>
+    <circle cx="250" cy="80" r="34" fill="#fff3cf"/>
+    <circle cx="238" cy="72" r="6" fill="#f1e2b8" opacity=".7"/><circle cx="262" cy="92" r="4" fill="#f1e2b8" opacity=".6"/>
+    <!-- the giant's castle -->
+    <g fill="#0f2440">
+      <rect x="92" y="120" width="22" height="70"/><path d="M88 120l15-24 15 24z"/>
+      <rect x="118" y="100" width="34" height="90"/><path d="M114 100l21-34 21 34z"/>
+      <rect x="156" y="128" width="22" height="62"/><path d="M152 128l15-22 15 22z"/>
+      <rect x="110" y="150" width="76" height="40"/>
+    </g>
+    <g fill="#ffd46e" opacity=".9"><rect x="131" y="118" width="7" height="11" rx="3"/><rect x="99" y="140" width="6" height="9" rx="3"/><rect x="163" y="146" width="6" height="9" rx="3"/></g>
+    <!-- cloud bank, moonlit -->
+    <g fill="url(#cloudlit)" opacity=".95">
+      <ellipse cx="80" cy="200" rx="70" ry="26"/><ellipse cx="150" cy="190" rx="66" ry="30"/><ellipse cx="225" cy="205" rx="80" ry="26"/>
+      <ellipse cx="300" cy="212" rx="60" ry="20"/><ellipse cx="40" cy="214" rx="46" ry="18"/>
+    </g>
+  </svg>
+
   </div>
   <div class="card signin">
     <h2>Sign in to start</h2>
@@ -95,10 +119,39 @@
   </div>
 {% else %}
 
+  <div class="intro">
+    <div>
+      <h1>Make a storybook</h1>
+      <ol class="steps"><li><b>1</b>Pick a story</li><li><b>2</b>Add a photo</li><li><b>3</b>Tell us about them</li><li><b>4</b>Download the PDF</li></ol>
+      <p class="lede" style="margin-top:12px">20 illustrated pages plus an About Me page. {{ price }} from your balance; ready in about a minute.</p>
+    </div>
+  <svg class="castle" id="castleCloud" viewBox="0 0 360 260" aria-hidden="true">
+    <defs>
+      <radialGradient id="moonglow" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#fff6d8" stop-opacity=".9"/><stop offset=".45" stop-color="#ffe2a0" stop-opacity=".25"/><stop offset="1" stop-color="#ffe2a0" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="cloudlit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3ebff"/><stop offset="1" stop-color="#7d93c4"/></linearGradient>
+    </defs>
+    <circle cx="250" cy="80" r="78" fill="url(#moonglow)"/>
+    <circle cx="250" cy="80" r="34" fill="#fff3cf"/>
+    <circle cx="238" cy="72" r="6" fill="#f1e2b8" opacity=".7"/><circle cx="262" cy="92" r="4" fill="#f1e2b8" opacity=".6"/>
+    <!-- the giant's castle -->
+    <g fill="#0f2440">
+      <rect x="92" y="120" width="22" height="70"/><path d="M88 120l15-24 15 24z"/>
+      <rect x="118" y="100" width="34" height="90"/><path d="M114 100l21-34 21 34z"/>
+      <rect x="156" y="128" width="22" height="62"/><path d="M152 128l15-22 15 22z"/>
+      <rect x="110" y="150" width="76" height="40"/>
+    </g>
+    <g fill="#ffd46e" opacity=".9"><rect x="131" y="118" width="7" height="11" rx="3"/><rect x="99" y="140" width="6" height="9" rx="3"/><rect x="163" y="146" width="6" height="9" rx="3"/></g>
+    <!-- cloud bank, moonlit -->
+    <g fill="url(#cloudlit)" opacity=".95">
+      <ellipse cx="80" cy="200" rx="70" ry="26"/><ellipse cx="150" cy="190" rx="66" ry="30"/><ellipse cx="225" cy="205" rx="80" ry="26"/>
+      <ellipse cx="300" cy="212" rx="60" ry="20"/><ellipse cx="40" cy="214" rx="46" ry="18"/>
+    </g>
+  </svg>
+
+  </div>
   <section id="makeSec">
-    <h1>Make a storybook</h1>
-    <ol class="steps"><li><b>1</b>Pick a story</li><li><b>2</b>Add a photo</li><li><b>3</b>Tell us about them</li><li><b>4</b>Download the PDF</li></ol>
-    <p class="lede" style="margin-top:12px">20 illustrated pages plus an About Me page. {{ price }} from your balance; ready in about a minute.</p>
 
     <form class="card" id="makeForm" novalidate>
       <h3><span class="stepno">1</span>Pick a story</h3>
@@ -167,6 +220,83 @@
 {% endblock %}
 
 {% block script %}
+<svg id="giantStalk" aria-hidden="true"><defs><linearGradient id="stemgrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3e9a48"/><stop offset=".5" stop-color="#7fdc7a"/><stop offset="1" stop-color="#2f7a3a"/></linearGradient></defs></svg>
+<script>
+(() => {
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const svg = document.getElementById("giantStalk"), NS = "http://www.w3.org/2000/svg";
+  let stem, tip, len = 0, leaves = [], startY = 0, table = [];
+
+  /* Build a wavy stalk the height of the whole page, with leaves every ~150px. */
+  function build(){
+    svg.setAttribute("height", 0);                       // measure the page without the stalk itself
+    const H = document.documentElement.scrollHeight;
+    svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 96 ${H}`);
+    svg.querySelectorAll(".stem,.lf").forEach(e => e.remove());
+    /* Start under the right end of the castle's cloud bank, then swing out to the side of the page. */
+    let y0 = 0, x0 = 48;
+    const cc = document.getElementById("castleCloud");
+    if (cc) {
+      const r = cc.getBoundingClientRect(), me = svg.getBoundingClientRect(), k = r.width / 360;
+      x0 = r.left + 296 * k - me.left; y0 = r.top + 214 * k - me.top;
+    }
+    const top = y0 + 240;
+    let d = `M${x0.toFixed(1)} ${y0.toFixed(1)} C${x0.toFixed(1)} ${(y0 + 110).toFixed(1)} 48 ${(top - 130).toFixed(1)} ${(48 + Math.sin(top / 180) * 26).toFixed(1)} ${top.toFixed(1)}`, pts = [];
+    startY = y0;
+    for (let y = top + 120; y <= H; y += 120) {
+      const x = 48 + Math.sin(y / 180) * 26;
+      d += ` S${(48 + Math.sin((y - 60) / 180) * 34).toFixed(1)} ${y - 60} ${x.toFixed(1)} ${y}`;
+      pts.push([x, y]);
+    }
+    const last = pts.length ? pts[pts.length - 1] : [48, top];
+    if (last[1] < H) d += ` S${last[0].toFixed(1)} ${((last[1] + H) / 2).toFixed(1)} 48 ${H}`;
+    stem = document.createElementNS(NS, "path"); stem.setAttribute("class", "stem"); stem.setAttribute("d", d);
+    svg.appendChild(stem); len = stem.getTotalLength();
+    tip = document.createElementNS(NS, "circle"); tip.setAttribute("class", "tip"); tip.setAttribute("r", 7);
+    stem.style.strokeDasharray = len;
+    table = [];
+    for (let l = 0; l <= len; l += 8) table.push([stem.getPointAtLength(l).y, l]);
+    table.push([H, len]);
+    leaves = pts.map(([x, y], i) => {
+      const left = i % 2 === 0, l = document.createElementNS(NS, "path");
+      l.setAttribute("class", "lf");
+      l.setAttribute("d", left ? `M${x} ${y}c-30 -4 -44 -20 -44 -34 20 0 38 14 44 34z` : `M${x} ${y}c30 -4 44 -20 44 -34 -20 0 -38 14 -44 34z`);
+      l.style.setProperty("--ox", left ? "100%" : "0%");
+      svg.appendChild(l); return [l, y];
+    });
+    svg.appendChild(tip);
+    /* Put the cottage just to the left of where the beanstalk meets the ground. */
+    const hills = document.getElementById("hills"), cot = document.getElementById("cottage");
+    if (hills && cot && getComputedStyle(svg).display !== "none") {
+      const pt = hills.createSVGPoint(), m = hills.getScreenCTM();
+      pt.x = svg.getBoundingClientRect().left + 48 - 120; pt.y = 0;
+      if (m) cot.setAttribute("transform", `translate(${pt.matrixTransform(m.inverse()).x.toFixed(0)} 150)`);
+    }
+    update();
+  }
+  /* Reveal the stalk down to the bottom of the screen, so it grows as you scroll. */
+  function update(){
+    if (!stem) return;
+    const H = document.documentElement.scrollHeight;
+    const atBottom = scrollY + innerHeight >= H - 4;
+    const shown = calm || atBottom ? H : Math.min(H, scrollY + innerHeight * 0.92);
+    let L = 0;
+    for (const [y, l] of table) { if (y > shown) break; L = l; }
+    if (shown >= H) L = len;
+    const f = len ? L / len : 0;
+    stem.style.strokeDashoffset = len - len * f;
+    leaves.forEach(([l, y]) => l.classList.toggle("on", y < shown - 20));
+    const pt = stem.getPointAtLength(len * f);
+    tip.setAttribute("cx", pt.x); tip.setAttribute("cy", pt.y);
+    tip.style.opacity = shown >= H - 4 ? 0 : 1;
+  }
+  addEventListener("scroll", () => requestAnimationFrame(update), {passive:true});
+  addEventListener("resize", () => requestAnimationFrame(build));
+  new ResizeObserver(() => requestAnimationFrame(build)).observe(document.body);
+  build();
+
+})();
+</script>
 {% if user %}
 <script>
 const $ = id => document.getElementById(id);
