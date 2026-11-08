@@ -27,7 +27,7 @@
     <div class="sc" id="scenes-{{ key }}"></div>
   </section>
   {% endfor %}
-  <section class="card"><h2>Log</h2><pre id="log">…</pre></section>
+  <section class="card" id="logcard"><h2>Log</h2><pre id="log">…</pre></section>
 {% endblock %}
 {% block script %}
 <script>
@@ -54,7 +54,8 @@ async function tick() {
   $("info").textContent = `Model ${d.model}, quality ${d.quality}, ${d.ipm} images/minute. ` +
     (d.running ? `Working: ${d.done} of ${d.total} done.` : "Idle.") +
     (d.cost.shared_calls ? ` Shared art so far: ${d.cost.shared_calls} calls, $${d.cost.shared_cost.toFixed(2)}.` : "");
-  $("log").textContent = d.log.join("\n") || "Nothing yet.";
+  $("log").textContent = (d.log.join("\n") || "Nothing yet.") +
+    (d.failures.length ? "\n\nRecent failed API calls:\n" + d.failures.join("\n") : "");
   for (const story of Object.keys(BIBLE)) {
     $("bible-" + story).innerHTML = Object.keys(BIBLE[story]).map(k => {
       const has = d.bible.includes(`${story}:${k}`);
@@ -63,7 +64,7 @@ async function tick() {
     $("scenes-" + story).innerHTML = Array.from({length: 20}, (_, i) => i + 1).map(n => {
       const s = d.scenes[`${story}:${n}`];
       return `<figure>${s ? `<a href="/scene/${story}/${n}.jpg?full=1" target="_blank"><img src="/scene/${story}/${n}.jpg?v=${s.score}-${s.attempts}" alt=""></a>` : `<div class="noimg"></div>`}
-        <figcaption><span>${n}${s ? ` · ${s.score}/10 · try ${s.attempts}` : ""}</span><button class="ghost" type="button" data-story="${story}" data-redo="${n}">Redo</button></figcaption></figure>`;
+        <figcaption><span>${n}${s ? ` · ${s.score == null ? "not checked" : s.score + "/10"} · try ${s.attempts}` : ""}</span><button class="ghost" type="button" data-story="${story}" data-redo="${n}">Redo</button></figcaption></figure>`;
     }).join("");
   }
   if (d.running) setTimeout(tick, 2500);

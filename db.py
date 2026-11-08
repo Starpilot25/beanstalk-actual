@@ -531,3 +531,10 @@ def book_cost(book_id):
         r = c.execute(select(func.coalesce(func.sum(api_calls.c.cost_usd), 0), func.count())
                       .where(api_calls.c.book_id == book_id)).first()
         return float(r[0]), int(r[1])
+
+
+def recent_failures(limit=12):
+    with engine.connect() as c:
+        rows = c.execute(select(api_calls.c.at, api_calls.c.purpose, api_calls.c.model, api_calls.c.detail)
+                         .where(api_calls.c.ok == 0).order_by(api_calls.c.id.desc()).limit(limit)).all()
+        return [f"{time.strftime('%H:%M:%S', time.localtime(r.at))} {r.purpose} {r.model}: {r.detail}" for r in rows]

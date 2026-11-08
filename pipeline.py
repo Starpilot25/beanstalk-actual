@@ -219,8 +219,10 @@ def safe_analysis(*args, **kw):
     try:
         return analysis_call(*args, **kw)
     except Exception as e:
-        log.warning("analysis unavailable: %s", str(e)[:200])
-        return dict(UNCHECKED)
+        log.warning("analysis unavailable: %s", str(e)[:300])
+        if pregen_state["running"]:
+            _plog(f"check failed: {str(e)[:300]}")
+        return {"unchecked": True, "issues": [UNCHECKED["issues"][0]], "error": str(e)[:300]}
 
 
 def grade(a):
@@ -436,8 +438,12 @@ def run_pregen(story, only=None, redo=False):
 
     def char(k):
         name, desc = S.BIBLE[story][k]
-        img = image_call([], S.bible_prompt(story, k), purpose="bible", label=f"{story} bible {k}",
-                         quality=SCENE_QUALITY)
+        try:
+            img = image_call([], S.bible_prompt(story, k), purpose="bible", label=f"{story} bible {k}",
+                             quality=SCENE_QUALITY)
+        except Exception as e:                  # one failure must not stop the rest
+            _plog(f"{story}: {name} FAILED: {str(e)[:400]}")
+            return
         db.save_bible(story, k, name, desc, img)
         pregen_state["done"] += 1
         _plog(f"{story}: drew {name}")
@@ -446,6 +452,15 @@ def run_pregen(story, only=None, redo=False):
         list(ex.map(char, chars))
 
     def scene(p):
+        try:
+            _scene(p)
+        except Exception as e:                  # one failure must not stop the rest
+            _plog(f"{story}: scene {p['n']} FAILED: {str(e)[:400]}")
+
+    def _scene(p):
+        missing = [c for c in p["cast"] if not db.bible_image(story, c)]
+        if missing:
+            raise RuntimeError(f"draw these bible characters first: {', '.join(missing)}")
         refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"] if db.bible_image(story, c)]
         best = None
         for attempt in range(1, MAX_ATTEMPTS + 1):

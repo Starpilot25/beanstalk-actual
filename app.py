@@ -530,7 +530,8 @@ def admin_status():
     st = pipeline.pregen_state
     return jsonify({"running": st["running"], "done": st["done"], "total": st["total"], "log": list(st["log"])[:60],
                     "scenes": have_scenes, "bible": list(have_bible), "cost": db.cost_report(),
-                    "model": pipeline.IMAGE_MODEL, "quality": pipeline.QUALITY, "ipm": pipeline.IPM})
+                    "model": pipeline.IMAGE_MODEL, "quality": pipeline.QUALITY, "ipm": pipeline.IPM,
+                    "failures": db.recent_failures()})
 
 
 @app.post("/api/admin/pregen")
