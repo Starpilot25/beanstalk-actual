@@ -44,7 +44,8 @@ async function run(body) {
   tick();
 }
 document.addEventListener("click", e => {
-  const a = e.target.closest("[data-run]"), b = e.target.closest("[data-bible]"), s = e.target.closest("[data-redo]");
+  const a = e.target.closest("[data-run]"), b = e.target.closest("[data-bible]"), s = e.target.closest("[data-redo]"), c = e.target.closest("[data-char]");
+  if (c) run({story: c.dataset.story, only: "bible:" + c.dataset.char, redo: true});
   if (a) run({story: a.dataset.run});
   if (b) run({story: b.dataset.bible, only: "bible", redo: true});
   if (s) run({story: s.dataset.story, only: [+s.dataset.redo], redo: true});
@@ -59,7 +60,7 @@ async function tick() {
   for (const story of Object.keys(BIBLE)) {
     $("bible-" + story).innerHTML = Object.keys(BIBLE[story]).map(k => {
       const has = d.bible.includes(`${story}:${k}`);
-      return `<figure>${has ? `<img src="/bible/${story}/${k}.jpg?v=${ver}${d.running ? Date.now() : ""}" alt="">` : `<div class="noimg"></div>`}<figcaption><span>${BIBLE[story][k][0]}</span></figcaption></figure>`;
+      return `<figure>${has ? `<img src="/bible/${story}/${k}.jpg?v=${Date.now()}" alt="">` : `<div class="noimg"></div>`}<figcaption><span>${BIBLE[story][k][0]}</span><button class="ghost" type="button" data-story="${story}" data-char="${k}">Redraw</button></figcaption></figure>`;
     }).join("");
     $("scenes-" + story).innerHTML = Array.from({length: 20}, (_, i) => i + 1).map(n => {
       const s = d.scenes[`${story}:${n}`];
