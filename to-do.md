@@ -18,11 +18,14 @@ Known defects and open questions in the 20-page build, most costly first. Update
   and 20 with several photos (glasses, curly hair, darker and lighter skin, a girl and a boy).
 
 ## Book
-- **Jack's mother has no portrait in the character bible.** OpenAI's image safety filter refused her portrait
-  10 times (4 different descriptions, the strict and the "low" moderation setting, and editing her out of a
-  scene), while every other character went through. She is drawn from her written description in each of her 5
-  scenes (pp. 1, 2, 6, 18, 20), so she may vary slightly between pages. The golden harp is the same: its portrait
-  made the scenes that used it get refused, so it is described in words too. Both are marked on `/characters`.
+- **OpenAI's image safety filter refuses some ordinary characters.** gpt-image-2.5-flare refused Jack's mother's
+  portrait 10 times (4 descriptions, both moderation levels), and refused scenes that used the golden harp's
+  portrait as a reference. Bible portraits now fall back to `gpt-image-1.5`, then `gpt-image-1`
+  (`BIBLE_FALLBACK_MODELS`), and a refused scene retries without reference pictures. A portrait from a
+  different model may look slightly different from the rest of the bible; every page is still painted by flare.
+- **Expressions are now checked.** Each page names the hero's feeling (e.g. p. 12 "frightened, holding breath"),
+  and the check scores whether the face shows it; a generic smile on a scary page fails and is repainted. Still to
+  verify in real books: the pre-made scenes' supporting characters (the giant on p. 16, the wolf on pp. 11–13).
 - Five pages per story are pre-made scenes without the hero. Check that a reader doesn't feel the hero
   disappears (Jack pp. 7, 10, 13, 16, 19; Red the same).
 - The words never use "he" or "she" for the hero (it's always "Jack", "Red" or "Mother"), so they fit a boy or a

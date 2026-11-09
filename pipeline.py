@@ -36,6 +36,9 @@ QUALITY = os.environ.get("PAGE_QUALITY", "medium")
 HERO_QUALITY = os.environ.get("HERO_QUALITY", QUALITY)
 SCENE_QUALITY = os.environ.get("SCENE_QUALITY", QUALITY)       # same as the pages, so every page matches
 ANALYSIS_MODEL = os.environ.get("ANALYSIS_MODEL", "gpt-5-mini")
+# Tried in order for a bible portrait that IMAGE_MODEL refuses.
+BIBLE_FALLBACK_MODELS = [m.strip() for m in os.environ.get("BIBLE_FALLBACK_MODELS", "gpt-image-1.5,gpt-image-1").split(",")
+                         if m.strip()]
 MAX_ATTEMPTS = 3
 RETRY_DEADLINE = float(os.environ.get("RETRY_DEADLINE", "48"))  # seconds after upload: no new repaints after this
 IPM = int(os.environ.get("IMAGES_PER_MINUTE", "20"))
@@ -126,9 +129,11 @@ def _fake_image(label, base=None, hero_at=None):
     return jpeg(im, 85)
 
 
-def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, quality=None, hero_at=None):
+def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, quality=None, hero_at=None,
+               model=None):
     """Exactly one image API call. images: list of PNG bytes (edit) or [] (generate). Returns JPEG bytes."""
     quality = quality or QUALITY
+    model = model or IMAGE_MODEL
     _wait_for_slot()
     t0 = time.time()
     usage = None
@@ -139,7 +144,7 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
             usage = {"text": 600, "image_in": 1500 * len(images), "out": 1600 if quality == "medium" else 3500}
         else:
             files = [(f"in{i}.png", b, "image/png") for i, b in enumerate(images)]
-            kw = dict(model=IMAGE_MODEL, prompt=prompt, size=SIZE, quality=quality, n=1, output_format="jpeg",
+            kw = dict(model=model, prompt=prompt, size=SIZE, quality=quality, n=1, output_format="jpeg",
                       output_compression=88)
             if files:
                 r = client().images.edit(image=files if len(files) > 1 else files[0], **kw)
@@ -159,7 +164,7 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
     except Exception as e:
         ms = int((time.time() - t0) * 1000)
         log.warning("image FAIL %s book=%s %s ms=%d err=%s", purpose, book_id, label, ms, str(e)[:200])
-        db.log_call(user_id=user_id, book_id=book_id, purpose=purpose, model=IMAGE_MODEL, ms=ms, ok=0,
+        db.log_call(user_id=user_id, book_id=book_id, purpose=purpose, model=model, ms=ms, ok=0,
                     input_tokens=0, output_tokens=0, cost_usd=0.0, detail=f"{label}: {str(e)[:250]}")
         raise
     ms = int((time.time() - t0) * 1000)
@@ -170,7 +175,7 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
     else:                                   # no usage reported: fall back to a per-image estimate
         cost, tin, tout = float(os.environ.get("IMAGE_COST_FALLBACK", "0.06")), 0, 0
     log.info("image OK %s book=%s %s ms=%d cost=$%.4f", purpose, book_id, label, ms, cost)
-    db.log_call(user_id=user_id, book_id=book_id, purpose=purpose, model=IMAGE_MODEL, ms=ms, ok=1,
+    db.log_call(user_id=user_id, book_id=book_id, purpose=purpose, model=model, ms=ms, ok=1,
                 input_tokens=tin, output_tokens=tout, cost_usd=cost, detail=label)
     return out
 
@@ -190,10 +195,12 @@ def analysis_call(images, prompt, *, label, user_id=None, book_id=None, fake_hin
             rng = random.Random(label + str(time.time()))
             bad = rng.random() < 0.3                     # fail sometimes, so the repaint loop is exercised
             busy = {"top": [False] * 3, "middle": [True, False, True], "bottom": [False] * 3}
+            expr = rng.randint(7, 10)
             if fake_hint:                                # mark the hero's column busy in the middle row
                 busy["middle"][{"left": 0, "center": 1, "right": 2}[fake_hint]] = True
             a = {"hero": 4 if bad else rng.randint(7, 10), "story": rng.randint(7, 10), "anatomy": rng.randint(7, 10),
-                 "clean": 10, "issues": ["hero face doesn't match the sheet"] if bad else [], "busy": busy}
+                 "clean": 10, "expression": expr, "issues": ["hero face doesn't match the sheet"] if bad else [],
+                 "busy": busy}
             tin, tout = 2200, 180
         else:
             content = [{"type": "text", "text": prompt}] + [
@@ -241,7 +248,8 @@ def grade(a):
         except (TypeError, ValueError):
             return 0.0
     parts = {k: g(k) for k in ("hero", "story", "anatomy", "clean")}
-    score = (2 * parts["hero"] + parts["story"] + parts["anatomy"] + parts["clean"]) / 5
+    parts["expression"] = g("expression") if "expression" in a else 10.0
+    score = (2 * parts["hero"] + parts["story"] + parts["anatomy"] + parts["clean"] + parts["expression"]) / 6
     return round(score, 1), min(parts.values()) >= 6 and score >= 7
 
 
@@ -467,11 +475,23 @@ def run_pregen(story, only=None, redo=False):
 
     def char(k):
         name, desc = S.BIBLE[story][k]
-        try:
-            img = image_call([], S.bible_prompt(story, k), purpose="bible", label=f"{story} bible {k}",
-                             quality=SCENE_QUALITY)
-        except Exception as e:                  # one failure must not stop the rest
-            _plog(f"{story}: {name} FAILED: {str(e)[:300]}")
+        img = None
+        # Each image model has its own safety check; if one refuses a plain picture-book character, try the
+        # next one, each with the full prompt and then a plainer wording. Scenes are still painted by
+        # IMAGE_MODEL, so the style of every page stays the same.
+        for m in [IMAGE_MODEL] + [x for x in BIBLE_FALLBACK_MODELS if x != IMAGE_MODEL]:
+            for variant, prompt in (("full", S.bible_prompt(story, k)), ("plain", S.bible_prompt_plain(story, k))):
+                try:
+                    img = image_call([], prompt, purpose="bible", label=f"{story} bible {k} [{m} {variant}]",
+                                     quality=SCENE_QUALITY, model=m)
+                    if m != IMAGE_MODEL or variant != "full":
+                        _plog(f"{story}: {name} drawn with {m} ({variant} wording)")
+                    break
+                except Exception as e:
+                    _plog(f"{story}: {name} refused by {m} ({variant} wording): {str(e)[:140]}")
+            if img:
+                break
+        if img is None:
             # Fallback: lift the character out of a scene they already appear in (an edit, not a fresh drawing).
             have, _ = db.scene_status()
             src = next((q["n"] for q in S.STORIES[story]["pages"] if k in q["cast"] and f"{story}:{q['n']}" in have), None)
@@ -507,12 +527,18 @@ def run_pregen(story, only=None, redo=False):
         refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"]
                 if not S.text_only(story, c) and db.bible_image(story, c)]
         best, last_err = None, ""
+        prompt = S.scene_prompt(story, p)
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
-                img = image_call(refs, S.scene_prompt(story, p), purpose="scene",
+                img = image_call(refs, prompt, purpose="scene",
                                  label=f"{story} scene {p['n']} try {attempt}", quality=SCENE_QUALITY)
             except Exception as e:              # a refused try is a failed attempt; earlier good tries are kept
                 last_err = str(e)
+                if refs and "safety" in last_err:
+                    # A reference picture can trip the filter on its own; try the next attempt from words only.
+                    refs = []
+                    prompt = prompt.replace(S.REFS_SENTENCE, "")
+                    _plog(f"{story}: scene {p['n']} refused with reference pictures; next try uses words only")
                 continue
             a = safe_analysis([img] + [b for b in (db.bible_image(story, c) for c in p["cast"] if not S.text_only(story, c))
                                        if b][:3],

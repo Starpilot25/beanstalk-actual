@@ -150,7 +150,7 @@ STORIES = {
                  cast=["cow"],
                  scene="A winding dirt road through green fields and hedgerows under a big blue sky; "
                        "Milky-White walks along the road on a rope lead.",
-                 action="leading Milky-White by her rope, walking along the road", mood="determined"),
+                 action="leading Milky-White by her rope, walking along the road", mood="a little sad about selling her, but determined"),
             dict(text="On the way, Jack met a funny little old man.",
                  cast=["old_man", "cow"],
                  scene="A crossroads with a wooden signpost; the old man stands on the right leaning on his "
@@ -164,7 +164,7 @@ STORIES = {
                  mood="amazed and tempted"),
             dict(text="Jack came home with five beans. \"Beans?\" cried Mother, and out the window they flew!",
                  cast=["mother"],
-                 scene=f"Outside the cottage at dusk; Jack's mother leans out of a lit window flinging {BEANS} "
+                 scene=f"Outside the cottage at dusk; Jack's mother, exasperated, leans out of a lit window flinging {BEANS} "
                        "through the air into the garden.",
                  action="standing in the garden, hands on head", mood="stunned and crestfallen"),
             dict(text="That night, while everyone slept, something began to grow.",
@@ -219,12 +219,12 @@ STORIES = {
                  cast=["giant"],
                  scene="The beanstalk against the sky; high above, the giant climbs down after someone, "
                        "leaves shaking.",
-                 action="sliding down the beanstalk, holding the golden harp", mood="fast and scared"),
+                 action="sliding down the beanstalk, holding the golden harp", mood="frightened, eyes wide, racing as fast as possible"),
             dict(text="\"Mother! The axe!\" Jack chopped and chopped.",
                  cast=["mother"],
                  scene="The bottom of the beanstalk beside the cottage; Jack's mother runs up with worried "
                        "eyes.",
-                 action="swinging an axe at the base of the beanstalk with both hands", mood="determined"),
+                 action="swinging an axe at the base of the beanstalk with both hands", mood="fierce and determined, teeth gritted with effort"),
             dict(text="CRASH! Down came the beanstalk, and that was the end of the giant.",
                  cast=[],
                  scene="The giant beanstalk toppling over across the valley, leaves flying, a big puff of "
@@ -232,7 +232,7 @@ STORIES = {
             dict(text="With the hen, the harp and the gold, Jack and Mother lived happily ever after.",
                  cast=["mother", "cow", "hen", "harp"],
                  scene="The cottage at golden sunset, now with flowers and a new roof; Jack's mother, "
-                       "Milky-White, the golden hen and the golden harp in the garden.",
+                       "Milky-White, the golden hen and the golden harp in the garden, everyone beaming.",
                  action="laughing in the middle of the family", mood="joyful"),
         ],
     },
@@ -246,13 +246,13 @@ STORIES = {
                  action="skipping along the garden path", mood="cheerful"),
             dict(text="\"Grandma is poorly,\" said Mother. \"Take her this basket, and stay on the path.\"",
                  cast=["mother"],
-                 scene="A bright cottage kitchen; Red's mother stands on the right holding out a wicker "
+                 scene="A bright cottage kitchen; Red's mother stands on the right, smiling warmly, holding out a wicker "
                        "basket with a checked cloth, bread and a jar of honey.",
                  action="taking the basket from Mother", mood="eager and listening"),
             dict(text="So Red set off down the forest path.",
                  cast=[],
                  scene="A winding dirt path into a sun-dappled forest of tall trees, ferns and wildflowers.",
-                 action="walking along the path carrying the basket", mood="happy"),
+                 action="walking along the path carrying the basket", mood="happy and carefree, mid-skip"),
             dict(text="Before long, Red met a wolf. \"Good morning,\" he said, with a very big smile.",
                  cast=["wolf"],
                  scene="A forest clearing; the wolf leans against a tree on the right, grinning slyly.",
@@ -292,7 +292,7 @@ STORIES = {
             dict(text="\"Grandma, what big eyes you have!\" \"All the better to see you with.\"",
                  cast=["wolf"],
                  scene="The wolf in the bed on the left peering over the spectacles with huge yellow eyes.",
-                 action="leaning back, gripping the basket", mood="worried"),
+                 action="leaning back, gripping the basket", mood="worried, eyebrows raised, leaning away"),
             dict(text="\"Grandma, what BIG TEETH you have!\" \"All the better to EAT YOU UP!\"",
                  cast=["wolf"],
                  scene="The wolf leaping out of the bed with the nightcap flying off, mouth open in a "
@@ -314,7 +314,7 @@ STORIES = {
             dict(text="Out of the wardrobe stepped Grandma, safe and sound!",
                  cast=["grandma", "woodcutter"],
                  scene="Grandma's bedroom; Grandma steps out of the open wardrobe on the left in her "
-                       "nightgown and cap, the woodcutter smiling by the door.",
+                       "nightgown and cap, smiling with relief, the woodcutter smiling by the door.",
                  action="running to hug Grandma", mood="overjoyed"),
             dict(text="They shared the bread and honey, and Grandma felt better at once.",
                  cast=["grandma", "woodcutter"],
@@ -328,7 +328,7 @@ STORIES = {
                  cast=["mother", "grandma"],
                  scene="The forest path at golden sunset with Red's mother and Grandma waving together "
                        "beside the path.",
-                 action="walking happily along the middle of the path, waving", mood="content"),
+                 action="walking happily along the middle of the path, waving", mood="content and smiling, a little wiser"),
         ],
     },
 }
@@ -343,10 +343,9 @@ for _key, _story in STORIES.items():
             assert _c in BIBLE[_key], (_key, _i, _c)
 
 STORY_KEYS = list(STORIES)
-# Characters drawn from their written description in every scene, with no portrait in the bible. OpenAI's image
-# safety filter refused every attempt at these (Jack's mother: 10 refusals across 4 different descriptions, from
-# scratch and from a scene; the harp's portrait made the scenes using it get refused).
-TEXT_ONLY = {("jack", "mother"), ("jack", "harp")}
+# Characters drawn from their written description in every scene, with no portrait in the bible (a last resort
+# if no image model will draw them).
+TEXT_ONLY = set()          # none at the moment: the bible portraits now fall back to other image models
 TEXT_ONLY_NOTE = ("Not drawn as a portrait: OpenAI's image safety filter refused it every time, so each scene "
                   "draws this character from the description instead.")
 
@@ -359,6 +358,13 @@ HERO_PAGES = {k: [p["n"] for p in s["pages"] if p["hero"]] for k, s in STORIES.i
 # ---------------------------------------------------------------------------------------------------------
 # Prompts
 # ---------------------------------------------------------------------------------------------------------
+def bible_prompt_plain(story, key):
+    """A shorter second wording, tried if the first is refused."""
+    _, desc = BIBLE[story][key]
+    return (f"Children's picture-book illustration in a friendly 3D animated style: {desc}, standing, full length, "
+            "on a plain white background.")
+
+
 def bible_prompt(story, key):
     # The family label ("Jack's mother") is left out on purpose: paired with "full-body view of a woman" it was
     # refused by the image model's safety filter every time. The description alone draws the same character.
@@ -376,10 +382,12 @@ def bible_from_scene_prompt(story, key):
             f"one full-body view standing, centered, on a plain light background. {HANDS} {NO_WORDS}")
 
 
+REFS_SENTENCE = " The reference images show the characters in this scene; draw them exactly as they look there."
+
+
 def scene_prompt(story, p):
     cast = " ".join(f"{BIBLE[story][c][0].capitalize()} is {BIBLE[story][c][1]}." for c in p["cast"])
-    refs = (" The reference images show the characters in this scene; draw them exactly as they look there."
-            if [c for c in p["cast"] if not text_only(story, c)] else "")
+    refs = REFS_SENTENCE if [c for c in p["cast"] if not text_only(story, c)] else ""
     hero_space = ""
     if p["hero"]:
         hero_space = (f" Leave a clear, open spot on the ground {HERO_POSITION[p['hero']]}, where one more "
@@ -387,6 +395,7 @@ def scene_prompt(story, p):
     calm = CALM.get(p["calm"] or "", "")
     return (f"Art style: {STYLE} A full-bleed page from a 3D animated picture book of {STORIES[story]['title']}. "
             f"Scene: {p['scene']}{refs} {cast} The only characters in the picture are the ones named here. "
+            f"Each character's face clearly shows what they feel in this moment of the story. "
             f"{SHOTS[p['shot']]}{hero_space} {calm} {HANDS} "
             f"Art style, again: {STYLE} {NO_WORDS}")
 
@@ -411,7 +420,8 @@ def insert_prompt(story, p):
             f"{p['action']}. The hero is the exact character from image 2: the same face, hair, skin tone, age, "
             "body proportions and outfit, an unmistakable match, with the face clearly visible. Draw the hero in "
             "the same 3D rendering, lighting and scale as image 1, full-length with feet on the ground where "
-            f"standing. The hero's expression and pose show this feeling: {p['mood']}. Keep everything else in "
+            f"standing. The hero feels {p['mood']}, and it shows clearly on the face, in the eyebrows, eyes and "
+            f"mouth, and in the body language. Keep everything else in "
             f"image 1 as it is: the setting, the other characters and the composition. "
             f"{CALM.get(p['calm'] or '', '')} {HANDS} {NO_WORDS}")
 
@@ -419,7 +429,7 @@ def insert_prompt(story, p):
 def analysis_prompt(story, p, has_hero):
     who = (f"Image 2 is the character sheet of the hero, {HERO[story]['role']}. " if has_hero else "")
     cast = ", ".join(BIBLE[story][c][0] for c in p["cast"]) or "no supporting characters"
-    beat = p["scene"] + (f" The hero is {p['action']}." if has_hero else "")
+    beat = p["scene"] + (f" The hero is {p['action']}, feeling {p['mood']}." if has_hero else "")
     return (
         "You are the quality checker for a children's picture book. Image 1 is one generated page. " + who +
         f"The page should show: {beat} Characters who should appear: {cast}"
@@ -430,10 +440,14 @@ def analysis_prompt(story, p, has_hero):
         "- story: the picture shows what the page should show, with the right characters and no extra people\n"
         "- anatomy: hands have five fingers, no extra or merged limbs, faces are not distorted\n"
         "- clean: no letters, words, signatures, watermarks, borders, collage panels or broken artifacts\n"
+        "- expression: " + (f"the hero's face clearly shows '{p['mood']}' (eyebrows, eyes, mouth), and every other "
+                            "character's face fits what happens on this page; a generic smile where the page "
+                            "calls for worry, fear or surprise scores 3 or less" if has_hero else
+                            "every character's face fits what happens on this page as described") + "\n"
         "Then map where the faces and the important story things are, on a 3x3 grid (rows top/middle/bottom, "
         "columns left/center/right): mark a cell true if a face, an eye, a hand doing something, or an object "
         "the reader must see is in it; false if it is only sky, wall, floor, grass, foliage or other background.\n"
-        "Reply with only JSON: {\"hero\":int,\"story\":int,\"anatomy\":int,\"clean\":int,"
+        "Reply with only JSON: {\"hero\":int,\"story\":int,\"anatomy\":int,\"clean\":int,\"expression\":int,"
         "\"issues\":[short strings],\"busy\":{\"top\":[bool,bool,bool],\"middle\":[bool,bool,bool],"
         "\"bottom\":[bool,bool,bool]}}"
     )
