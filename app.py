@@ -204,6 +204,13 @@ def wallet_page():
             note, bad = f"Couldn't confirm the payment with Stripe: {str(e)[:120]}", True
     elif request.args.get("cancelled"):
         note = "Payment cancelled. Nothing was charged."
+    try:                                   # recover any paid checkout that wasn't credited
+        found = billing.reconcile(user["id"], request.host_url.rstrip("/"))
+        if found:
+            note = f"Added {billing.money(found)} to your balance from a payment that hadn't been credited yet."
+            bad = False
+    except Exception as e:
+        log.warning("reconcile FAIL %s", str(e)[:200])
     return render_template("wallet.html", user=user, note=note, bad=bad, amounts=billing.AMOUNTS,
                            money=billing.money, fake_stripe=billing.FAKE, admin=is_admin(user),
                            price=billing.money(billing.BOOK_PRICE), balance=billing.money(db.balance(user["id"])))

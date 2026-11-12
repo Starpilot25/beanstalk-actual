@@ -14,6 +14,7 @@ Without a key (or with STRIPE_FAKE=1) a built-in pretend checkout is used, for t
 """
 import os
 import secrets
+import time
 
 import db
 
@@ -30,6 +31,7 @@ if not FAKE:
     stripe.max_network_retries = 1
 
 _fake_sessions = {}                  # pretend checkout sessions (offline testing only)
+APP_TAG = "beanstalk-storybook"      # marks this app's checkouts (the class shares one Stripe test account)
 
 
 def money(cents):
@@ -54,7 +56,7 @@ def start_checkout(user, amount_cents, base_url):
             "product_data": {"name": f"Storybook balance top-up ({money(amount_cents)})"}}}],
         customer_email=user.get("email") if "@" in (user.get("email") or "") else None,
         client_reference_id=str(user["id"]),
-        metadata={"user_id": str(user["id"])},
+        metadata={"user_id": str(user["id"]), "app": APP_TAG},
         success_url=f"{base_url}/wallet?paid={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{base_url}/wallet?cancelled=1",
     )
@@ -75,11 +77,30 @@ def confirm_checkout(user_id, session_id):
         amount = s["amount"]
     else:
         s = stripe.checkout.Session.retrieve(session_id)
-        if s.payment_status != "paid" or (s.metadata or {}).get("user_id") != str(user_id):
+        # Stripe objects are not dicts (no .get) in stripe-python 12+: read fields as attributes.
+        if getattr(s, "payment_status", None) != "paid" or getattr(s, "client_reference_id", None) != str(user_id):
             return 0
-        amount = s.amount_total
+        amount = int(s.amount_total)
     db.post(user_id, "deposit", amount, "Added funds (Stripe test card)", ref=session_id)
     return amount
+
+
+def reconcile(user_id, base_url):
+    """Credit any paid checkout of this user that never got credited (the return trip from Stripe failed, or
+    the tab was closed). Each session is credited at most once: its id is the ledger row's unique ref.
+    The class shares one Stripe account, so a session only counts if it came back to THIS site's wallet."""
+    if FAKE:
+        return 0
+    added = 0
+    since = int(time.time()) - 14 * 24 * 3600
+    for s in stripe.checkout.Session.list(limit=100, created={"gte": since}).auto_paging_iter():
+        if (getattr(s, "client_reference_id", None) == str(user_id)
+                and getattr(s, "payment_status", None) == "paid"
+                and str(getattr(s, "success_url", "") or "").startswith(f"{base_url}/wallet")):
+            before = db.balance(user_id)
+            db.post(user_id, "deposit", int(s.amount_total), "Added funds (Stripe test card)", ref=s.id)
+            added += db.balance(user_id) - before
+    return added
 
 
 # ---------------------------------------------------------------------------
