@@ -378,22 +378,27 @@ def run_book(book_id, user_id, photo_png):
         n = p["n"]
         scene, _ = db.get_scene(story, n)
         scene_png = to_png(scene)
-        best, tries, last_err = None, 0, ""
+        best, tries, last_err, gentle = None, 0, "", False
+        ref_raw = [db.bible_image(story, c) for c in S.insert_refs(story, p)]
+        ref_raw = [r for r in ref_raw if r]
+        ref_pngs = [to_png(r, 768) for r in ref_raw]
         for attempt in range(1, MAX_ATTEMPTS + 1):
             _check(book_id)
             tries = attempt
             db.set_page(book_id, n, status="painting", attempts=attempt)
             try:
-                img = image_call([scene_png, hero_png], S.insert_prompt(story, p),
+                img = image_call([scene_png, hero_png] + ref_pngs, S.insert_prompt(story, p, gentle=gentle),
                                  purpose="page" if attempt == 1 else "retry", label=f"page {n} try {attempt}",
                                  user_id=user_id, book_id=book_id, hero_at=p["hero"])
             except Exception as e:          # e.g. a safety rejection: count it as a failed try
                 last_err = str(e)
+                if "safety" in last_err:
+                    gentle = True           # next try: the child just standing nearby, watching
                 if time.time() - t0 > RETRY_DEADLINE:
                     break
                 continue
             db.set_page(book_id, n, status="checking", thumb=thumb(img))
-            a = safe_analysis([img, hero], S.analysis_prompt(story, p, True), label=f"page {n} check {attempt}",
+            a = safe_analysis([img, hero] + ref_raw, S.analysis_prompt(story, p, True), label=f"page {n} check {attempt}",
                               user_id=user_id, book_id=book_id, fake_hint=p["hero"])
             score, ok = grade(a)
             db.add_attempt(book_id, n, attempt, score, ok, a, img)

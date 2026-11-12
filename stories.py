@@ -88,8 +88,8 @@ BIBLE = {
         "mother": ("Jack's mother", "a tall, grown-up farm woman in her forties with adult height and proportions, "
                    "short curly dark-brown hair under a red headscarf, laugh lines and a strong jaw, wearing a "
                    "mustard-yellow knitted shawl over a long brown wool dress with patched sleeves"),
-        "cow": ("Milky-White", "a gentle, thin white dairy cow with soft brown ears and a small brass bell "
-                "on a rope collar"),
+        "cow": ("Milky-White", "a gentle, slim dairy cow, pure white all over with no spots, a pink nose, soft "
+                "light-brown ears, two short curved cream horns, and a small brass bell on a red rope collar"),
         "old_man": ("the old man", "a small, twinkly-eyed old man with a long white beard, a patched green "
                     "cloak and a crooked walking stick"),
         "giant": ("the giant", "a huge, burly, fearsome storybook giant with a wild bushy black beard, heavy "
@@ -204,8 +204,8 @@ STORIES = {
             dict(text="FEE-FI-FO-FUM! The whole castle shook.",
                  cast=["giant"],
                  scene="A giant castle kitchen; the giant stomps through the door on the left, nose in the "
-                       "air, sniffing. A huge oven with its door ajar stands on the right.",
-                 action="peeking out from behind the oven door", mood="frightened, holding breath"),
+                       "air, sniffing. A huge wooden barrel stands on the right.",
+                 action="peeking out from behind the big wooden barrel", mood="frightened, holding breath"),
             dict(text="The giant counted his gold until he fell fast asleep.",
                  cast=["giant", "hen"],
                  scene="The giant asleep in a huge wooden chair at the table, snoring, with piles of gold "
@@ -539,11 +539,25 @@ def hero_prompt(story):
             + f"The same outfit in both views. {HANDS} {NO_WORDS}")
 
 
-def insert_prompt(story, p):
+def insert_refs(story, p):
+    """The supporting characters on this page whose bible portrait is sent along with a page edit."""
+    return [c for c in p["cast"] if not text_only(story, c)][:3]
+
+
+def insert_prompt(story, p, gentle=False):
     h = HERO[story]
+    refs = insert_refs(story, p)
+    ref_note = ""
+    if refs:
+        names = [BIBLE[story][c][0] for c in refs]
+        ref_note = (" " + " ".join(f"Image {i + 3} is the reference sheet of {nm}." for i, nm in enumerate(names))
+                    + " Keep every one of them looking exactly like their reference sheet: the same colours, "
+                      "markings, clothes and proportions.")
+    action = (f"standing nearby, watching, feeling {p['mood']}" if gentle else p["action"])
     return (f"Art style: {STYLE} Image 1 is a finished page from a 3D animated picture book. Image 2 is the "
-            f"character sheet of the hero, {h['role']}. Image 1 has a stand-in child {HERO_POSITION[p['hero']]}, "
-            f"{p['action']}. Replace that stand-in child with the hero from image 2, in the same place and the same "
+            f"character sheet of the hero, {h['role']}.{ref_note} Image 1 has a stand-in child "
+            f"{HERO_POSITION[p['hero']]}, "
+            f"{action}. Replace that stand-in child with the hero from image 2, in the same place and the same "
             f"pose, so the hero is the only child in the picture. The hero is the exact character from image 2: "
             "the same face, hair, skin tone, age and "
             "body proportions, an unmistakable match, with the face clearly visible. The hero wears exactly the "
@@ -563,6 +577,9 @@ def analysis_prompt(story, p, has_hero):
         (" " + _feelings(story, p) if FEELINGS.get((story, p["n"])) else "")
     return (
         "You are the quality checker for a children's picture book. Image 1 is one generated page. " + who +
+        ("Any further images are reference sheets of the other characters on the page; they must look like "
+         "them (a character who looks different, e.g. a cow with different markings, scores story 4 or less). "
+         if has_hero and p["cast"] else "") +
         f"The page should show: {beat} Characters who should appear: {cast}"
         + (" and the hero" if has_hero else "") + ".\n"
         "Score each from 0 to 10, strictly:\n"
