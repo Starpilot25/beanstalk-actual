@@ -393,9 +393,11 @@ def run_book(book_id, user_id, photo_png):
             except Exception as e:          # e.g. a safety rejection: count it as a failed try
                 last_err = str(e)
                 if "safety" in last_err:
-                    gentle = True           # next try: the child just standing nearby, watching
-                if time.time() - t0 > RETRY_DEADLINE:
-                    break
+                    # Refusals come back at once and cost nothing, and without a retry the stand-in stays on
+                    # the page, so they always get all 3 tries, whatever the time. Each retry asks for less:
+                    if gentle:
+                        ref_pngs = []       # try 3: just the scene and the hero sheet
+                    gentle = True           # try 2: the child just standing nearby, watching
                 continue
             db.set_page(book_id, n, status="checking", thumb=thumb(img))
             a = safe_analysis([img, hero] + ref_raw, S.analysis_prompt(story, p, True), label=f"page {n} check {attempt}",
@@ -406,7 +408,13 @@ def run_book(book_id, user_id, photo_png):
                 best = (score, ok, img, a, attempt)
             if ok:
                 break
-            if time.time() - t0 > RETRY_DEADLINE:
+            # Past the deadline, stop repainting a page that is merely imperfect. Keep going if the hero isn't
+            # really there (the stand-in left in, or a different person): that page would be wrong, not slow.
+            try:
+                hero_there = float(best[3].get("hero", 10)) >= 5
+            except (TypeError, ValueError):
+                hero_there = True
+            if time.time() - t0 > RETRY_DEADLINE and hero_there:
                 break
         if best is None:                    # every try was refused: keep the pre-made scene so the book still exists
             _, sa = db.get_scene(story, n)

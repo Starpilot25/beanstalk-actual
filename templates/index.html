@@ -373,6 +373,7 @@ function tileHTML(bookId, p) {
   else if (p.status === "painting") badge = `<span>Painting</span><span>try ${p.attempts}/3</span>`;
   else if (p.status === "checking") badge = `<span>Checking</span><span>try ${p.attempts}/3</span>`;
   else if (p.issues && p.issues.startsWith("the automatic check was unavailable")) badge = `<span>Not checked</span><span>try ${p.attempts}/3</span>`;
+  else if (p.issues && p.issues.includes("the hero couldn't be added")) badge = `<span>Not added</span><span>try ${p.attempts}/3</span>`;
   else badge = `<span>${warn ? "Best of " + p.attempts : "Passed ✓"}</span><span>try ${p.attempts}/3${p.score != null ? " · " + p.score : ""}</span>`;
   const img = (p.status === "checking" || p.status === "done")
     ? `<img alt="Page ${p.n}" src="/api/books/${bookId}/thumb/${p.n}?v=${p.updated_at}">`
