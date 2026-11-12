@@ -470,6 +470,11 @@ def scene_prompt(story, p):
         who = (f" One stand-in child is {HERO_POSITION[p['hero']]}, {p['action']}, full-length with the face "
                f"clearly visible, wearing {HERO[story]['outfit']}; the child feels {p['mood']}. The only figures "
                "in the picture are this one child and the characters named here.")
+        grown = [BIBLE[story][c][0] for c in p["cast"] if c in ("mother", "grandma", "wife", "woodcutter", "old_man")]
+        if grown:   # the cartoon style shrinks grown-ups next to a child unless told the scale
+            who += (" " + _no_hero_names(story, ", ".join(grown)).capitalize()
+                    + (" is a grown-up" if len(grown) == 1 else " are grown-ups")
+                    + ", clearly taller than the child: the child's head reaches about their waist.")
     else:
         who = " Every figure in the picture is one of the characters named here."
     calm = CALM.get(p["calm"] or "", "")
