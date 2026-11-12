@@ -234,7 +234,11 @@ STORIES = {
                  cast=["mother"],
                  scene="The bottom of the beanstalk beside the cottage; Jack's mother runs up with worried "
                        "eyes.",
-                 action="swinging an axe at the base of the beanstalk with both hands", mood="fierce and determined, teeth gritted with effort"),
+                 action="chopping the thick beanstalk stem with a woodcutter's axe: standing side-on to the stalk "
+                        "with feet planted apart, both hands together near the end of the long wooden handle, the "
+                        "axe head swung back over one shoulder, its blade edge facing the stalk, about to strike "
+                        "the stem level at waist height, wood chips flying from a notch already cut",
+                 mood="fierce and determined, teeth gritted with effort"),
             dict(text="CRASH! Down came the beanstalk, and that was the end of the giant.",
                  cast=[],
                  scene="The giant beanstalk toppling over across the valley, leaves flying, a big puff of "
@@ -544,18 +548,22 @@ def insert_refs(story, p):
     return [c for c in p["cast"] if not text_only(story, c)][:3]
 
 
-def insert_prompt(story, p, gentle=False):
+def insert_prompt(story, p, gentle=False, with_photo=True, with_refs=True):
     h = HERO[story]
-    refs = insert_refs(story, p)
+    refs = insert_refs(story, p) if with_refs else []
+    first = 4 if with_photo else 3
+    photo_note = (" Image 3 is a photo of the real person the hero is drawn from: the hero's face must be "
+                  "recognisably this person (face shape, eyes, nose, mouth, eyebrows, hair, skin tone), drawn in "
+                  "the book's 3D style.") if with_photo else ""
     ref_note = ""
     if refs:
         names = [BIBLE[story][c][0] for c in refs]
-        ref_note = (" " + " ".join(f"Image {i + 3} is the reference sheet of {nm}." for i, nm in enumerate(names))
+        ref_note = (" " + " ".join(f"Image {i + first} is the reference sheet of {nm}." for i, nm in enumerate(names))
                     + " Keep every one of them looking exactly like their reference sheet: the same colours, "
                       "markings, clothes and proportions.")
     action = (f"standing nearby, watching, feeling {p['mood']}" if gentle else p["action"])
     return (f"Art style: {STYLE} Image 1 is a finished page from a 3D animated picture book. Image 2 is the "
-            f"character sheet of the hero, {h['role']}.{ref_note} Image 1 has a stand-in child "
+            f"character sheet of the hero, {h['role']}.{photo_note}{ref_note} Image 1 has a stand-in child "
             f"{HERO_POSITION[p['hero']]}, "
             f"{action}. Replace that stand-in child with the hero from image 2, in the same place and the same "
             f"pose, so the hero is the only child in the picture. The hero is the exact character from image 2: "
@@ -570,21 +578,26 @@ def insert_prompt(story, p, gentle=False):
             f"{CALM.get(p['calm'] or '', '')} {HANDS} {NO_WORDS}")
 
 
-def analysis_prompt(story, p, has_hero):
+def analysis_prompt(story, p, has_hero, with_photo=False):
     who = (f"Image 2 is the character sheet of the hero, {HERO[story]['role']}. " if has_hero else "")
+    if has_hero and with_photo:
+        who += "Image 3 is a photo of the real person the hero is drawn from. "
     cast = ", ".join(BIBLE[story][c][0] for c in p["cast"]) or "no supporting characters"
     beat = p["scene"] + (f" The hero is {p['action']}, feeling {p['mood']}." if has_hero else "") + \
         (" " + _feelings(story, p) if FEELINGS.get((story, p["n"])) else "")
     return (
         "You are the quality checker for a children's picture book. Image 1 is one generated page. " + who +
-        ("Any further images are reference sheets of the other characters on the page; they must look like "
+        ("Any further images after those are reference sheets of the other characters on the page; they must look like "
          "them (a character who looks different, e.g. a cow with different markings, scores story 4 or less). "
          if has_hero and p["cast"] else "") +
         f"The page should show: {beat} Characters who should appear: {cast}"
         + (" and the hero" if has_hero else "") + ".\n"
         "Score each from 0 to 10, strictly:\n"
-        "- hero: " + ("the hero in image 1 is clearly the same person as image 2 (face, hair, skin, glasses, "
-                      "outfit); 0 if the hero is missing or a different person" if has_hero else "always 10") + "\n"
+        "- hero: " + ("the hero in image 1 is clearly the same person as image 2" + (" and as the real person in "
+                      "image 3" if with_photo else "") + " (face shape, eyes, nose, mouth, hair, skin, glasses, "
+                      "outfit); someone who knows them would recognise them at a glance. 7 means clearly them; "
+                      "0 if the hero is missing, still the generic stand-in, or a different person"
+                      if has_hero else "always 10") + "\n"
         "- story: the picture shows what the page should show, with the right characters and no extra people"
         + ("; there must be exactly one child, the hero; a second child anywhere scores 0" if has_hero else "")
         + "\n"

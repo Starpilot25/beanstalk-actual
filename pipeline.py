@@ -252,7 +252,8 @@ def grade(a):
     parts = {k: g(k) for k in ("hero", "story", "anatomy", "clean")}
     parts["expression"] = g("expression") if "expression" in a else 10.0
     score = (2 * parts["hero"] + parts["story"] + parts["anatomy"] + parts["clean"] + parts["expression"]) / 6
-    return round(score, 1), min(parts.values()) >= 6 and score >= 7
+    # Likeness has its own, higher bar: a page that only sort of looks like the child is repainted.
+    return round(score, 1), min(parts.values()) >= 6 and score >= 7 and parts["hero"] >= 7
 
 
 def clear_zone(page, busy):
@@ -378,7 +379,7 @@ def run_book(book_id, user_id, photo_png):
         n = p["n"]
         scene, _ = db.get_scene(story, n)
         scene_png = to_png(scene)
-        best, tries, last_err, gentle = None, 0, "", False
+        best, tries, last_err, gentle, use_photo = None, 0, "", False, True
         ref_raw = [db.bible_image(story, c) for c in S.insert_refs(story, p)]
         ref_raw = [r for r in ref_raw if r]
         ref_pngs = [to_png(r, 768) for r in ref_raw]
@@ -387,7 +388,9 @@ def run_book(book_id, user_id, photo_png):
             tries = attempt
             db.set_page(book_id, n, status="painting", attempts=attempt)
             try:
-                img = image_call([scene_png, hero_png] + ref_pngs, S.insert_prompt(story, p, gentle=gentle),
+                imgs = [scene_png, hero_png] + ([photo_png] if use_photo else []) + ref_pngs
+                img = image_call(imgs, S.insert_prompt(story, p, gentle=gentle, with_photo=use_photo,
+                                                       with_refs=bool(ref_pngs)),
                                  purpose="page" if attempt == 1 else "retry", label=f"page {n} try {attempt}",
                                  user_id=user_id, book_id=book_id, hero_at=p["hero"])
             except Exception as e:          # e.g. a safety rejection: count it as a failed try
@@ -397,10 +400,12 @@ def run_book(book_id, user_id, photo_png):
                     # the page, so they always get all 3 tries, whatever the time. Each retry asks for less:
                     if gentle:
                         ref_pngs = []       # try 3: just the scene and the hero sheet
+                        use_photo = False
                     gentle = True           # try 2: the child just standing nearby, watching
                 continue
             db.set_page(book_id, n, status="checking", thumb=thumb(img))
-            a = safe_analysis([img, hero] + ref_raw, S.analysis_prompt(story, p, True), label=f"page {n} check {attempt}",
+            a = safe_analysis([img, hero, photo_png] + ref_raw, S.analysis_prompt(story, p, True, with_photo=True),
+                              label=f"page {n} check {attempt}",
                               user_id=user_id, book_id=book_id, fake_hint=p["hero"])
             score, ok = grade(a)
             db.add_attempt(book_id, n, attempt, score, ok, a, img)
