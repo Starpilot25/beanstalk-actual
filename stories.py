@@ -149,7 +149,8 @@ STORIES = {
             dict(text="Once upon a time, Jack and Mother lived in a tiny cottage with one old cow, Milky-White.",
                  cast=["mother", "cow"],
                  scene="A tiny thatched cottage in a sunny green valley with a vegetable patch. Jack's mother "
-                       "stands by the door, Milky-White grazes by the fence.",
+                       "stands by the door. Milky-White stands by the fence in the left foreground, large and clearly visible, "
+                       "facing the viewer.",
                  action="waving from the garden path", mood="cheerful and hopeful"),
             dict(text="One morning the cupboard was empty. \"We must sell Milky-White,\" said Mother sadly.",
                  cast=["mother"],
