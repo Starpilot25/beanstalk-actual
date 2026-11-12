@@ -23,9 +23,11 @@ Known defects and open questions in the 20-page build, most costly first. Update
   portrait as a reference. Bible portraits now fall back to `gpt-image-1.5`, then `gpt-image-1`
   (`BIBLE_FALLBACK_MODELS`), and a refused scene retries without reference pictures. A portrait from a
   different model may look slightly different from the rest of the bible; every page is still painted by flare.
-- **Expressions are now checked.** Each page names the hero's feeling (e.g. p. 12 "frightened, holding breath"),
-  and the check scores whether the face shows it; a generic smile on a scary page fails and is repainted. Still to
-  verify in real books: the pre-made scenes' supporting characters (the giant on p. 16, the wolf on pp. 11–13).
+- **Expressions are now specified and checked for every character on every page** (`FEELINGS` in `stories.py`):
+  the hero's feeling per page, and each supporting character's (e.g. the wolf's fake smile and hungry eyes on p. 4,
+  his terror fleeing on p. 16). The check fails a bland face where the page calls for menace or fear. The wolf and
+  the giant were redesigned as proper storybook villains. Risk: menacing faces are more likely to be refused by the
+  image filter; watch the admin log on wolf pages 7, 13 and 14.
 - Five pages per story are pre-made scenes without the hero. Check that a reader doesn't feel the hero
   disappears (Jack pp. 7, 10, 13, 16, 19; Red the same).
 - The words never use "he" or "she" for the hero (it's always "Jack", "Red" or "Mother"), so they fit a boy or a

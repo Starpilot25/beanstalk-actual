@@ -547,9 +547,20 @@ def run_pregen(story, only=None, redo=False):
                               scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}",
                               detail="high", effort="low")   # one-time art: worth a closer look
             score, ok = grade(a)
-            if a.get("extra_figure") is True:
+            figs = [f for f in (a.get("figures") if isinstance(a.get("figures"), list) else []) if isinstance(f, dict)]
+            is_stand = [f for f in figs if "stand" in str(f.get("who", "")).lower()]
+            kids = [f for f in figs if str(f.get("age", "")).lower().startswith("child") and f not in is_stand]
+            unknown = [f for f in figs if str(f.get("who", "")).lower() in ("unknown", "") and f not in is_stand]
+            allowed = 1 if p["hero"] else 0                      # hero pages: exactly one stand-in child
+            too_many = len(is_stand) > allowed
+            if a.get("extra_figure") is True or kids or unknown or too_many:
                 ok = False
-                a.setdefault("issues", []).append("a child or an unlisted character is in the scene")
+                a.setdefault("issues", []).append(
+                    "a child or an unlisted character is in the scene"
+                    + (f" ({', '.join(str(f.get('who')) for f in kids + unknown)})" if kids or unknown else "")
+                    + (" (more than one stand-in)" if too_many else ""))
+            if p["hero"] and not is_stand and figs:
+                a.setdefault("issues", []).append("no stand-in child; the hero will be added into the scene instead")
             if a.get("off_model") is True:
                 ok = False
                 a.setdefault("issues", []).append("a character doesn't match their reference sheet")
@@ -586,12 +597,17 @@ def scene_check_prompt(story, p):
     return S.analysis_prompt(story, p, False).replace(
         "Image 1 is one generated page.",
         "Image 1 is one generated page; any further images are the reference sheets of its characters."
-        + (" The hero is added later, so an empty spot in the scene is correct." if p["hero"] else "")
-        + f" IMPORTANT: this scene must contain no child, boy, girl or {S.HERO[story]['role']} at all (the child "
-          "is added later, separately), and no people other than the listed characters. Look closely, including "
-          "small figures in the distance. Also check that each listed character looks like their reference sheet "
-          "(the same design, colours and clothes) and is doing what the page describes."
+        + ((f" IMPORTANT: this scene must contain exactly ONE child: a stand-in child {S.HERO_POSITION[p['hero']]}, "
+            f"{p['action']}, in {S.HERO[story]['outfit']} (label them \"stand-in\"). Any other child, or anyone not "
+            "listed, is wrong.") if p["hero"] else
+           " IMPORTANT: this scene must contain no child at all, and no one who isn't listed.")
+        + " Look closely, including small figures in the distance. Also check that each listed character looks like "
+          "their reference sheet (the same design, colours and clothes) and is doing what the page describes."
           ).replace('"issues":[short strings]',
-                    '"extra_figure":bool (true if any child or anyone not listed appears),'
+                    '"figures":[{"who":"which listed character, stand-in, or unknown","age":"child or adult"}] (one entry '
+                    'for EVERY person or creature you can see, however small or far away; judge age by body '
+                    'proportions: a short figure with a big head is a child; animals, and small elderly characters with white or grey hair, count as adult),'
+                    '"extra_figure":bool (true if any child other than the one stand-in, or anyone not listed, appears),'
                     '"off_model":bool (true if a listed character looks different from their reference sheet '
-                    'or the description),"issues":[short strings]')
+                    'or the description, including a grown-up drawn with a child\'s proportions),'
+                    '"issues":[short strings]')

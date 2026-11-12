@@ -85,15 +85,15 @@ HERO_POSITION = {
 # ---------------------------------------------------------------------------------------------------------
 BIBLE = {
     "jack": {
-        "mother": ("Jack's mother", "a sturdy, cheerful farm woman in her forties with short curly dark-brown hair "
-                   "under a red headscarf, round cheeks and laugh lines, wearing a mustard-yellow knitted shawl over "
-                   "a brown wool dress with patched sleeves"),
+        "mother": ("Jack's mother", "a tall, grown-up farm woman in her forties with adult height and proportions, "
+                   "short curly dark-brown hair under a red headscarf, laugh lines and a strong jaw, wearing a "
+                   "mustard-yellow knitted shawl over a long brown wool dress with patched sleeves"),
         "cow": ("Milky-White", "a gentle, thin white dairy cow with soft brown ears and a small brass bell "
                 "on a rope collar"),
         "old_man": ("the old man", "a small, twinkly-eyed old man with a long white beard, a patched green "
                     "cloak and a crooked walking stick"),
-        "giant": ("the giant", "a huge, burly storybook giant with a bushy black beard, thick eyebrows and a "
-                  "brown leather tunic, comically grumpy like a cartoon character"),
+        "giant": ("the giant", "a huge, burly, fearsome storybook giant with a wild bushy black beard, heavy "
+                  "scowling eyebrows, a big crooked nose and a brown leather tunic with a wide belt"),
         "wife": ("the giant's wife", "a very tall, gentle, motherly woman with grey hair in a long braid, rosy "
                  "cheeks, a warm smile and a long green apron"),
         "hen": ("the golden hen", "a plump russet-red hen with a golden comb and a warm golden glow"),
@@ -101,13 +101,15 @@ BIBLE = {
                  "and shining strings"),
     },
     "red": {
-        "mother": ("Red's mother", "a cheerful woman in her thirties with dark curly hair tied in a yellow "
-                   "scarf, a sage-green dress and a white apron"),
+        "mother": ("Red's mother", "a tall, grown-up woman in her thirties with adult height and proportions, dark "
+                   "curly hair tied in a yellow scarf, a long sage-green dress and a white apron"),
         "grandma": ("Grandma", "a tiny, round-cheeked grandmother with white hair in a bun, small round "
                     "spectacles, a lavender nightgown and a frilled white nightcap"),
-        "wolf": ("the wolf", "a tall, lanky grey cartoon wolf who always stands and walks upright on his two hind "
-                 "legs like a person, with shaggy grey fur all over, a pale grey chest, yellow eyes, a long snout, "
-                 "big pointed ears, a bushy tail and a sly toothy grin; more sneaky than scary"),
+        "wolf": ("the wolf", "the villain of the story: a tall, lanky, menacing wolf who always stands and walks "
+                 "upright on his two hind legs like a person, with scruffy dark charcoal-grey fur, a pale grey chest, "
+                 "heavy brows over narrowed, glowing amber-yellow eyes, a long snout, big pointed ears, a ragged "
+                 "bushy tail, long dark claws and a wicked grin full of sharp white teeth; a classic animated-film "
+                 "villain, scary in a storybook way"),
         "woodcutter": ("the woodcutter", "a big, friendly woodcutter with a red-brown beard, a checked flannel "
                        "shirt, suspenders and a wooden-handled tool belt"),
     },
@@ -219,8 +221,8 @@ STORIES = {
                  action="reaching toward the golden harp", mood="enchanted"),
             dict(text="\"MASTER! MASTER!\" cried the harp. The giant woke with a roar.",
                  cast=["giant", "harp"],
-                 scene="The giant standing up beside his big wooden chair, blinking awake and looking around in "
-                       "surprise; the golden harp glows on the table."),
+                 scene="The giant standing up beside his big wooden chair, wide awake and angry, glaring around "
+                       "the room; the golden harp glows on the table."),
             dict(text="Jack raced down the beanstalk as fast as could be, with the giant close behind!",
                  cast=["giant"],
                  scene="The beanstalk against the sky; high above, the giant climbs down the beanstalk, reaching "
@@ -306,7 +308,7 @@ STORIES = {
             dict(text="\"Grandma, what BIG TEETH you have!\" \"All the better to EAT YOU UP!\"",
                  cast=["wolf"],
                  scene="Grandma's bedroom; the wolf springs up out of the bed onto his hind legs, Grandma's white frilled cotton nightcap flying "
-                       "off his head, mouth open in a big cartoon grin, the patchwork quilt tumbling."),
+                       "off his head, jaws open wide showing sharp teeth, claws out, the patchwork quilt tumbling."),
             dict(text="Red screamed and ran, round and round the room!",
                  cast=["wolf"],
                  scene="Grandma's bedroom in a muddle, a chair tipped over; in the background the wolf runs "
@@ -344,6 +346,63 @@ STORIES = {
     },
 }
 
+# How each character looks in their bible portrait (their usual self).
+PORTRAIT_EXPRESSION = {
+    ("red", "wolf"): "a wicked, scheming sneer with narrowed eyes",
+    ("jack", "giant"): "a deep, suspicious scowl",
+    ("jack", "old_man"): "a mysterious, knowing twinkle",
+    ("jack", "cow"): "gentle and calm",
+    ("red", "grandma"): "a warm, kindly smile",
+    ("red", "woodcutter"): "a brave, steady look",
+}
+
+# What each supporting character feels on each page. Without this the model gives everyone the same pleasant
+# face; the check scores every one of these.
+FEELINGS = {
+    ("jack", 1): {"mother": "warm and hopeful, smiling", "cow": "calm and content"},
+    ("jack", 2): {"mother": "sad and worried, brow furrowed, shoulders slumped"},
+    ("jack", 3): {"cow": "sad and droopy, ears down, head low"},
+    ("jack", 4): {"old_man": "mysterious, with a sly twinkle in his eye", "cow": "uneasy, ears back"},
+    ("jack", 5): {"old_man": "sly and knowing, a secretive smile"},
+    ("jack", 6): {"mother": "exasperated and angry, eyes squeezed, mouth open in a shout"},
+    ("jack", 11): {"wife": "startled and worried, eyebrows up"},
+    ("jack", 12): {"giant": "suspicious and menacing, nose in the air sniffing, eyes narrowed, scowling"},
+    ("jack", 13): {"giant": "fast asleep, mouth open, snoring", "hen": "drowsy"},
+    ("jack", 14): {"giant": "fast asleep, snoring", "hen": "startled, feathers puffed"},
+    ("jack", 15): {"harp": "glowing softly"},
+    ("jack", 16): {"giant": "furious and fearsome, brows crashing down, fists clenched",
+                   "harp": "alarmed, glowing bright"},
+    ("jack", 17): {"giant": "furious and fearsome, roaring, reaching down with a huge hand"},
+    ("jack", 18): {"mother": "frightened but brave, eyes wide, hands up"},
+    ("jack", 20): {"mother": "overjoyed, laughing", "cow": "happy", "hen": "proud and happy", "harp": "glowing warmly"},
+    ("red", 1): {"mother": "cheerful, humming as she works"},
+    ("red", 2): {"mother": "kind but a little concerned, gently serious"},
+    ("red", 4): {"wolf": "falsely friendly: a wide fake smile, but cold, narrowed, hungry eyes"},
+    ("red", 5): {"wolf": "wicked and scheming, a sly sideways grin, eyes glinting"},
+    ("red", 6): {"wolf": "sinister and eager, grinning over his shoulder as he hurries away"},
+    ("red", 7): {"wolf": "hungry and menacing, eyes glowing, tongue licking his lips"},
+    ("red", 10): {"wolf": "smug and cunning, glowing eyes peeking over the quilt"},
+    ("red", 11): {"wolf": "sly and sneaky, a sickly-sweet fake smile, one ear twitching"},
+    ("red", 12): {"wolf": "menacing, huge hungry glowing eyes staring over the spectacles"},
+    ("red", 13): {"wolf": "terrifying in a storybook way: jaws wide, sharp teeth bared, claws out, eyes blazing"},
+    ("red", 14): {"wolf": "hungry and menacing, snarling, claws reaching"},
+    ("red", 15): {"woodcutter": "brave and determined, a stern frown"},
+    ("red", 16): {"wolf": "terrified, ears flat, eyes wide with fear, fleeing"},
+    ("red", 17): {"grandma": "overjoyed and relieved, arms open", "woodcutter": "kind, a proud smile"},
+    ("red", 18): {"grandma": "happy and cozy, laughing", "woodcutter": "cheerful"},
+    ("red", 19): {"wolf": "frightened and defeated, tail between his legs"},
+    ("red", 20): {"mother": "relieved and happy, waving", "grandma": "happy, waving"},
+}
+
+
+def _feelings(story, p):
+    f = FEELINGS.get((story, p["n"]), {})
+    if not f:
+        return ""
+    parts = [f"{BIBLE[story][c][0]} looks {mood}" for c, mood in f.items()]
+    return ("Expressions, big and easy to read like an animated feature film: " + "; ".join(parts) + ". ")
+
+
 # Attach template slots so every page knows its layout.
 for _key, _story in STORIES.items():
     assert len(_story["pages"]) == len(TEMPLATE) == 20, _key
@@ -372,8 +431,8 @@ HERO_PAGES = {k: [p["n"] for p in s["pages"] if p["hero"]] for k, s in STORIES.i
 def bible_prompt_plain(story, key):
     """A shorter second wording, tried if the first is refused."""
     _, desc = BIBLE[story][key]
-    return (f"Children's picture-book illustration in a friendly 3D animated style: {desc}, standing, full length, "
-            "on a plain white background.")
+    return (f"Children's picture-book illustration in a 3D animated style: {desc}, standing, full length, "
+            f"{PORTRAIT_EXPRESSION.get((story, key), 'a calm, natural expression')}, on a plain white background.")
 
 
 def bible_prompt(story, key):
@@ -383,7 +442,7 @@ def bible_prompt(story, key):
     return (f"Art style: {STYLE} A character model sheet for a picture book, showing one supporting character: "
             f"{desc}. One full-body view "
             f"standing, facing the viewer at a slight three-quarter angle, centered, on a plain light background. "
-            f"Neutral, friendly expression. {HANDS} {NO_WORDS}")
+            f"Expression: {PORTRAIT_EXPRESSION.get((story, key), 'a calm, natural expression')}. {HANDS} {NO_WORDS}")
 
 
 def bible_from_scene_prompt(story, key):
@@ -404,20 +463,24 @@ REFS_SENTENCE = " The reference images show the characters in this scene; draw t
 def scene_prompt(story, p):
     cast = " ".join(f"{BIBLE[story][c][0].capitalize()} is {BIBLE[story][c][1]}." for c in p["cast"])
     refs = REFS_SENTENCE if [c for c in p["cast"] if not text_only(story, c)] else ""
-    hero_space = ""
+    # Hero pages get a stand-in child on purpose, in the hero's place, pose and costume. Leaving the spot
+    # empty never worked: the model kept drawing a child anyway, just in the wrong place and clothes. Each
+    # book then swaps the stand-in for the real child (insert_prompt), keeping the pose.
     if p["hero"]:
-        # Describe the open space as scenery only. Mentioning a character "to be added later" makes the model
-        # draw one (that is how a boy got onto Jack's beanstalk).
-        hero_space = f" {OPEN_SPACE[p['hero']]} is open and uncluttered."
+        who = (f" One stand-in child is {HERO_POSITION[p['hero']]}, {p['action']}, full-length with the face "
+               f"clearly visible, wearing {HERO[story]['outfit']}; the child feels {p['mood']}. The only figures "
+               "in the picture are this one child and the characters named here.")
+    else:
+        who = " Every figure in the picture is one of the characters named here."
     calm = CALM.get(p["calm"] or "", "")
     # The hero's name never appears in a scene prompt ("Jack's mother" -> "the mother"): any mention of the hero
     # invites the model to draw one.
     scene = _no_hero_names(story, p["scene"])
     cast = _no_hero_names(story, cast)
     return (f"Art style: {STYLE} A full-bleed page from a 3D animated picture book of a classic fairy tale. "
-            f"Scene: {scene}{refs} {cast} The only characters in the picture are the ones named here. "
-            f"Each character's face clearly shows what they feel in this moment of the story. "
-            f"{SHOTS[p['shot']]}{hero_space} {calm} {HANDS} "
+            f"Scene: {scene}{refs} {cast}{who} "
+            f"{_feelings(story, p)}"
+            f"{SHOTS[p['shot']]} {calm} {HANDS} "
             f"Art style, again: {STYLE} {NO_WORDS}")
 
 
@@ -437,12 +500,14 @@ def hero_prompt(story):
 def insert_prompt(story, p):
     h = HERO[story]
     return (f"Art style: {STYLE} Image 1 is a finished page from a 3D animated picture book. Image 2 is the "
-            f"character sheet of the hero, {h['role']}. Add the hero into image 1, {HERO_POSITION[p['hero']]}, "
-            f"{p['action']}. The hero is the exact character from image 2: the same face, hair, skin tone, age, "
+            f"character sheet of the hero, {h['role']}. Image 1 has a stand-in child {HERO_POSITION[p['hero']]}, "
+            f"{p['action']}. Replace that stand-in child with the hero from image 2, in the same place and the same "
+            f"pose, so the hero is the only child in the picture. The hero is the exact character from image 2: "
+            "the same face, hair, skin tone, age, "
             "body proportions and outfit, an unmistakable match, with the face clearly visible. Draw the hero in "
             "the same 3D rendering, lighting and scale as image 1, full-length with feet on the ground where "
             f"standing. The hero feels {p['mood']}, and it shows clearly on the face, in the eyebrows, eyes and "
-            f"mouth, and in the body language. Keep everything else in "
+            f"mouth, and in the body language: a big, easy-to-read expression like an animated feature film. Keep everything else in "
             f"image 1 as it is: the setting, the other characters and the composition. "
             f"{CALM.get(p['calm'] or '', '')} {HANDS} {NO_WORDS}")
 
@@ -450,7 +515,8 @@ def insert_prompt(story, p):
 def analysis_prompt(story, p, has_hero):
     who = (f"Image 2 is the character sheet of the hero, {HERO[story]['role']}. " if has_hero else "")
     cast = ", ".join(BIBLE[story][c][0] for c in p["cast"]) or "no supporting characters"
-    beat = p["scene"] + (f" The hero is {p['action']}, feeling {p['mood']}." if has_hero else "")
+    beat = p["scene"] + (f" The hero is {p['action']}, feeling {p['mood']}." if has_hero else "") + \
+        (" " + _feelings(story, p) if FEELINGS.get((story, p["n"])) else "")
     return (
         "You are the quality checker for a children's picture book. Image 1 is one generated page. " + who +
         f"The page should show: {beat} Characters who should appear: {cast}"
@@ -458,13 +524,16 @@ def analysis_prompt(story, p, has_hero):
         "Score each from 0 to 10, strictly:\n"
         "- hero: " + ("the hero in image 1 is clearly the same person as image 2 (face, hair, skin, glasses, "
                       "outfit); 0 if the hero is missing or a different person" if has_hero else "always 10") + "\n"
-        "- story: the picture shows what the page should show, with the right characters and no extra people\n"
+        "- story: the picture shows what the page should show, with the right characters and no extra people"
+        + ("; there must be exactly one child, the hero; a second child anywhere scores 0" if has_hero else "")
+        + "\n"
         "- anatomy: hands have five fingers, no extra or merged limbs, faces are not distorted\n"
         "- clean: no letters, words, signatures, watermarks, borders, collage panels or broken artifacts\n"
         "- expression: " + (f"the hero's face clearly shows '{p['mood']}' (eyebrows, eyes, mouth), and every other "
-                            "character's face fits what happens on this page; a generic smile where the page "
-                            "calls for worry, fear or surprise scores 3 or less" if has_hero else
-                            "every character's face fits what happens on this page as described") + "\n"
+                            "character shows the feeling listed for them; a generic smile where the page calls "
+                            "for worry, fear, menace or surprise scores 3 or less" if has_hero else
+                            "every character shows the feeling listed for them, clearly; a bland or pleasant face "
+                            "where the page calls for menace, fear or anger scores 3 or less") + "\n"
         "Then map where the faces and the important story things are, on a 3x3 grid (rows top/middle/bottom, "
         "columns left/center/right): mark a cell true if a face, an eye, a hand doing something, or an object "
         "the reader must see is in it; false if it is only sky, wall, floor, grass, foliage or other background.\n"
