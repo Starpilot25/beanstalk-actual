@@ -355,7 +355,25 @@ def book_get(book_id):
     b = db.get_book(current_user_id(), book_id)
     if not b:
         return error("Book not found.", 404)
+    # "Running" but no job behind it (the server restarted): close it now and refund, don't leave it hanging.
+    if b["status"] == "running" and not pipeline.is_running(book_id) and time.time() - (b["started_at"] or 0) > 20:
+        pipeline.fail_book(book_id, current_user_id(), "The server restarted while this book was being made, so it "
+                                                      "stopped. Your $0.99 has been put back in your balance; please "
+                                                      "make it again.")
+        b = db.get_book(current_user_id(), book_id)
     return jsonify(book_json(b))
+
+
+@app.post("/api/books/<int:book_id>/cancel")
+@login_required
+def book_cancel(book_id):
+    b = db.get_book(current_user_id(), book_id)
+    if not b:
+        return error("Book not found.", 404)
+    if b["status"] != "running":
+        return error("This book isn't being made right now.", 409)
+    pipeline.cancel_book(book_id, current_user_id())
+    return jsonify({"ok": True})
 
 
 @app.post("/api/books")

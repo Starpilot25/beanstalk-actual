@@ -273,6 +273,24 @@ def clear_zone(page, busy):
 # ---------------------------------------------------------------------------
 _running = set()
 _running_lock = threading.Lock()
+_cancelled = set()
+
+
+class Cancelled(Exception):
+    pass
+
+
+def _check(book_id):
+    if book_id in _cancelled:
+        raise Cancelled()
+
+
+def cancel_book(book_id, user_id):
+    """Stop a book. A live job stops at its next step; a job that is gone (e.g. after a restart) is closed now.
+    Either way the book is marked cancelled and the $0.99 goes back to the balance."""
+    _cancelled.add(book_id)
+    if not is_running(book_id):
+        fail_book(book_id, user_id, "Cancelled. Your $0.99 has been put back in your balance.")
 
 
 def start_book(book_id, user_id, photo_png):
@@ -288,6 +306,8 @@ def is_running(book_id):
 def _run_book_safe(book_id, user_id, photo_png):
     try:
         run_book(book_id, user_id, photo_png)
+    except Cancelled:
+        fail_book(book_id, user_id, "Cancelled. Your $0.99 has been put back in your balance.")
     except Exception as e:
         log.exception("book %s failed", book_id)
         msg = str(e)
@@ -299,6 +319,7 @@ def _run_book_safe(book_id, user_id, photo_png):
     finally:
         with _running_lock:
             _running.discard(book_id)
+        _cancelled.discard(book_id)
 
 
 def fail_book(book_id, user_id, message):
@@ -334,6 +355,7 @@ def run_book(book_id, user_id, photo_png):
     db.update_book(book_id, stage=f"Drawing {name} as {S.HERO[story]['role']}")
     hero, best = None, None
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        _check(book_id)
         img = image_call([photo_png], S.hero_prompt(story), purpose="hero" if attempt == 1 else "retry",
                          label=f"hero try {attempt}", user_id=user_id, book_id=book_id, quality=HERO_QUALITY)
         a = safe_analysis([img, photo_png], hero_check_prompt(story), label=f"hero check {attempt}",
@@ -358,6 +380,7 @@ def run_book(book_id, user_id, photo_png):
         scene_png = to_png(scene)
         best, tries, last_err = None, 0, ""
         for attempt in range(1, MAX_ATTEMPTS + 1):
+            _check(book_id)
             tries = attempt
             db.set_page(book_id, n, status="painting", attempts=attempt)
             try:
@@ -401,12 +424,15 @@ def run_book(book_id, user_id, photo_png):
         for f in futures:
             try:
                 f.result()
+            except Cancelled:
+                raise
             except Exception as e:
                 errors.append(str(e))
     if errors:
         raise RuntimeError(f"{len(errors)} page(s) could not be painted: {errors[0][:120]}")
 
     # 3. The PDF, built once and stored, so it downloads instantly from now on.
+    _check(book_id)
     db.update_book(book_id, stage="Putting the book together")
     from book_pdf import build_book
     b = db.get_book_internal(book_id)

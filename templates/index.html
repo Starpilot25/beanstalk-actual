@@ -196,7 +196,8 @@
   <section class="card" id="progSec" hidden aria-live="polite">
     <div class="row" style="justify-content:space-between">
       <h2 id="progTitle" style="margin:0">Making your book</h2>
-      <button class="ghost" type="button" id="closeProg">Make another book</button>
+      <span class="row"><button class="danger" type="button" id="cancelBook" hidden>Cancel this book</button>
+      <button class="ghost" type="button" id="closeProg">Make another book</button></span>
     </div>
     <div class="stagebar"><span id="stage">Starting</span><span id="clock"></span></div>
     <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Book progress"><i id="bar"></i></div>
@@ -411,8 +412,10 @@ function render(b) {
     $("pdfLink").href = `/api/books/${b.id}/pdf`;
     $("doneNote").innerHTML = `Ready <b>${Math.round(b.elapsed)} seconds</b> after upload. It's saved in My books.`;
   }
+  $("cancelBook").hidden = b.status !== "running";
   $("failRow").hidden = b.status !== "failed";
-  if (b.status === "failed") $("failRow").textContent = (b.error || "The book couldn't be made.") + " Your $0.99 has been put back in your balance.";
+  if (b.status === "failed") $("failRow").textContent = (b.error || "The book couldn't be made.") +
+    (/put back|refunded/.test(b.error || "") ? "" : " Your $0.99 has been put back in your balance.");
 }
 async function poll() {
   if (!watching) return;
@@ -434,6 +437,13 @@ function watch(id) {
   window.scrollTo({top: 0, behavior: "smooth"});
   poll();
 }
+$("cancelBook").addEventListener("click", async () => {
+  const btn = $("cancelBook");
+  if (!btn.dataset.sure) { btn.dataset.sure = "1"; btn.textContent = "Cancel and refund $0.99?"; return; }
+  btn.disabled = true; btn.textContent = "Cancelling…";
+  try { await api(`/api/books/${watching}/cancel`, {method: "POST"}); } catch (e) { btn.textContent = e.message; }
+  setTimeout(() => { btn.disabled = false; delete btn.dataset.sure; btn.textContent = "Cancel this book"; }, 3000);
+});
 $("closeProg").addEventListener("click", () => {
   clearTimeout(timer); watching = null;
   $("progSec").hidden = true; $("makeSec").hidden = false;

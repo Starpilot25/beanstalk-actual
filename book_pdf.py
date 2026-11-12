@@ -9,11 +9,13 @@ The image model never draws words. Every word here is real type (Young Serif), p
 """
 import io
 import os
+import tempfile
+import threading
 
 import numpy as np
 from PIL import Image
 from reportlab.lib.colors import Color, HexColor
-from reportlab.lib.utils import ImageReader, simpleSplit
+from reportlab.lib.utils import simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -84,9 +86,9 @@ def _crop32(raw):
 
 
 def _shade(im, zone):
-    """Darken only the words' band, strongest at the page edge, so white type reads on anything."""
-    a = np.asarray(im).astype("float32")
-    h = a.shape[0]
+    """Darken only the words' band, strongest at the page edge, so white type reads on anything.
+    Built as a one-pixel-wide mask stretched across the picture, so it costs almost no memory."""
+    h = im.height
     t = np.zeros(h, dtype="float32")
     third = h // 3
     if zone == "top":
@@ -96,13 +98,25 @@ def _shade(im, zone):
     else:  # middle: a soft horizontal band
         x = np.linspace(-1, 1, third + 80)
         t[third - 40:2 * third + 40] = 0.5 * np.exp(-(x ** 2) / 0.35)
-    tint = np.array([12, 16, 24], dtype="float32")
-    a = a * (1 - t[:, None, None]) + tint * t[:, None, None]
-    return Image.fromarray(a.clip(0, 255).astype("uint8"))
+    mask = Image.fromarray((t * 255).astype("uint8").reshape(h, 1), "L").resize(im.size)
+    return Image.composite(Image.new("RGB", im.size, (12, 16, 24)), im, mask)
+
+
+_tls = threading.local()
+
+
+def _jpeg(im):
+    """Save the picture as a JPEG file and hand the PDF its path: the PDF embeds the JPEG bytes as they are.
+    Passing pixels instead made the PDF library re-compress them (about 100 s for a book on a slow server) and
+    hold every decoded picture in memory until the end (300 MB+). Files: ~1.5 s and under 80 MB."""
+    _tls.n = getattr(_tls, "n", 0) + 1
+    path = os.path.join(_tls.dir, f"{_tls.n}.jpg")
+    im.save(path, "JPEG", quality=90)
+    return path
 
 
 def _full_page(c, raw, text, zone, n):
-    c.drawImage(ImageReader(_shade(_crop32(raw), zone)), 0, 0, W, H)
+    c.drawImage(_jpeg(_shade(_crop32(raw), zone)), 0, 0, W, H)
     lo, hi = BAND[zone]
     band_bottom, band_h = lo * H, (hi - lo) * H
     size, lines = _fit(text, W - 2 * MARGIN - 60, band_h - 36)
@@ -136,7 +150,7 @@ def _below_page(c, raw, text, n):
     p = c.beginPath()
     p.roundRect(x, y, aw, ah, 14)
     c.clipPath(p, stroke=0, fill=0)
-    c.drawImage(ImageReader(_crop32(raw)), x, y, aw, ah)
+    c.drawImage(_jpeg(_crop32(raw)), x, y, aw, ah)
     c.restoreState()
     c.setStrokeColor(HexColor("#c9a24a"))
     c.setLineWidth(2)
@@ -172,7 +186,7 @@ def _about(c, book, hero):
         p = c.beginPath()
         p.roundRect(MARGIN, MARGIN, pw, ph, 18)
         c.clipPath(p, stroke=0, fill=0)
-        c.drawImage(ImageReader(im), MARGIN, MARGIN, pw, ph)
+        c.drawImage(_jpeg(im), MARGIN, MARGIN, pw, ph)
         c.restoreState()
         text_x = MARGIN + pw + 40
     width = W - text_x - MARGIN
@@ -224,10 +238,10 @@ def _cover(c, raw, title, name, zone):
         c.rect(0, 0, W, H, stroke=0, fill=1)
         aw, ah = W - 120, (W - 120) / 1.5 * 0.82
         x, y = 60, 40
-        c.drawImage(ImageReader(_crop32(raw)), x, y, aw, ah, preserveAspectRatio=True, anchor="c")
+        c.drawImage(_jpeg(_crop32(raw)), x, y, aw, ah, preserveAspectRatio=True, anchor="c")
         ty = H - 70
     else:
-        c.drawImage(ImageReader(_shade(_crop32(raw), "top")), 0, 0, W, H)
+        c.drawImage(_jpeg(_shade(_crop32(raw), "top")), 0, 0, W, H)
         ty = H - 74
     size = 46
     while pdfmetrics.stringWidth(title, FONT, size) > W - 120 and size > 28:
@@ -247,6 +261,12 @@ def _cover(c, raw, title, name, zone):
 
 def build_book(story, images, hero, book):
     """images: {n: (jpeg_bytes, zone)}. Returns PDF bytes: cover, 20 story pages, About Me."""
+    with tempfile.TemporaryDirectory() as d:
+        _tls.dir, _tls.n = d, 0
+        return _build(story, images, hero, book)
+
+
+def _build(story, images, hero, book):
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(W, H))
     c.setTitle(S.STORIES[story]["title"])
