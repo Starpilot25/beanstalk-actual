@@ -359,6 +359,8 @@ PORTRAIT_EXPRESSION = {
 # What each supporting character feels on each page. Without this the model gives everyone the same pleasant
 # face; the check scores every one of these.
 FEELINGS = {
+    ("jack", 0): {"cow": "calm and content"},
+    ("red", 0): {"wolf": "sly and menacing, a wicked grin, eyes narrowed"},
     ("jack", 1): {"mother": "warm and hopeful, smiling", "cow": "calm and content"},
     ("jack", 2): {"mother": "sad and worried, brow furrowed, shoulders slumped"},
     ("jack", 3): {"cow": "sad and droopy, ears down, head low"},
@@ -423,6 +425,37 @@ TEXT_ONLY_NOTE = ("Not drawn as a portrait: OpenAI's image safety filter refused
 def text_only(story, key):
     return (story, key) in TEXT_ONLY
 HERO_PAGES = {k: [p["n"] for p in s["pages"] if p["hero"]] for k, s in STORIES.items()}
+
+# The cover is page 0 of every book: a pre-made scene with the hero swapped in like any other page, and the
+# title printed by the PDF in the clear sky at the top.
+COVERS = {
+    "jack": dict(cast=["cow"],
+                 scene="The thatched cottage in a green valley at golden morning light; beside it an enormous "
+                       "beanstalk twists up into fluffy clouds, where a grey stone castle with towers sits on top. "
+                       "Milky-White grazes by the fence.",
+                 action="standing on the path in front of the beanstalk, looking up at it, one hand raised to the "
+                        "stalk", mood="full of wonder and ready for adventure"),
+    "red": dict(cast=["wolf"],
+                scene="A sun-dappled forest path winding toward a small stone cottage with a blue door far in the "
+                      "distance; the wolf peers out from behind a tall tree on the right, watching with narrowed "
+                      "eyes.",
+                action="walking along the path toward the viewer, carrying a wicker basket", mood="bright and "
+                       "cheerful, unaware of the wolf"),
+}
+for _key, _c in COVERS.items():
+    _c.update(n=0, text=STORIES[_key]["title"], layout="full", zones=["top"], calm="top", shot="wide",
+              hero="center", cover=True)
+    for _ch in _c["cast"]:
+        assert _ch in BIBLE[_key], (_key, _ch)
+
+
+def all_pages(story):
+    """The cover (page 0) and the 20 story pages."""
+    return [COVERS[story]] + STORIES[story]["pages"]
+
+
+def page_by_n(story, n):
+    return COVERS[story] if n == 0 else STORIES[story]["pages"][n - 1]
 
 
 # ---------------------------------------------------------------------------------------------------------

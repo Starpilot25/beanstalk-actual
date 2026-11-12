@@ -10,7 +10,7 @@
 {% endblock %}
 {% block main %}
   <h1>Shared art</h1>
-  <p class="lede">Draw the character bible and the 20 pre-made scenes for each story, once. Every book reuses them. Each scene is checked like a page (up to 3 attempts) and must leave its words' band clear.</p>
+  <p class="lede">Draw the character bible, the cover and the 20 pre-made scenes for each story, once. Every book reuses them. Each scene is checked like a page (up to 3 attempts) and must leave its words' band clear.</p>
   <p id="info" class="muted"></p>
   {% for key, s in stories.items() %}
   <section class="card">
@@ -19,7 +19,7 @@
       <div class="row">
         <button type="button" data-run="{{ key }}">Draw everything missing</button>
         <button type="button" class="ghost" data-bible="{{ key }}">Redraw the bible</button>
-        <button type="button" class="ghost" data-allscenes="{{ key }}">Redraw all 20 scenes</button>
+        <button type="button" class="ghost" data-allscenes="{{ key }}">Redraw all scenes</button>
         <button type="button" class="ghost" data-everything="{{ key }}">Redraw everything</button>
       </div>
     </div>
@@ -52,7 +52,7 @@ document.addEventListener("click", e => {
   const every = e.target.closest("[data-everything]");
   if (every) run({story: every.dataset.everything, redo: true});
   const all = e.target.closest("[data-allscenes]");
-  if (all) run({story: all.dataset.allscenes, only: Array.from({length: 20}, (_, i) => i + 1), redo: true});
+  if (all) run({story: all.dataset.allscenes, only: Array.from({length: 21}, (_, i) => i), redo: true});
   if (a) run({story: a.dataset.run});
   if (b) run({story: b.dataset.bible, only: "bible", redo: true});
   if (s) run({story: s.dataset.story, only: [+s.dataset.redo], redo: true});
@@ -69,10 +69,10 @@ async function tick() {
       const has = d.bible.includes(`${story}:${k}`), words = TEXT_ONLY.includes(`${story}:${k}`);
       return `<figure>${has ? `<img src="/bible/${story}/${k}.jpg?v=${Date.now()}" alt="">` : `<div class="noimg" style="display:grid;place-items:center;font-size:.75rem;color:#6a5d45">${words ? "Described in words" : ""}</div>`}<figcaption><span>${BIBLE[story][k][0]}</span>${words ? "" : `<button class="ghost" type="button" data-story="${story}" data-char="${k}">Redraw</button>`}</figcaption></figure>`;
     }).join("");
-    $("scenes-" + story).innerHTML = Array.from({length: 20}, (_, i) => i + 1).map(n => {
+    $("scenes-" + story).innerHTML = Array.from({length: 21}, (_, i) => i).map(n => {
       const s = d.scenes[`${story}:${n}`];
       return `<figure>${s ? `<a href="/scene/${story}/${n}.jpg?full=1" target="_blank"><img src="/scene/${story}/${n}.jpg?v=${s.score}-${s.attempts}" alt=""></a>` : `<div class="noimg"></div>`}
-        <figcaption><span>${n}${s ? ` · ${s.score == null ? "not checked" : s.score + "/10"} · try ${s.attempts}` : ""}</span><button class="ghost" type="button" data-story="${story}" data-redo="${n}">Redo</button></figcaption></figure>`;
+        <figcaption><span>${n === 0 ? "Cover" : n}${s ? ` · ${s.score == null ? "not checked" : s.score + "/10"} · try ${s.attempts}` : ""}</span><button class="ghost" type="button" data-story="${story}" data-redo="${n}">Redo</button></figcaption></figure>`;
     }).join("");
   }
   if (d.running) setTimeout(tick, 2500);

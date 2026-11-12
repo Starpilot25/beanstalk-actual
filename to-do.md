@@ -32,7 +32,8 @@ Known defects and open questions in the 20-page build, most costly first. Update
   disappears (Jack pp. 7, 10, 13, 16, 19; Red the same).
 - The words never use "he" or "she" for the hero (it's always "Jack", "Red" or "Mother"), so they fit a boy or a
   girl. The hero is still called Jack or Red, not the child's own name; the About Me page carries the name.
-- No cover page: the PDF opens on page 1. Kept out on purpose so the page count is exactly 20 + About Me.
+- The PDF is a cover, 20 story pages and an About Me page (22 in all). The cover is painted like any hero page
+  (the child swapped into a pre-made cover scene) and the title is printed in the clear sky at the top.
 
 ## Money
 - Refund processing is done by the same user who asked for it (there's no separate store owner in this

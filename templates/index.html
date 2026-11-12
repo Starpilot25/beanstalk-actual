@@ -158,7 +158,7 @@
       <div class="stories" role="group" aria-label="Story">
         {% for key, s in stories.items() %}
         <button type="button" class="story" data-story="{{ key }}" aria-pressed="false" {{ 'disabled' if not ready[key] }}>
-          {% if ready[key] %}<img src="/scene/{{ key }}/1.jpg" alt="">{% else %}<div class="noimg"></div>{% endif %}
+          {% if ready[key] %}<img src="/scene/{{ key }}/0.jpg?w=1000" alt="" width="1000" height="667">{% else %}<div class="noimg"></div>{% endif %}
           <div><b>{{ s.title }}</b><small>{{ ('Your child as ' + ('Jack' if key == 'jack' else 'Red')) if ready[key] else 'Pictures still being prepared' }}</small></div>
         </button>
         {% endfor %}
@@ -376,18 +376,18 @@ function tileHTML(bookId, p) {
   const img = (p.status === "checking" || p.status === "done")
     ? `<img alt="Page ${p.n}" src="/api/books/${bookId}/thumb/${p.n}?v=${p.updated_at}">`
     : `<span class="wait">${p.status === "waiting" ? "Waiting" : "Painting…"}</span>`;
-  return `<button type="button" class="tile${busy ? " busy" : ""}" data-n="${p.n}" aria-label="Page ${p.n}">${img}<span class="n">${p.n}</span><span class="badge${warn ? " warn" : ""}">${badge}</span></button>`;
+  return `<button type="button" class="tile${busy ? " busy" : ""}" data-n="${p.n}" aria-label="${p.n === 0 ? "Cover" : "Page " + p.n}">${img}<span class="n">${p.n === 0 ? "Cover" : p.n}</span><span class="badge${warn ? " warn" : ""}">${badge}</span></button>`;
 }
 function heroTile(b) {
   const img = b.has_hero ? `<img alt="Hero" src="/api/books/${b.id}/hero">` : `<span class="wait">Drawing…</span>`;
   const label = b.has_hero ? (b.hero_passed ? "Passed ✓" : "Best of " + b.hero_attempts) : "Drawing";
-  return `<button type="button" class="tile${b.has_hero ? "" : " busy"}" data-n="0" aria-label="Hero sheet">${img}<span class="n">Hero</span><span class="badge${b.has_hero && !b.hero_passed ? " warn" : ""}"><span>${label}</span><span>try ${b.hero_attempts || 1}/3</span></span></button>`;
+  return `<button type="button" class="tile${b.has_hero ? "" : " busy"}" data-n="hero" aria-label="Hero sheet">${img}<span class="n">Hero</span><span class="badge${b.has_hero && !b.hero_passed ? " warn" : ""}"><span>${label}</span><span>try ${b.hero_attempts || 1}/3</span></span></button>`;
 }
 function percent(b) {
   if (b.status === "done") return 100;
   if (!b.has_hero) return 3 + Math.min(12, (b.elapsed || 0) * 0.6);
   if (b.stage === "Putting the book together") return 96;
-  return 15 + 80 * (b.done_pages / 20);
+  return 15 + 80 * (b.done_pages / (b.pages.length || 21));
 }
 function render(b) {
   lastBook = b;
@@ -400,11 +400,11 @@ function render(b) {
   const grid = $("grid");
   const put = (key, n, html) => {
     const el = grid.querySelector(`[data-n="${n}"]`);
-    if (!el) grid.insertAdjacentHTML(n === 0 ? "afterbegin" : "beforeend", html);
+    if (!el) grid.insertAdjacentHTML(n === "hero" ? "afterbegin" : "beforeend", html);
     else if (seen[key] !== html) el.outerHTML = html;
     seen[key] = html;
   };
-  put(b.id + ":0", 0, heroTile(b));
+  put(b.id + ":hero", "hero", heroTile(b));
   for (const p of b.pages) put(b.id + ":" + p.n, p.n, tileHTML(b.id, p));
   $("doneRow").hidden = b.status !== "done";
   if (b.status === "done") {
@@ -441,8 +441,8 @@ $("closeProg").addEventListener("click", () => {
 });
 $("grid").addEventListener("click", e => {
   const t = e.target.closest(".tile"); if (!t || !lastBook) return;
-  const n = +t.dataset.n;
-  if (n === 0) {
+  const n = t.dataset.n === "hero" ? "hero" : +t.dataset.n;
+  if (n === "hero") {
     if (!lastBook.has_hero) return;
     $("dlgImg").src = `/api/books/${lastBook.id}/hero`;
     $("dlgTitle").textContent = "The hero sheet";
@@ -452,7 +452,7 @@ $("grid").addEventListener("click", e => {
     const p = lastBook.pages.find(x => x.n === n);
     if (!p || !(p.status === "done" || p.status === "checking")) return;
     $("dlgImg").src = `/api/books/${lastBook.id}/page/${n}?v=${p.updated_at}`;
-    $("dlgTitle").textContent = `Page ${n}`;
+    $("dlgTitle").textContent = n === 0 ? "Cover" : `Page ${n}`;
     const where = {top: "top of the picture", middle: "middle of the picture", bottom: "bottom of the picture", below: "paper below the picture"}[p.zone] || "";
     $("dlgText").innerHTML = `“${esc(p.text)}”<br>` + (p.premade ? "A pre-made scene, checked when it was made." :
       `Attempts: <b>${p.attempts} of 3</b>${p.score != null ? `, score <b>${p.score}/10</b>` : ""}. ${p.issues ? "Check notes: " + esc(p.issues) : "No problems found."}`) +
@@ -468,7 +468,7 @@ async function loadBooks() {
     const el = $("books");
     if (!rows.length) { el.innerHTML = `<p class="muted">No books yet. Make your first one above.</p>`; return; }
     el.innerHTML = rows.map(r => `<div class="bk">
-      <img alt="" src="${r.status === "done" ? `/api/books/${r.id}/thumb/1` : `/scene/${r.story}/1.jpg`}" loading="lazy">
+      <img alt="" src="${r.status === "done" ? `/api/books/${r.id}/thumb/0` : `/scene/${r.story}/0.jpg`}" onerror="this.onerror=null;this.src='/api/books/${r.id}/thumb/1'" loading="lazy">
       <div class="t"><b>${esc(r.title)}</b><br><span class="muted small">Starring ${esc(r.child_name || "—")} · ${new Date(r.created_at).toLocaleString()}${r.seconds ? ` · made in ${r.seconds} s` : ""}${r.status === "running" ? " · being made now" : r.status === "failed" ? " · failed (refunded)" : ""}</span></div>
       ${r.has_pdf ? `<a class="btn" href="/api/books/${r.id}/pdf">Download PDF</a>` : ""}
       <button class="ghost" type="button" data-view="${r.id}">${r.status === "running" ? "Watch" : "See pages"}</button>

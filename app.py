@@ -13,6 +13,7 @@ environment only. See stories.py for how a book is made, pipeline.py for the gen
 """
 
 import hmac
+import io
 import logging
 import os
 import threading
@@ -22,6 +23,7 @@ from functools import wraps
 
 from authlib.integrations.flask_client import OAuth
 from flask import Flask, Response, abort, jsonify, redirect, render_template, request, session, url_for
+from PIL import Image
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import billing
@@ -149,7 +151,7 @@ def jpeg_response(raw, cache="private, max-age=86400"):
 
 def scenes_ready():
     have, _ = db.scene_status()
-    return {k: all(f"{k}:{n}" in have for n in range(1, 21)) for k in S.STORY_KEYS}
+    return {k: all(f"{k}:{n}" in have for n in range(0, 21)) for k in S.STORY_KEYS}
 
 
 # Books whose background job died with a restart: mark them failed and give the $0.99 back.
@@ -315,15 +317,16 @@ def book_json(b):
     out["elapsed"] = round(end - b["started_at"], 1) if b["started_at"] else None
     pages = []
     for p in b["pages"]:
-        t = S.STORIES[b["story"]]["pages"][p["n"] - 1]
-        pages.append({**p, "text": t["text"], "premade": not t["hero"], "layout": t["layout"]})
+        t = S.page_by_n(b["story"], p["n"])
+        pages.append({**p, "text": t["text"], "premade": not t["hero"], "layout": t["layout"],
+                      "cover": p["n"] == 0})
     out["pages"] = pages
     done = sum(1 for p in pages if p["status"] == "done")
     out["done_pages"] = done
     if b["status"] == "running" and pages and b["stage"] == "Painting the pages":
         painting = [p for p in pages if p["status"] in ("painting", "checking")]
         retry = [p for p in painting if (p["attempts"] or 0) > 1]
-        out["stage"] = (f"Painting and checking pages: {done} of 20 done"
+        out["stage"] = (f"Painting and checking pages: {done} of {len(pages)} done"
                         + (f", repainting {len(retry)}" if retry else ""))
     return out
 
@@ -521,8 +524,25 @@ def bible_img(story, key):
 
 @app.get("/scene/<story>/<int:n>.jpg")
 def scene_img(story, n):
+    w = request.args.get("w", type=int)
+    if w:                                   # a sharp copy at the size the page shows it (e.g. the story picker)
+        w = max(200, min(1536, w))
+        key = (story, n, w)
+        if key not in _sized:
+            raw, _ = db.get_scene(story, n)
+            if raw is None:
+                abort(404)
+            im = Image.open(io.BytesIO(raw)).convert("RGB")
+            im.thumbnail((w, w))
+            buf = io.BytesIO()
+            im.save(buf, "JPEG", quality=85, optimize=True)
+            _sized[key] = buf.getvalue()
+        return jpeg_response(_sized[key], "public, max-age=600")
     raw, _ = db.get_scene(story, n, thumb=request.args.get("full") != "1")
     return jpeg_response(raw, "public, max-age=3600")
+
+
+_sized = {}   # resized scene images, cleared whenever the shared art is redrawn
 
 
 @app.get("/api/bible")
@@ -559,6 +579,7 @@ def admin_pregen():
     only = d.get("only")
     if isinstance(only, list):
         only = [int(x) for x in only]
+    _sized.clear()
     if not pipeline.start_pregen(story, only, bool(d.get("redo"))):
         return error("Already running.", 409)
     return jsonify({"ok": True})

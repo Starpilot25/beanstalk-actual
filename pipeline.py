@@ -313,7 +313,7 @@ def fail_book(book_id, user_id, message):
 def run_book(book_id, user_id, photo_png):
     b = db.get_book_internal(book_id)
     story, t0 = b["story"], b["started_at"]
-    pages = S.STORIES[story]["pages"]
+    pages = S.all_pages(story)
     name = b["child_name"] or "your child"
 
     # Shared art must exist before a book can be made.
@@ -339,7 +339,7 @@ def run_book(book_id, user_id, photo_png):
         a = safe_analysis([img, photo_png], hero_check_prompt(story), label=f"hero check {attempt}",
                           user_id=user_id, book_id=book_id)
         score, ok = grade(a)
-        db.add_attempt(book_id, 0, attempt, score, ok, a, img)
+        db.add_attempt(book_id, -1, attempt, score, ok, a, img)        # -1 = the hero sheet
         if best is None or (score or 0) > (best[0] or 0):
             best = (score, img)
         if ok or time.time() - t0 > RETRY_DEADLINE / 2:
@@ -466,7 +466,7 @@ def run_pregen(story, only=None, redo=False):
         chars = [only[6:]] if only[6:] in S.BIBLE[story] and not S.text_only(story, only[6:]) else []
     elif only not in (None, "bible"):
         chars = []
-    pages = S.STORIES[story]["pages"]
+    pages = S.all_pages(story)
     if isinstance(only, str) and only.startswith("bible"):
         todo = []
     elif isinstance(only, list):
@@ -590,7 +590,7 @@ def run_pregen(story, only=None, redo=False):
         _plog(f"{story}: stopped with gaps. Missing characters: {', '.join(miss_b) or 'none'}; "
               f"missing scenes: {', '.join(map(str, miss_s)) or 'none'}. See the errors above.")
     else:
-        _plog(f"{story}: complete. All characters and all 20 scenes are drawn.")
+        _plog(f"{story}: complete. All characters, the cover and all 20 scenes are drawn.")
 
 
 def scene_check_prompt(story, p):

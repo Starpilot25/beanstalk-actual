@@ -1,7 +1,7 @@
 # Storybook starring your child — MCON 368
 
-Upload one photo, pick *Jack and the Beanstalk* or *Little Red Riding Hood*, and get a 20-page illustrated PDF
-(plus an About Me page) with the child as the hero. $0.99 a book, paid from a balance funded through Stripe
+Upload one photo, pick *Jack and the Beanstalk* or *Little Red Riding Hood*, and get a cover, 20 illustrated pages
+and an About Me page as a PDF with the child as the hero. $0.99 a book, paid from a balance funded through Stripe
 (test mode).
 
 Live: https://beanstalk.autosignusa.com

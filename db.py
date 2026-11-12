@@ -267,7 +267,7 @@ def get_book(user_id, book_id):
         has = c.execute(select(storybooks.c.hero.isnot(None), storybooks.c.pdf.isnot(None))
                         .where(storybooks.c.id == book_id)).first()
         hero_tries = c.execute(select(page_attempts.c.attempt, page_attempts.c.score, page_attempts.c.passed)
-                               .where(page_attempts.c.book_id == book_id, page_attempts.c.n == 0)
+                               .where(page_attempts.c.book_id == book_id, page_attempts.c.n == -1)
                                .order_by(page_attempts.c.attempt)).all()
         return {**dict(b._mapping), "has_hero": bool(has[0]), "has_pdf": bool(has[1]),
                 "hero_attempts": len(hero_tries),

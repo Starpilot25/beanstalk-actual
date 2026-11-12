@@ -216,12 +216,45 @@ def _about(c, book, hero):
     c.drawString(text_x, MARGIN, f"Starring in {S.STORIES[book['story']]['title']}")
 
 
+def _cover(c, raw, title, name, zone):
+    """Front cover: the art full-bleed, the title and the child's name in the clear sky at the top."""
+    starring = f"starring {name}" if name else ""
+    if zone != "top":                        # sky wasn't clear: frame the art and put the title on paper
+        c.setFillColor(LEAF)
+        c.rect(0, 0, W, H, stroke=0, fill=1)
+        aw, ah = W - 120, (W - 120) / 1.5 * 0.82
+        x, y = 60, 40
+        c.drawImage(ImageReader(_crop32(raw)), x, y, aw, ah, preserveAspectRatio=True, anchor="c")
+        ty = H - 70
+    else:
+        c.drawImage(ImageReader(_shade(_crop32(raw), "top")), 0, 0, W, H)
+        ty = H - 74
+    size = 46
+    while pdfmetrics.stringWidth(title, FONT, size) > W - 120 and size > 28:
+        size -= 2
+    c.setFont(FONT, size)
+    c.setFillColor(Color(0, 0, 0, 0.45))
+    c.drawCentredString(W / 2 + 2, ty - 2, title)
+    c.setFillColor(HexColor("#ffe9a8"))
+    c.drawCentredString(W / 2, ty, title)
+    if starring:
+        c.setFont(FONT, 20)
+        c.setFillColor(Color(0, 0, 0, 0.45))
+        c.drawCentredString(W / 2 + 1.5, ty - 38 - 1.5, starring)
+        c.setFillColor(HexColor("#fffaf0"))
+        c.drawCentredString(W / 2, ty - 38, starring)
+
+
 def build_book(story, images, hero, book):
-    """images: {n: (jpeg_bytes, zone)}. Returns PDF bytes: 20 story pages + About Me."""
+    """images: {n: (jpeg_bytes, zone)}. Returns PDF bytes: cover, 20 story pages, About Me."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(W, H))
     c.setTitle(S.STORIES[story]["title"])
     c.setAuthor(book.get("child_name") or "")
+    if 0 in images:
+        raw, zone = images[0]
+        _cover(c, raw, S.STORIES[story]["title"], book.get("child_name") or "", zone)
+        c.showPage()
     for p in S.STORIES[story]["pages"]:
         raw, zone = images[p["n"]]
         if zone in BAND:
