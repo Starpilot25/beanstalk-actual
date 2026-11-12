@@ -125,10 +125,12 @@ HERO = {
     },
     "red": {
         "role": "Little Red Riding Hood",
-        "outfit": ("a bright red hooded cloak worn with the hood down, a cream linen shirt, brown trousers "
-                   "and brown boots"),
+        # Red always wears the skirt, whoever the child is.
+        "outfit": ("a bright red hooded cloak worn with the hood down, a cream linen blouse, a knee-length "
+                   "blue dress, white stockings and brown boots"),
         "outfit_skirt": ("a bright red hooded cloak worn with the hood down, a cream linen blouse, a "
                          "knee-length blue dress, white stockings and brown boots"),
+        "always_skirt": True,
     },
 }
 
@@ -531,8 +533,10 @@ def hero_prompt(story):
             "if any, and their real age, so family would recognize them at a glance. Stylize the rendering, not "
             "the anatomy. Neutral, relaxed expression with the mouth closed. RIGHT HALF: the same hero full-length, "
             "head to toe, facing the viewer. "
-            f"If the person in the photo is a girl or a woman, the hero wears {h['outfit_skirt']}; otherwise the "
-            f"hero wears {h['outfit']}. The same outfit in both views. {HANDS} {NO_WORDS}")
+            + (f"The hero wears {h['outfit_skirt']}. " if h.get("always_skirt") else
+               f"If the person in the photo is a girl or a woman, the hero wears {h['outfit_skirt']}; otherwise the "
+               f"hero wears {h['outfit']}. ")
+            + f"The same outfit in both views. {HANDS} {NO_WORDS}")
 
 
 def insert_prompt(story, p):
@@ -541,8 +545,10 @@ def insert_prompt(story, p):
             f"character sheet of the hero, {h['role']}. Image 1 has a stand-in child {HERO_POSITION[p['hero']]}, "
             f"{p['action']}. Replace that stand-in child with the hero from image 2, in the same place and the same "
             f"pose, so the hero is the only child in the picture. The hero is the exact character from image 2: "
-            "the same face, hair, skin tone, age, "
-            "body proportions and outfit, an unmistakable match, with the face clearly visible. Draw the hero in "
+            "the same face, hair, skin tone, age and "
+            "body proportions, an unmistakable match, with the face clearly visible. The hero wears exactly the "
+            "outfit shown in image 2, replacing the stand-in's clothes: if image 2 shows a skirt or dress, the hero "
+            "wears that skirt or dress on this page. Draw the hero in "
             "the same 3D rendering, lighting and scale as image 1, full-length with feet on the ground where "
             f"standing. The hero feels {p['mood']}, and it shows clearly on the face, in the eyebrows, eyes and "
             f"mouth, and in the body language: a big, easy-to-read expression like an animated feature film. Keep everything else in "
