@@ -69,6 +69,11 @@ TEMPLATE = [
 for t in TEMPLATE:
     t["calm"] = t["zones"][0] if t["zones"] else None
 
+OPEN_SPACE = {
+    "left": "The left third of the picture",
+    "center": "The middle of the picture",
+    "right": "The right third of the picture",
+}
 HERO_POSITION = {
     "left": "standing in the left third of the picture",
     "center": "in the middle of the picture",
@@ -100,8 +105,9 @@ BIBLE = {
                    "scarf, a sage-green dress and a white apron"),
         "grandma": ("Grandma", "a tiny, round-cheeked grandmother with white hair in a bun, small round "
                     "spectacles, a lavender nightgown and a frilled white nightcap"),
-        "wolf": ("the wolf", "a tall, lanky grey wolf who walks on his hind legs, with yellow eyes, a long "
-                 "snout and a sly grin; cartoonish and more sneaky than scary"),
+        "wolf": ("the wolf", "a tall, lanky grey cartoon wolf who always stands and walks upright on his two hind "
+                 "legs like a person, with shaggy grey fur all over, a pale grey chest, yellow eyes, a long snout, "
+                 "big pointed ears, a bushy tail and a sly toothy grin; more sneaky than scary"),
         "woodcutter": ("the woodcutter", "a big, friendly woodcutter with a red-brown beard, a checked flannel "
                        "shirt, suspenders and a wooden-handled tool belt"),
     },
@@ -178,9 +184,9 @@ STORIES = {
                  action="standing at the bottom of the beanstalk, looking up in wonder", mood="astonished"),
             dict(text="Up, up, up climbed Jack, higher than the birds.",
                  cast=[],
-                 scene="A view along the giant beanstalk's thick stem halfway up, among big leaves, with an open "
-                       "stretch of stem in the middle for a climber added later; the cottage and fields are tiny far "
-                       "below, birds fly past.",
+                 scene="A view along the giant beanstalk's thick green stem halfway up, among big leaves, with a "
+                       "bare, smooth stretch of stem in the middle; the cottage and fields are tiny far below, "
+                       "birds fly past.",
                  action="climbing the beanstalk, both hands gripping the stalk", mood="brave and excited"),
             dict(text="At the very top stood a castle in the clouds.",
                  cast=[],
@@ -217,8 +223,8 @@ STORIES = {
                        "surprise; the golden harp glows on the table."),
             dict(text="Jack raced down the beanstalk as fast as could be, with the giant close behind!",
                  cast=["giant"],
-                 scene="The beanstalk against the sky; high above, the giant climbs down after someone, "
-                       "leaves shaking.",
+                 scene="The beanstalk against the sky; high above, the giant climbs down the beanstalk, reaching "
+                       "downward, leaves shaking.",
                  action="sliding down the beanstalk, holding the golden harp", mood="frightened, eyes wide, racing as fast as possible"),
             dict(text="\"Mother! The axe!\" Jack chopped and chopped.",
                  cast=["mother"],
@@ -255,22 +261,22 @@ STORIES = {
                  action="walking along the path carrying the basket", mood="happy and carefree, mid-skip"),
             dict(text="Before long, Red met a wolf. \"Good morning,\" he said, with a very big smile.",
                  cast=["wolf"],
-                 scene="A forest clearing; the wolf leans against a tree on the right, grinning slyly.",
+                 scene="A forest clearing; the wolf stands upright on the right, leaning against a tree, grinning slyly.",
                  action="facing the wolf, holding the basket", mood="polite but unsure"),
             dict(text="\"Why not pick some flowers for Grandma?\" said the wolf.",
                  cast=["wolf"],
-                 scene="Close view of a paw pointing to a patch of bright wildflowers: poppies, daisies and "
-                       "bluebells.",
+                 scene="A patch of bright wildflowers (poppies, daisies and bluebells) at the edge of the path; the "
+                       "wolf stands upright on the right, pointing at the flowers with one paw and grinning.",
                  action="holding a small bunch of flowers close, looking at them", mood="tempted"),
             dict(text="Red wandered off the path to pick them, while the wolf ran away fast.",
                  cast=["wolf"],
-                 scene="A sunny meadow of flowers beside the forest; in the far background the wolf sprints "
-                       "off between the trees.",
+                 scene="A sunny meadow of flowers beside the forest; in the far background the wolf runs off "
+                       "upright between the trees.",
                  action="kneeling in the flowers picking them", mood="dreamy and distracted"),
             dict(text="The wolf raced straight to Grandma's house.",
                  cast=["wolf"],
-                 scene="The wolf running on all fours through the dark forest, fast, ears back, toward a "
-                       "little cottage in the distance."),
+                 scene="The wolf running upright on his hind legs through the evening forest, fast, ears back, "
+                       "toward a little stone cottage with a blue door in the distance."),
             dict(text="At last Red came to Grandma's little cottage.",
                  cast=[],
                  scene="Grandma's small stone cottage with a blue door and roses round it, in a quiet "
@@ -282,25 +288,29 @@ STORIES = {
                  action="knocking on the door, standing on tiptoe", mood="puzzled"),
             dict(text="Inside, someone was tucked up in Grandma's bed.",
                  cast=["wolf"],
-                 scene="Grandma's bedroom; the wolf lies in the bed wearing Grandma's frilled nightcap and "
-                       "spectacles, the quilt pulled up to his snout, a wardrobe in the corner."),
+                 scene="Grandma's bedroom; the wolf lies in the bed under the patchwork quilt, wearing Grandma's white frilled cotton nightcap "
+                       "and small round spectacles, the quilt pulled up to his snout, a wardrobe in the corner. "
+                       "Nobody else is in the room."),
             dict(text="\"Grandma, what big ears you have!\" \"All the better to hear you with.\"",
                  cast=["wolf"],
-                 scene="Grandma's bedroom; the wolf in the bed on the right in the nightcap, ears poking "
-                       "out of it.",
+                 scene="Grandma's bedroom; the wolf lies in the bed on the right under the patchwork quilt, "
+                       "wearing Grandma's white frilled cotton nightcap with his big pointed ears poking out of it. He is the only one in the bed, "
+                       "and the floor on the left is empty.",
                  action="standing beside the bed holding the basket", mood="suspicious"),
             dict(text="\"Grandma, what big eyes you have!\" \"All the better to see you with.\"",
                  cast=["wolf"],
-                 scene="The wolf in the bed on the left peering over the spectacles with huge yellow eyes.",
+                 scene="Grandma's bedroom; the wolf lies in the bed on the left under the patchwork quilt, wearing "
+                       "Grandma's white frilled cotton nightcap, peering over small round spectacles with huge yellow eyes. The floor on the right is "
+                       "empty.",
                  action="leaning back, gripping the basket", mood="worried, eyebrows raised, leaning away"),
             dict(text="\"Grandma, what BIG TEETH you have!\" \"All the better to EAT YOU UP!\"",
                  cast=["wolf"],
-                 scene="The wolf leaping out of the bed with the nightcap flying off, mouth open in a "
-                       "cartoonish grin, quilt tumbling."),
+                 scene="Grandma's bedroom; the wolf springs up out of the bed onto his hind legs, Grandma's white frilled cotton nightcap flying "
+                       "off his head, mouth open in a big cartoon grin, the patchwork quilt tumbling."),
             dict(text="Red screamed and ran, round and round the room!",
                  cast=["wolf"],
-                 scene="Grandma's bedroom in chaos, the chair knocked over, the wolf chasing in the "
-                       "background.",
+                 scene="Grandma's bedroom in a muddle, a chair tipped over; in the background the wolf runs "
+                       "upright across the room with his arms out.",
                  action="running away, cloak flying", mood="scared"),
             dict(text="Just then, the woodcutter burst through the door.",
                  cast=["woodcutter"],
@@ -309,8 +319,8 @@ STORIES = {
                  action="pointing toward the woodcutter, relieved", mood="relieved"),
             dict(text="The wolf leapt out of the window and ran, and he was never seen again.",
                  cast=["wolf"],
-                 scene="Outside the cottage; the wolf flies out through the open window, legs scrambling, "
-                       "toward the forest."),
+                 scene="Outside the stone cottage with the blue door; the wolf tumbles out of the open window "
+                       "and lands running upright toward the forest, ears flat, looking back in alarm."),
             dict(text="Out of the wardrobe stepped Grandma, safe and sound!",
                  cast=["grandma", "woodcutter"],
                  scene="Grandma's bedroom; Grandma steps out of the open wardrobe on the left in her "
@@ -323,7 +333,8 @@ STORIES = {
                  action="sitting at the table between them, sharing bread", mood="happy and cozy"),
             dict(text="Far away over the hills, the wolf kept running.",
                  cast=["wolf"],
-                 scene="Rolling hills at sunset; the tiny figure of the wolf runs away into the distance."),
+                 scene="Rolling green hills at sunset; the small figure of the wolf runs upright away into the "
+                       "distance."),
             dict(text="And from that day on, Red always stayed on the path.",
                  cast=["mother", "grandma"],
                  scene="The forest path at golden sunset with Red's mother and Grandma waving together "
@@ -382,6 +393,11 @@ def bible_from_scene_prompt(story, key):
             f"one full-body view standing, centered, on a plain light background. {HANDS} {NO_WORDS}")
 
 
+def _no_hero_names(story, text):
+    role = {"jack": "Jack", "red": "Red"}[story]
+    return text.replace(f"{role}'s mother", "the mother").replace(f"{role}'s Mother", "the mother")
+
+
 REFS_SENTENCE = " The reference images show the characters in this scene; draw them exactly as they look there."
 
 
@@ -390,11 +406,16 @@ def scene_prompt(story, p):
     refs = REFS_SENTENCE if [c for c in p["cast"] if not text_only(story, c)] else ""
     hero_space = ""
     if p["hero"]:
-        hero_space = (f" Leave a clear, open spot on the ground {HERO_POSITION[p['hero']]}, where one more "
-                      "character will be added later; nobody and nothing stands in that spot.")
+        # Describe the open space as scenery only. Mentioning a character "to be added later" makes the model
+        # draw one (that is how a boy got onto Jack's beanstalk).
+        hero_space = f" {OPEN_SPACE[p['hero']]} is open and uncluttered."
     calm = CALM.get(p["calm"] or "", "")
-    return (f"Art style: {STYLE} A full-bleed page from a 3D animated picture book of {STORIES[story]['title']}. "
-            f"Scene: {p['scene']}{refs} {cast} The only characters in the picture are the ones named here. "
+    # The hero's name never appears in a scene prompt ("Jack's mother" -> "the mother"): any mention of the hero
+    # invites the model to draw one.
+    scene = _no_hero_names(story, p["scene"])
+    cast = _no_hero_names(story, cast)
+    return (f"Art style: {STYLE} A full-bleed page from a 3D animated picture book of a classic fairy tale. "
+            f"Scene: {scene}{refs} {cast} The only characters in the picture are the ones named here. "
             f"Each character's face clearly shows what they feel in this moment of the story. "
             f"{SHOTS[p['shot']]}{hero_space} {calm} {HANDS} "
             f"Art style, again: {STYLE} {NO_WORDS}")

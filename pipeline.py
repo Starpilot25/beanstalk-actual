@@ -186,7 +186,8 @@ def _data_url(raw, max_side=768):
     return "data:image/jpeg;base64," + base64.b64encode(jpeg(im, 80)).decode()
 
 
-def analysis_call(images, prompt, *, label, user_id=None, book_id=None, fake_hint=None):
+def analysis_call(images, prompt, *, label, user_id=None, book_id=None, fake_hint=None, detail="low",
+                  effort="minimal"):
     """One vision call that grades a picture. Returns the parsed JSON dict."""
     t0 = time.time()
     try:
@@ -204,10 +205,11 @@ def analysis_call(images, prompt, *, label, user_id=None, book_id=None, fake_hin
             tin, tout = 2200, 180
         else:
             content = [{"type": "text", "text": prompt}] + [
-                {"type": "image_url", "image_url": {"url": _data_url(b), "detail": "low"}} for b in images]
+                {"type": "image_url", "image_url": {"url": _data_url(b, 1536 if detail == "high" else 768),
+                                                     "detail": detail}} for b in images]
             kw = {}
             if ANALYSIS_MODEL.startswith("gpt-5"):
-                kw["reasoning_effort"] = "minimal"
+                kw["reasoning_effort"] = effort
             r = client().chat.completions.create(model=ANALYSIS_MODEL, response_format={"type": "json_object"},
                                                  messages=[{"role": "user", "content": content}], **kw)
             a = json.loads(r.choices[0].message.content)
@@ -542,8 +544,15 @@ def run_pregen(story, only=None, redo=False):
                 continue
             a = safe_analysis([img] + [b for b in (db.bible_image(story, c) for c in p["cast"] if not S.text_only(story, c))
                                        if b][:3],
-                              scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}")
+                              scene_check_prompt(story, p), label=f"{story} scene {p['n']} check {attempt}",
+                              detail="high", effort="low")   # one-time art: worth a closer look
             score, ok = grade(a)
+            if a.get("extra_figure") is True:
+                ok = False
+                a.setdefault("issues", []).append("a child or an unlisted character is in the scene")
+            if a.get("off_model") is True:
+                ok = False
+                a.setdefault("issues", []).append("a character doesn't match their reference sheet")
             # The words' band must be clear in the scene itself, or the template can't be honoured.
             # (An unchecked scene is kept as is: a failed check must never cause a repaint.)
             if not a.get("unchecked") and p["layout"] == "full" and clear_zone(p, a.get("busy")) != p["zones"][0]:
@@ -579,5 +588,10 @@ def scene_check_prompt(story, p):
         "Image 1 is one generated page; any further images are the reference sheets of its characters."
         + (" The hero is added later, so an empty spot in the scene is correct." if p["hero"] else "")
         + f" IMPORTANT: this scene must contain no child, boy, girl or {S.HERO[story]['role']} at all (the child "
-          "is added later, separately), and no people other than the listed characters. If any child or extra "
-          "person appears anywhere, score story 0.")
+          "is added later, separately), and no people other than the listed characters. Look closely, including "
+          "small figures in the distance. Also check that each listed character looks like their reference sheet "
+          "(the same design, colours and clothes) and is doing what the page describes."
+          ).replace('"issues":[short strings]',
+                    '"extra_figure":bool (true if any child or anyone not listed appears),'
+                    '"off_model":bool (true if a listed character looks different from their reference sheet '
+                    'or the description),"issues":[short strings]')

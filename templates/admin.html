@@ -19,6 +19,8 @@
       <div class="row">
         <button type="button" data-run="{{ key }}">Draw everything missing</button>
         <button type="button" class="ghost" data-bible="{{ key }}">Redraw the bible</button>
+        <button type="button" class="ghost" data-allscenes="{{ key }}">Redraw all 20 scenes</button>
+        <button type="button" class="ghost" data-everything="{{ key }}">Redraw everything</button>
       </div>
     </div>
     <h3 style="margin-top:16px">Bible</h3>
@@ -47,6 +49,10 @@ async function run(body) {
 document.addEventListener("click", e => {
   const a = e.target.closest("[data-run]"), b = e.target.closest("[data-bible]"), s = e.target.closest("[data-redo]"), c = e.target.closest("[data-char]");
   if (c) run({story: c.dataset.story, only: "bible:" + c.dataset.char, redo: true});
+  const every = e.target.closest("[data-everything]");
+  if (every) run({story: every.dataset.everything, redo: true});
+  const all = e.target.closest("[data-allscenes]");
+  if (all) run({story: all.dataset.allscenes, only: Array.from({length: 20}, (_, i) => i + 1), redo: true});
   if (a) run({story: a.dataset.run});
   if (b) run({story: b.dataset.bible, only: "bible", redo: true});
   if (s) run({story: s.dataset.story, only: [+s.dataset.redo], redo: true});
