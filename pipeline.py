@@ -99,12 +99,13 @@ def _time(book_id, key, seconds, how="add"):
 # ---------------------------------------------------------------------------
 # Image helpers
 # ---------------------------------------------------------------------------
-def to_png(raw, max_side=1536):
+def to_input(raw, max_side=1536):
+    """An image ready to send to the image API. High-quality JPEG, not PNG: a 1536px PNG is ~3 MB and 16 pages
+    each holding a scene, the hero sheet, the photo and refs as PNGs (plus the request copies) ran the 512 MB
+    server out of memory mid-book. JPEG is ~10x smaller, which also makes every upload quicker."""
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
     img.thumbnail((max_side, max_side))
-    buf = io.BytesIO()
-    img.save(buf, "PNG")
-    return buf.getvalue()
+    return jpeg(img, 92)
 
 
 def jpeg(img, q=88):
@@ -143,7 +144,7 @@ def _fake_image(label, base=None, hero_at=None):
 
 def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, quality=None, hero_at=None,
                model=None):
-    """Exactly one image API call. images: list of PNG bytes (edit) or [] (generate). Returns JPEG bytes."""
+    """Exactly one image API call. images: list of JPEG bytes (edit) or [] (generate). Returns JPEG bytes."""
     quality = quality or QUALITY
     model = model or IMAGE_MODEL
     waited = _wait_for_slot()
@@ -156,7 +157,7 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
                               hero_at=hero_at)
             usage = {"text": 600, "image_in": 1500 * len(images), "out": 1600 if quality == "medium" else 3500}
         else:
-            files = [(f"in{i}.png", b, "image/png") for i, b in enumerate(images)]
+            files = [(f"in{i}.jpg", b, "image/jpeg") for i, b in enumerate(images)]
             kw = dict(model=model, prompt=prompt, size=SIZE, quality=quality, n=1, output_format="jpeg",
                       output_compression=88)
             if files:
@@ -309,19 +310,19 @@ def cancel_book(book_id, user_id):
         fail_book(book_id, user_id, "Cancelled. Your $0.99 has been put back in your balance.")
 
 
-def start_book(book_id, user_id, photo_png):
+def start_book(book_id, user_id, photo_in):
     with _running_lock:
         _running.add(book_id)
-    threading.Thread(target=_run_book_safe, args=(book_id, user_id, photo_png), daemon=True).start()
+    threading.Thread(target=_run_book_safe, args=(book_id, user_id, photo_in), daemon=True).start()
 
 
 def is_running(book_id):
     return book_id in _running
 
 
-def _run_book_safe(book_id, user_id, photo_png):
+def _run_book_safe(book_id, user_id, photo_in):
     try:
-        run_book(book_id, user_id, photo_png)
+        run_book(book_id, user_id, photo_in)
     except Cancelled:
         fail_book(book_id, user_id, "Cancelled. Your $0.99 has been put back in your balance.")
     except Exception as e:
@@ -347,7 +348,7 @@ def fail_book(book_id, user_id, message):
                 ref=f"reversal-{book_id}")
 
 
-def run_book(book_id, user_id, photo_png):
+def run_book(book_id, user_id, photo_in):
     b = db.get_book_internal(book_id)
     story, t0 = b["story"], b["started_at"]
     pages = S.all_pages(story)
@@ -372,9 +373,9 @@ def run_book(book_id, user_id, photo_png):
     hero, best = None, None
     for attempt in range(1, MAX_ATTEMPTS + 1):
         _check(book_id)
-        img = image_call([photo_png], S.hero_prompt(story), purpose="hero" if attempt == 1 else "retry",
+        img = image_call([photo_in], S.hero_prompt(story), purpose="hero" if attempt == 1 else "retry",
                          label=f"hero try {attempt}", user_id=user_id, book_id=book_id, quality=HERO_QUALITY)
-        a = safe_analysis([img, photo_png], hero_check_prompt(story), label=f"hero check {attempt}",
+        a = safe_analysis([img, photo_in], hero_check_prompt(story), label=f"hero check {attempt}",
                           user_id=user_id, book_id=book_id)
         score, ok = grade(a)
         db.add_attempt(book_id, -1, attempt, score, ok, a, img)        # -1 = the hero sheet
@@ -386,7 +387,7 @@ def run_book(book_id, user_id, photo_png):
     hero = best[1]
     _time(book_id, "hero_done_at", time.time() - t0, "max")
     db.update_book(book_id, hero=hero)
-    hero_png = to_png(hero)
+    hero_in = to_input(hero)
 
     # 2. Every hero page at once.
     db.update_book(book_id, stage="Painting the pages")
@@ -394,19 +395,19 @@ def run_book(book_id, user_id, photo_png):
     def make_page(p):
         n = p["n"]
         scene, _ = db.get_scene(story, n)
-        scene_png = to_png(scene)
+        scene_in = to_input(scene)
         best, tries, last_err, gentle, use_photo = None, 0, "", False, True
         ref_raw = [db.bible_image(story, c) for c in S.insert_refs(story, p)]
         ref_raw = [r for r in ref_raw if r]
-        ref_pngs = [to_png(r, 768) for r in ref_raw]
+        ref_ins = [to_input(r, 768) for r in ref_raw]
         for attempt in range(1, MAX_ATTEMPTS + 1):
             _check(book_id)
             tries = attempt
             db.set_page(book_id, n, status="painting", attempts=attempt)
             try:
-                imgs = [scene_png, hero_png] + ([photo_png] if use_photo else []) + ref_pngs
+                imgs = [scene_in, hero_in] + ([photo_in] if use_photo else []) + ref_ins
                 img = image_call(imgs, S.insert_prompt(story, p, gentle=gentle, with_photo=use_photo,
-                                                       with_refs=bool(ref_pngs)),
+                                                       with_refs=bool(ref_ins)),
                                  purpose="page" if attempt == 1 else "retry", label=f"page {n} try {attempt}",
                                  user_id=user_id, book_id=book_id, hero_at=p["hero"])
             except Exception as e:          # e.g. a safety rejection: count it as a failed try
@@ -415,12 +416,12 @@ def run_book(book_id, user_id, photo_png):
                     # Refusals come back at once and cost nothing, and without a retry the stand-in stays on
                     # the page, so they always get all 3 tries, whatever the time. Each retry asks for less:
                     if gentle:
-                        ref_pngs = []       # try 3: just the scene and the hero sheet
+                        ref_ins = []       # try 3: just the scene and the hero sheet
                         use_photo = False
                     gentle = True           # try 2: the child just standing nearby, watching
                 continue
             db.set_page(book_id, n, status="checking", thumb=thumb(img))
-            a = safe_analysis([img, hero, photo_png] + ref_raw, S.analysis_prompt(story, p, True, with_photo=True),
+            a = safe_analysis([img, hero, photo_in] + ref_raw, S.analysis_prompt(story, p, True, with_photo=True),
                               label=f"page {n} check {attempt}",
                               user_id=user_id, book_id=book_id, fake_hint=p["hero"])
             if a.get("mannequin") is True:     # the stand-in wasn't replaced: wrong, not just imperfect
@@ -568,7 +569,7 @@ def run_pregen(story, only=None, redo=False):
                 return
             try:
                 scene_img, _ = db.get_scene(story, src)
-                img = image_call([to_png(scene_img, 1024)], S.bible_from_scene_prompt(story, k), purpose="bible",
+                img = image_call([to_input(scene_img, 1024)], S.bible_from_scene_prompt(story, k), purpose="bible",
                                  label=f"{story} bible {k} from scene {src}", quality=SCENE_QUALITY)
                 _plog(f"{story}: drew {name} from scene {src} instead")
             except Exception as e2:
@@ -592,7 +593,7 @@ def run_pregen(story, only=None, redo=False):
         missing = [c for c in p["cast"] if not S.text_only(story, c) and not db.bible_image(story, c)]
         if missing:
             _plog(f"{story}: scene {p['n']}: drawing {', '.join(missing)} from the description (no bible picture yet)")
-        refs = [to_png(db.bible_image(story, c), 1024) for c in p["cast"]
+        refs = [to_input(db.bible_image(story, c), 1024) for c in p["cast"]
                 if not S.text_only(story, c) and db.bible_image(story, c)]
         best, last_err = None, ""
         prompt = S.scene_prompt(story, p)

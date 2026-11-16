@@ -391,7 +391,7 @@ def book_create():
     if not f:
         return error("Add a photo first.")
     try:
-        photo = pipeline.to_png(f.read(), 1024)
+        photo = pipeline.to_input(f.read(), 1024)
     except Exception:
         return error("That file isn't a readable image. Use a JPG, PNG or WEBP photo.")
     details = clean_details(request.form)
