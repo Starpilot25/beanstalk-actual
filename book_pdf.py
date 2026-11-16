@@ -15,7 +15,7 @@ import threading
 import numpy as np
 from PIL import Image
 from reportlab.lib.colors import Color, HexColor
-from reportlab.lib.utils import simpleSplit
+from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -85,30 +85,63 @@ def _crop32(raw):
     return im
 
 
-def _shade(im, zone):
-    """Darken only the words' band, strongest at the page edge, so white type reads on anything.
-    Built as a one-pixel-wide mask stretched across the picture, so it costs almost no memory."""
-    h = im.height
-    t = np.zeros(h, dtype="float32")
-    third = h // 3
+def _shade_alpha(zone, steps=120):
+    """How dark the shade is at each of `steps` horizontal strips, bottom to top (0..1). The words' band is
+    darkest at the page edge, so white type reads on anything."""
+    y = (np.arange(steps) + 0.5) / steps            # 0 = bottom of the page, 1 = top
+    a = np.zeros(steps)
+    third, pad = 1 / 3, 40 / 1024                    # same shape as the old pixel mask on the 1024px art
     if zone == "top":
-        t[:third + 40] = np.linspace(0.62, 0, third + 40) ** 1.2
+        lo = 1 - third - pad
+        m = y >= lo
+        a[m] = (0.62 * (y[m] - lo) / (1 - lo)) ** 1.2
     elif zone == "bottom":
-        t[h - third - 40:] = np.linspace(0, 0.62, third + 40) ** 1.2
-    else:  # middle: a soft horizontal band
-        x = np.linspace(-1, 1, third + 80)
-        t[third - 40:2 * third + 40] = 0.5 * np.exp(-(x ** 2) / 0.35)
-    mask = Image.fromarray((t * 255).astype("uint8").reshape(h, 1), "L").resize(im.size)
-    return Image.composite(Image.new("RGB", im.size, (12, 16, 24)), im, mask)
+        hi = third + pad
+        m = y <= hi
+        a[m] = (0.62 * (hi - y[m]) / hi) ** 1.2
+    else:
+        lo, hi = third - pad, 2 * third + pad
+        m = (y >= lo) & (y <= hi)
+        x = (y[m] - lo) / (hi - lo) * 2 - 1
+        a[m] = 0.5 * np.exp(-(x ** 2) / 0.35)
+    return a
+
+
+_SHADES = {}
+
+
+def _draw_shade(c, zone):
+    """Lay the shade over the picture as a tiny see-through image (1 x 256 pixels) stretched across the page.
+    Doing it in the picture's own pixels meant decoding, blending and re-encoding every 1536px picture, about
+    18 s a book on the 0.1-CPU server; this costs nothing."""
+    if zone not in _SHADES:
+        a = _shade_alpha(zone, 256)[::-1]           # image rows run top to bottom
+        rgba = np.zeros((256, 1, 4), dtype="uint8")
+        rgba[..., 0], rgba[..., 1], rgba[..., 2] = 12, 16, 24
+        rgba[..., 3] = (a * 255).round().astype("uint8").reshape(256, 1)
+        _SHADES[zone] = ImageReader(Image.fromarray(rgba, "RGBA"))
+    c.drawImage(_SHADES[zone], 0, 0, W, H, mask="auto")
 
 
 _tls = threading.local()
 
 
+def _path(raw):
+    """A JPEG file for the PDF to embed as it is. The art is already 3:2 JPEG, so it is written straight to disk
+    with no decoding at all; anything else is cropped and saved once."""
+    _tls.n = getattr(_tls, "n", 0) + 1
+    path = os.path.join(_tls.dir, f"{_tls.n}.jpg")
+    im = Image.open(io.BytesIO(raw))                 # reads the header only
+    if im.format == "JPEG" and im.mode == "RGB" and abs(im.width / im.height - W / H) < 0.005:
+        with open(path, "wb") as f:
+            f.write(raw)
+        return path
+    return _jpeg(_crop32(raw))
+
+
 def _jpeg(im):
-    """Save the picture as a JPEG file and hand the PDF its path: the PDF embeds the JPEG bytes as they are.
-    Passing pixels instead made the PDF library re-compress them (about 100 s for a book on a slow server) and
-    hold every decoded picture in memory until the end (300 MB+). Files: ~1.5 s and under 80 MB."""
+    """Save a picture as a JPEG file and hand the PDF its path: the PDF embeds the JPEG bytes as they are, rather
+    than re-compressing pixels (about 100 s and 300 MB+ for a book on the slow server)."""
     _tls.n = getattr(_tls, "n", 0) + 1
     path = os.path.join(_tls.dir, f"{_tls.n}.jpg")
     im.save(path, "JPEG", quality=90)
@@ -116,7 +149,8 @@ def _jpeg(im):
 
 
 def _full_page(c, raw, text, zone, n):
-    c.drawImage(_jpeg(_shade(_crop32(raw), zone)), 0, 0, W, H)
+    c.drawImage(_path(raw), 0, 0, W, H)
+    _draw_shade(c, zone)
     lo, hi = BAND[zone]
     band_bottom, band_h = lo * H, (hi - lo) * H
     size, lines = _fit(text, W - 2 * MARGIN - 60, band_h - 36)
@@ -150,7 +184,7 @@ def _below_page(c, raw, text, n):
     p = c.beginPath()
     p.roundRect(x, y, aw, ah, 14)
     c.clipPath(p, stroke=0, fill=0)
-    c.drawImage(_jpeg(_crop32(raw)), x, y, aw, ah)
+    c.drawImage(_path(raw), x, y, aw, ah)
     c.restoreState()
     c.setStrokeColor(HexColor("#c9a24a"))
     c.setLineWidth(2)
@@ -238,10 +272,11 @@ def _cover(c, raw, title, name, zone):
         c.rect(0, 0, W, H, stroke=0, fill=1)
         aw, ah = W - 120, (W - 120) / 1.5 * 0.82
         x, y = 60, 40
-        c.drawImage(_jpeg(_crop32(raw)), x, y, aw, ah, preserveAspectRatio=True, anchor="c")
+        c.drawImage(_path(raw), x, y, aw, ah, preserveAspectRatio=True, anchor="c")
         ty = H - 70
     else:
-        c.drawImage(_jpeg(_shade(_crop32(raw), "top")), 0, 0, W, H)
+        c.drawImage(_path(raw), 0, 0, W, H)
+        _draw_shade(c, "top")
         ty = H - 74
     size = 46
     while pdfmetrics.stringWidth(title, FONT, size) > W - 120 and size > 28:
