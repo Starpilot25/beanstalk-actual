@@ -474,10 +474,16 @@ def run_book(book_id, user_id, photo_in):
     _time(book_id, "pages_done_at", time.time() - t0, "max")
     db.update_book(book_id, stage="Putting the book together")
     from book_pdf import build_book
+    t1 = time.time()
     b = db.get_book_internal(book_id)
     imgs = db.page_images_internal(book_id)
+    t2 = time.time()
     pdf = build_book(story, imgs, hero, b)
+    t3 = time.time()
     db.update_book(book_id, pdf=pdf, status="done", stage="Done", done_at=time.time())
+    _time(book_id, "pdf_load_s", t2 - t1, "max")       # the three parts of "Putting the book together",
+    _time(book_id, "pdf_build_s", t3 - t2, "max")      # shown on the finished book
+    _time(book_id, "pdf_save_s", time.time() - t3, "max")
     _time(book_id, "pdf_done_at", time.time() - t0, "max")
     log.info("book %s timing %s", book_id, {k: round(v, 1) for k, v in timings.get(book_id, {}).items()})
     log.info("book %s done in %.1fs", book_id, time.time() - t0)

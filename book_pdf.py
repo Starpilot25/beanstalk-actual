@@ -19,6 +19,11 @@ from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+from reportlab import rl_config
+
+# Embed the JPEGs as raw binary. reportlab's default wraps every image in ASCII85 text, done in pure Python here:
+# about 3.4 s a book on a laptop and ~15 s on the 0.1-CPU server, and a PDF 25% bigger. Binary: 0.1 s.
+rl_config.useA85 = 0
 
 import stories as S
 

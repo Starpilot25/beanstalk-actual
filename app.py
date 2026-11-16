@@ -252,6 +252,12 @@ def health():
     return "ok"
 
 
+@app.get("/version")
+def version():
+    """Which commit is live (Render sets RENDER_GIT_COMMIT), so a test can tell a deploy has landed."""
+    return (os.environ.get("RENDER_GIT_COMMIT") or "local")[:7]
+
+
 # ---------------------------------------------------------------------------
 # Sign-in
 # ---------------------------------------------------------------------------
