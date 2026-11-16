@@ -451,6 +451,12 @@ def ledger_row(user_id, ledger_id):
         return dict(r._mapping) if r else None
 
 
+def book_reversed(book_id):
+    """True if a failed book's charge was already put back automatically (ledger ref reversal-<id>)."""
+    with engine.connect() as c:
+        return c.execute(select(ledger.c.id).where(ledger.c.ref == f"reversal-{book_id}")).first() is not None
+
+
 def refunded_cents(ledger_id):
     """How much of a charge or deposit has already been refunded or is waiting to be."""
     with engine.connect() as c:

@@ -118,6 +118,8 @@ def charge_book(user_id, book_id, title):
 def refundable(user_id, row):
     """How much of this ledger row can still be refunded (cents)."""
     left = abs(row["amount_cents"]) - db.refunded_cents(row["id"])
+    if row["kind"] == "book" and row.get("book_id") and db.book_reversed(row["book_id"]):
+        return 0                                       # the book failed and its $0.99 was already put back
     if row["kind"] == "deposit":
         left = min(left, db.balance(user_id))          # can't refund money already spent
     return max(0, left) if row["kind"] in ("deposit", "book") else 0
