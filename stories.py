@@ -507,14 +507,16 @@ def scene_prompt(story, p):
     # empty never worked: the model kept drawing a child anyway, just in the wrong place and clothes. Each
     # book then swaps the stand-in for the real child (insert_prompt), keeping the pose.
     if p["hero"]:
-        who = (f" One stand-in child is {HERO_POSITION[p['hero']]}, {p['action']}, full-length with the face "
-               f"clearly visible, wearing {HERO[story]['outfit']}; the child feels {p['mood']}. The only figures "
-               "in the picture are this one child and the characters named here.")
+        # The stand-in is a faceless wooden mannequin, not a child: a leftover mannequin is unmistakable (to
+        # people and to the check), where a leftover stand-in child in the hero's costume passed for the hero.
+        who = (f" A stand-in figure is {HERO_POSITION[p['hero']]}: a plain, faceless, child-sized wooden artist's mannequin, {p['action']}, full-length, "
+               f"dressed in {HERO[story]['outfit']}, its pose and body language showing {p['mood']}. The only "
+               "figures in the picture are this mannequin and the characters named here.")
         grown = [BIBLE[story][c][0] for c in p["cast"] if c in ("mother", "grandma", "wife", "woodcutter", "old_man")]
         if grown:   # the cartoon style shrinks grown-ups next to a child unless told the scale
             who += (" " + _no_hero_names(story, ", ".join(grown)).capitalize()
                     + (" is a grown-up" if len(grown) == 1 else " are grown-ups")
-                    + ", clearly taller than the child: the child's head reaches about their waist.")
+                    + ", clearly taller than the mannequin: its head reaches about their waist.")
     else:
         who = " Every figure in the picture is one of the characters named here."
     calm = CALM.get(p["calm"] or "", "")
@@ -564,10 +566,10 @@ def insert_prompt(story, p, gentle=False, with_photo=True, with_refs=True):
                       "markings, clothes and proportions.")
     action = (f"standing nearby, watching, feeling {p['mood']}" if gentle else p["action"])
     return (f"Art style: {STYLE} Image 1 is a finished page from a 3D animated picture book. Image 2 is the "
-            f"character sheet of the hero, {h['role']}.{photo_note}{ref_note} Image 1 has a stand-in child "
-            f"{HERO_POSITION[p['hero']]}, "
-            f"{action}. Replace that stand-in child with the hero from image 2, in the same place and the same "
-            f"pose, so the hero is the only child in the picture. The hero is the exact character from image 2: "
+            f"character sheet of the hero, {h['role']}.{photo_note}{ref_note} Image 1 has a stand-in: a faceless "
+            f"wooden mannequin {HERO_POSITION[p['hero']]}, {action}. Replace the mannequin completely with the hero "
+            f"from image 2, a real living child with a real face, in the same place and the same pose; no wood, no "
+            f"mannequin and no blank face remain anywhere. The hero is the exact character from image 2: "
             "the same face, hair, skin tone, age and "
             "body proportions, an unmistakable match, with the face clearly visible. The hero wears exactly the "
             "outfit shown in image 2, replacing the stand-in's clothes: if image 2 shows a skirt or dress, the hero "
@@ -612,7 +614,10 @@ def analysis_prompt(story, p, has_hero, with_photo=False):
         "Then map where the faces and the important story things are, on a 3x3 grid (rows top/middle/bottom, "
         "columns left/center/right): mark a cell true if a face, an eye, a hand doing something, or an object "
         "the reader must see is in it; false if it is only sky, wall, floor, grass, foliage or other background.\n"
+        + ("Also answer mannequin: true if a wooden mannequin, a faceless or blank-faced figure, or any part of "
+           "one is still visible anywhere in image 1.\n" if has_hero else "") +
         "Reply with only JSON: {\"hero\":int,\"story\":int,\"anatomy\":int,\"clean\":int,\"expression\":int,"
+        + ("\"mannequin\":bool," if has_hero else "") +
         "\"issues\":[short strings],\"busy\":{\"top\":[bool,bool,bool],\"middle\":[bool,bool,bool],"
         "\"bottom\":[bool,bool,bool]}}"
     )

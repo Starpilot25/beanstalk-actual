@@ -328,6 +328,7 @@ def book_json(b):
         pages.append({**p, "text": t["text"], "premade": not t["hero"], "layout": t["layout"],
                       "cover": p["n"] == 0})
     out["pages"] = pages
+    out["timing"] = {k: round(v, 1) for k, v in pipeline.timings.get(b["id"], {}).items()}
     done = sum(1 for p in pages if p["status"] == "done")
     out["done_pages"] = done
     if b["status"] == "running" and pages and b["stage"] == "Painting the pages":

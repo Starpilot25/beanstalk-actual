@@ -411,7 +411,16 @@ function render(b) {
   $("doneRow").hidden = b.status !== "done";
   if (b.status === "done") {
     $("pdfLink").href = `/api/books/${b.id}/pdf`;
-    $("doneNote").innerHTML = `Ready <b>${Math.round(b.elapsed)} seconds</b> after upload. It's saved in My books.`;
+    const t = b.timing || {};
+    const parts = [];
+    if (t.hero_done_at != null) parts.push(`hero drawn by ${Math.round(t.hero_done_at)} s`);
+    if (t.pages_done_at != null) parts.push(`pages done by ${Math.round(t.pages_done_at)} s`);
+    if (t.page_slowest != null) parts.push(`slowest page ${Math.round(t.page_slowest)} s`);
+    if (t.retry_slowest != null) parts.push(`slowest repaint ${Math.round(t.retry_slowest)} s`);
+    if (t.check_slowest != null) parts.push(`slowest check ${Math.round(t.check_slowest)} s`);
+    if (t.rate_limit_wait_max) parts.push(`longest wait for the rate limit ${Math.round(t.rate_limit_wait_max)} s`);
+    $("doneNote").innerHTML = `Ready <b>${Math.round(b.elapsed)} seconds</b> after upload. It's saved in My books.` +
+      (parts.length ? `<br><span class="muted small">Where the time went: ${parts.join(" · ")}</span>` : "");
   }
   $("cancelBook").hidden = b.status !== "running";
   $("failRow").hidden = b.status !== "failed";

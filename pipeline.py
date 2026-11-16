@@ -72,6 +72,8 @@ _ipm_times = deque()
 
 
 def _wait_for_slot():
+    """Blocks until an image call may start; returns how long it waited (seconds)."""
+    t = time.time()
     while True:
         with _ipm_lock:
             now = time.time()
@@ -79,9 +81,19 @@ def _wait_for_slot():
                 _ipm_times.popleft()
             if len(_ipm_times) < IPM:
                 _ipm_times.append(now)
-                return
+                return now - t
             wait = 60 - (now - _ipm_times[0]) + 0.05
         time.sleep(min(wait, 2))
+
+
+timings = {}   # book_id -> where the time went (shown on the finished book)
+
+
+def _time(book_id, key, seconds, how="add"):
+    if book_id is None:
+        return
+    d = timings.setdefault(book_id, {})
+    d[key] = (d.get(key, 0) + seconds) if how == "add" else max(d.get(key, 0), seconds)
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +146,8 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
     """Exactly one image API call. images: list of PNG bytes (edit) or [] (generate). Returns JPEG bytes."""
     quality = quality or QUALITY
     model = model or IMAGE_MODEL
-    _wait_for_slot()
+    waited = _wait_for_slot()
+    _time(book_id, "rate_limit_wait_max", waited, "max")
     t0 = time.time()
     usage = None
     try:
@@ -175,6 +188,7 @@ def image_call(images, prompt, *, purpose, label, user_id=None, book_id=None, qu
     else:                                   # no usage reported: fall back to a per-image estimate
         cost, tin, tout = float(os.environ.get("IMAGE_COST_FALLBACK", "0.06")), 0, 0
     log.info("image OK %s book=%s %s ms=%d cost=$%.4f", purpose, book_id, label, ms, cost)
+    _time(book_id, f"{purpose}_slowest", ms / 1000, "max")
     db.log_call(user_id=user_id, book_id=book_id, purpose=purpose, model=model, ms=ms, ok=1,
                 input_tokens=tin, output_tokens=tout, cost_usd=cost, detail=label)
     return out
@@ -220,6 +234,7 @@ def analysis_call(images, prompt, *, label, user_id=None, book_id=None, fake_hin
                     input_tokens=0, output_tokens=0, cost_usd=0.0, detail=f"{label}: {str(e)[:250]}")
         raise
     ms = int((time.time() - t0) * 1000)
+    _time(book_id, "check_slowest", ms / 1000, "max")
     cost = (tin * PRICE["llm_in"] + tout * PRICE["llm_out"]) / 1e6
     db.log_call(user_id=user_id, book_id=book_id, purpose="analysis", model=ANALYSIS_MODEL, ms=ms, ok=1,
                 input_tokens=tin, output_tokens=tout, cost_usd=cost, detail=label)
@@ -369,6 +384,7 @@ def run_book(book_id, user_id, photo_png):
             break
         db.update_book(book_id, stage=f"Redrawing {name} (attempt {attempt + 1} of 3)")
     hero = best[1]
+    _time(book_id, "hero_done_at", time.time() - t0, "max")
     db.update_book(book_id, hero=hero)
     hero_png = to_png(hero)
 
@@ -407,6 +423,9 @@ def run_book(book_id, user_id, photo_png):
             a = safe_analysis([img, hero, photo_png] + ref_raw, S.analysis_prompt(story, p, True, with_photo=True),
                               label=f"page {n} check {attempt}",
                               user_id=user_id, book_id=book_id, fake_hint=p["hero"])
+            if a.get("mannequin") is True:     # the stand-in wasn't replaced: wrong, not just imperfect
+                a["hero"] = 0
+                a.setdefault("issues", []).append("the wooden stand-in is still on the page")
             score, ok = grade(a)
             db.add_attempt(book_id, n, attempt, score, ok, a, img)
             if best is None or (score or 0) > (best[0] or 0):
@@ -451,12 +470,15 @@ def run_book(book_id, user_id, photo_png):
 
     # 3. The PDF, built once and stored, so it downloads instantly from now on.
     _check(book_id)
+    _time(book_id, "pages_done_at", time.time() - t0, "max")
     db.update_book(book_id, stage="Putting the book together")
     from book_pdf import build_book
     b = db.get_book_internal(book_id)
     imgs = db.page_images_internal(book_id)
     pdf = build_book(story, imgs, hero, b)
     db.update_book(book_id, pdf=pdf, status="done", stage="Done", done_at=time.time())
+    _time(book_id, "pdf_done_at", time.time() - t0, "max")
+    log.info("book %s timing %s", book_id, {k: round(v, 1) for k, v in timings.get(book_id, {}).items()})
     log.info("book %s done in %.1fs", book_id, time.time() - t0)
 
 
@@ -594,6 +616,7 @@ def run_pregen(story, only=None, redo=False):
             figs = [f for f in (a.get("figures") if isinstance(a.get("figures"), list) else []) if isinstance(f, dict)]
             is_stand = [f for f in figs if "stand" in str(f.get("who", "")).lower()]
             kids = [f for f in figs if str(f.get("age", "")).lower().startswith("child") and f not in is_stand]
+            # (the stand-in is a mannequin now, so any real child is wrong)
             unknown = [f for f in figs if str(f.get("who", "")).lower() in ("unknown", "") and f not in is_stand]
             allowed = 1 if p["hero"] else 0                      # hero pages: exactly one stand-in child
             too_many = len(is_stand) > allowed
@@ -641,9 +664,10 @@ def scene_check_prompt(story, p):
     return S.analysis_prompt(story, p, False).replace(
         "Image 1 is one generated page.",
         "Image 1 is one generated page; any further images are the reference sheets of its characters."
-        + ((f" IMPORTANT: this scene must contain exactly ONE child: a stand-in child {S.HERO_POSITION[p['hero']]}, "
-            f"{p['action']}, in {S.HERO[story]['outfit']} (label them \"stand-in\"). Any other child, or anyone not "
-            "listed, is wrong.") if p["hero"] else
+        + ((f" IMPORTANT: this scene must contain exactly one stand-in: a faceless wooden mannequin "
+            f"{S.HERO_POSITION[p['hero']]}, {p['action']}, dressed in {S.HERO[story]['outfit']} (label it "
+            "\"stand-in\"). It must contain no child at all; any real child, or anyone not listed, is wrong.")
+           if p["hero"] else
            " IMPORTANT: this scene must contain no child at all, and no one who isn't listed.")
         + " Look closely, including small figures in the distance. Also check that each listed character looks like "
           "their reference sheet (the same design, colours and clothes) and is doing what the page describes."
