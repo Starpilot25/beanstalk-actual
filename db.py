@@ -255,6 +255,16 @@ def update_book(book_id, **vals):
         c.execute(update(storybooks).where(storybooks.c.id == book_id).values(**vals))
 
 
+def fail_if_running(book_id, **vals):
+    """Mark a book failed only if it is still running, in one statement. Returns True if this call changed it.
+    Without the condition, a status check that read 'running' a moment before the job finished could overwrite a
+    finished book with 'failed' (and refund it): that happened to book #46."""
+    with engine.begin() as c:
+        r = c.execute(update(storybooks).where(storybooks.c.id == book_id, storybooks.c.status == "running")
+                      .values(**vals))
+        return r.rowcount == 1
+
+
 def get_book(user_id, book_id):
     with engine.connect() as c:
         b = c.execute(select(*[storybooks.c[k] for k in BOOK_COLS])

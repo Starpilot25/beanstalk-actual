@@ -347,7 +347,8 @@ def _run_book_safe(book_id, user_id, photo_in):
 def fail_book(book_id, user_id, message):
     """Mark the book failed and give the $0.99 back (once)."""
     b = db.get_book_internal(book_id)
-    db.update_book(book_id, status="failed", stage="Failed", error=message[:400])
+    if not db.fail_if_running(book_id, status="failed", stage="Failed", error=message[:400]):
+        return                     # already finished, failed or cancelled: leave it, and don't refund twice
     if b and b.get("charge_id"):
         db.post(user_id, "reversal", 99, f"Refund: book #{book_id} could not be made", book_id=book_id,
                 ref=f"reversal-{book_id}")
