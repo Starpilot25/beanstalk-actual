@@ -421,6 +421,13 @@ for _key, _story in STORIES.items():
         for _c in _p["cast"]:
             assert _c in BIBLE[_key], (_key, _i, _c)
 
+# Pre-made scenes are drawn once and shared by every book, so their text placement can be checked by a person,
+# once. These failed that check (the words crossed a face or head the automatic grid had called clear), so their
+# words go on the paper under the picture instead of on it.
+TEXT_BELOW = {("jack", 16)}        # the giant's head reaches into the top band
+for _key, _n in TEXT_BELOW:
+    STORIES[_key]["pages"][_n - 1].update(layout="framed", zones=[])
+
 STORY_KEYS = list(STORIES)
 # Characters drawn from their written description in every scene, with no portrait in the bible (a last resort
 # if no image model will draw them).
@@ -617,8 +624,8 @@ def analysis_prompt(story, p, has_hero, with_photo=False):
                             "every character shows the feeling listed for them, clearly; a bland or pleasant face "
                             "where the page calls for menace, fear or anger scores 3 or less") + "\n"
         "Then map where the faces and the important story things are, on a 3x3 grid (rows top/middle/bottom, "
-        "columns left/center/right): mark a cell true if a face, an eye, a hand doing something, or an object "
-        "the reader must see is in it; false if it is only sky, wall, floor, grass, foliage or other background.\n"
+        "columns left/center/right): mark a cell true if a face, an eye, any part of a head (even just the top of the hair or a hat), a "
+        "hand doing something, or an object the reader must see is in it, however little of it; false if it is only sky, wall, floor, grass, foliage or other background.\n"
         + ("Also answer mannequin: true if a wooden mannequin, a faceless or blank-faced figure, or any part of "
            "one is still visible anywhere in image 1.\n" if has_hero else "") +
         "Reply with only JSON: {\"hero\":int,\"story\":int,\"anatomy\":int,\"clean\":int,\"expression\":int,"

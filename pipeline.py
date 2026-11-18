@@ -40,7 +40,12 @@ ANALYSIS_MODEL = os.environ.get("ANALYSIS_MODEL", "gpt-5-mini")
 BIBLE_FALLBACK_MODELS = [m.strip() for m in os.environ.get("BIBLE_FALLBACK_MODELS", "gpt-image-1.5,gpt-image-1").split(",")
                          if m.strip()]
 MAX_ATTEMPTS = 3
-RETRY_DEADLINE = float(os.environ.get("RETRY_DEADLINE", "48"))  # seconds after upload: no new repaints after this
+# Seconds after upload after which an imperfect page is not repainted. A repaint costs ~20 s to paint plus ~7 s to
+# check, and the first tries finish at 35-55 s, so with 48 s here any repaint landed the book at 75-86 s. At 30 s a
+# book stays under a minute; pages that are wrong rather than imperfect (hero missing, stand-in left, refused)
+# still get all 3 tries whatever the time.
+RETRY_DEADLINE = float(os.environ.get("RETRY_DEADLINE", "30"))
+HERO_DEADLINE = float(os.environ.get("HERO_DEADLINE", "24"))     # the same for the hero sheet, which comes first
 IPM = int(os.environ.get("IMAGES_PER_MINUTE", "20"))
 WORKERS = int(os.environ.get("PAGE_WORKERS", "16"))
 SIZE = "1536x1024"
@@ -381,7 +386,7 @@ def run_book(book_id, user_id, photo_in):
         db.add_attempt(book_id, -1, attempt, score, ok, a, img)        # -1 = the hero sheet
         if best is None or (score or 0) > (best[0] or 0):
             best = (score, img)
-        if ok or time.time() - t0 > RETRY_DEADLINE / 2:
+        if ok or time.time() - t0 > HERO_DEADLINE:
             break
         db.update_book(book_id, stage=f"Redrawing {name} (attempt {attempt + 1} of 3)")
     hero = best[1]
