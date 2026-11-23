@@ -191,6 +191,27 @@ api_calls = Table(                 # what every API call cost us
     Column("detail", String(300)),
 )
 
+print_orders = Table(              # printed copies ordered through the print API (Lulu, sandbox)
+    "print_orders", meta,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.id"), index=True),
+    Column("book_id", Integer, index=True),
+    Column("status", String(30)),        # placing | CREATED | UNPAID | PRODUCTION_READY | ... | SHIPPED | failed
+    Column("lulu_id", String(40)),
+    Column("shipping_level", String(20)),
+    Column("address", Text),             # JSON, as sent to the printer
+    Column("quote", Text),               # JSON: the printer's costs and our price, as shown when approved
+    Column("price_cents", Integer),
+    Column("ledger_id", Integer),        # the charge on the balance
+    Column("file_token", String(64)),    # secret in the file URLs the printer downloads from
+    Column("interior", LargeBinary),
+    Column("cover", LargeBinary),
+    Column("error", String(400)),
+    Column("approved_at", Float),
+    Column("created_at", Float),
+    Column("updated_at", Float),
+)
+
 meta.create_all(engine)
 
 
@@ -559,3 +580,48 @@ def recent_failures(limit=12):
         rows = c.execute(select(api_calls.c.at, api_calls.c.purpose, api_calls.c.model, api_calls.c.detail)
                          .where(api_calls.c.ok == 0).order_by(api_calls.c.id.desc()).limit(limit)).all()
         return [f"{time.strftime('%H:%M:%S', time.localtime(r.at))} {r.purpose} {r.model}: {r.detail}" for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Print orders
+# ---------------------------------------------------------------------------
+ORDER_COLS = ["id", "book_id", "status", "lulu_id", "shipping_level", "address", "quote", "price_cents", "error",
+              "approved_at", "created_at", "updated_at"]
+
+
+def create_order(**vals):
+    vals.setdefault("created_at", time.time())
+    vals["updated_at"] = time.time()
+    with engine.begin() as c:
+        return c.execute(insert(print_orders).values(**vals)).inserted_primary_key[0]
+
+
+def update_order(order_id, **vals):
+    vals["updated_at"] = time.time()
+    with engine.begin() as c:
+        c.execute(update(print_orders).where(print_orders.c.id == order_id).values(**vals))
+
+
+def list_orders(user_id):
+    with engine.connect() as c:
+        rows = c.execute(select(*[print_orders.c[k] for k in ORDER_COLS])
+                         .where(print_orders.c.user_id == user_id).order_by(print_orders.c.id.desc())).all()
+        return [dict(r._mapping) for r in rows]
+
+
+def get_order(user_id, order_id):
+    with engine.connect() as c:
+        r = c.execute(select(*[print_orders.c[k] for k in ORDER_COLS])
+                      .where(print_orders.c.id == order_id, print_orders.c.user_id == user_id)).first()
+        return dict(r._mapping) if r else None
+
+
+def order_file(order_id, token, kind):
+    """For the printer's download: no login, but the URL carries the order's secret token."""
+    import hmac as _hmac
+    col = {"interior": print_orders.c.interior, "cover": print_orders.c.cover}[kind]
+    with engine.connect() as c:
+        r = c.execute(select(col, print_orders.c.file_token).where(print_orders.c.id == order_id)).first()
+    if not r or not r[1] or not _hmac.compare_digest(r[1], token):
+        return None
+    return r[0]

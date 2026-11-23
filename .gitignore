@@ -12,3 +12,10 @@ local.db
 .env.example
 .env.example
 .env.example
+
+# AI persona run: keep the answers, photos and the few pages responses.md shows; not every page or the PDFs.
+personas/out/**/*.pdf
+personas/out/*/page*.jpg
+!personas/out/*/page00.jpg
+!personas/out/*/page01.jpg
+!personas/out/*/page12.jpg

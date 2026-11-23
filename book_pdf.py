@@ -1,5 +1,11 @@
 """
-PDF layer: 20 story pages laid out by the shared TEMPLATE, then an About Me page. Pure Python (reportlab).
+PDF layer, pure Python (reportlab). Two outputs from the same page designs:
+
+  build_book          the downloadable PDF: front cover ("Title, starring Name"), copyright page, the 20 story
+                      pages laid out by the shared TEMPLATE, and the About Me back cover.
+  build_print_*       the files a print shop needs (Lulu): an interior PDF (title page, copyright page, story
+                      pages 1-20, The End, padded to a multiple of 4) and a one-page cover spread (back cover About
+                      Me + front cover), at the printed trim size with 1/8 inch bleed.
 
 The image model never draws words. Every word here is real type (Young Serif), placed in one of two ways:
   full   - the art fills the page; the words sit in the band (top, middle or bottom third) that the analysis
@@ -26,6 +32,11 @@ from reportlab import rl_config
 rl_config.useA85 = 0
 
 import stories as S
+from contextlib import contextmanager
+from datetime import date
+
+PUBLISHER = os.environ.get("PUBLISHER", "Beanstalk Books")
+PUBLISHER_PLACE = os.environ.get("PUBLISHER_PLACE", "New York, NY")
 
 FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 pdfmetrics.registerFont(TTFont("YoungSerif", os.path.join(FONT_DIR, "YoungSerif-Regular.ttf")))
@@ -208,7 +219,7 @@ def _below_page(c, raw, text, n):
 def _number(c, n, light):
     c.setFont(FONT, 11)
     c.setFillColor(Color(1, 1, 1, 0.85) if light else Color(0.12, 0.16, 0.13, 0.7))
-    c.drawRightString(W - 18, 12, str(n))
+    c.drawRightString(W - 40, 14, str(n))      # inside the printer's half-inch safety margin
 
 
 def _about(c, book, hero):
@@ -299,9 +310,90 @@ def _cover(c, raw, title, name, zone):
         c.drawCentredString(W / 2, ty - 38, starring)
 
 
+
+def _copyright(c, story, book):
+    """The copyright page: publisher, notice, and what the book is. The story starts on the page after this."""
+    c.setFillColor(PAPER)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+    title = S.STORIES[story]["title"]
+    name = book.get("child_name") or ""
+    x, y = 120, H - 150
+    width = W - 240
+    c.setFillColor(INK)
+    c.setFont(FONT, 18)
+    c.drawString(x, y, f"{title}, starring {name}" if name else title)
+    y -= 34
+    made = book.get("done_at") or book.get("started_at")
+    when = date.fromtimestamp(made) if made else date.today()
+    paras = [
+        f"Text and illustrations copyright \u00a9 {when.year} {PUBLISHER}. All rights reserved. No part of this book "
+        f"may be reproduced in any form without written permission from the publisher.",
+        f"Published by {PUBLISHER}, {PUBLISHER_PLACE}.",
+        "The story is retold from the traditional fairy tale. The pictures were made with the help of AI from a "
+        "photograph supplied by the person who ordered this book.",
+        f"Made especially for {name or 'you'}. First edition, {when.strftime('%B %Y')}."
+        + (f" Book no. {book['id']}." if book.get("id") else ""),
+    ]
+    c.setFont(FONT, 11.5)
+    c.setFillColor(HexColor("#4c5d51"))
+    for para in paras:
+        for line in simpleSplit(para, FONT, 11.5, width):
+            c.drawString(x, y, line)
+            y -= 17
+        y -= 10
+    c.setFillColor(LEAF)
+    c.setFont(FONT, 15)
+    c.drawString(x, 110, PUBLISHER)
+    c.setStrokeColor(LEAF)
+    c.setLineWidth(1)
+    c.line(x, 102, x + c.stringWidth(PUBLISHER, FONT, 15), 102)
+
+
+def _title_page(c, story, book):
+    """The printed book's first inside page (the right-hand page you see on opening it)."""
+    c.setFillColor(PAPER)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+    title = S.STORIES[story]["title"]
+    size = 44
+    while c.stringWidth(title, FONT, size) > W - 160 and size > 26:
+        size -= 2
+    c.setFillColor(INK)
+    c.setFont(FONT, size)
+    c.drawCentredString(W / 2, H / 2 + 30, title)
+    if book.get("child_name"):
+        c.setFont(FONT, 22)
+        c.setFillColor(LEAF)
+        c.drawCentredString(W / 2, H / 2 - 16, f"starring {book['child_name']}")
+    c.setFont(FONT, 13)
+    c.setFillColor(HexColor("#4c5d51"))
+    c.drawCentredString(W / 2, 70, PUBLISHER)
+
+
+def _the_end(c):
+    c.setFillColor(PAPER)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+    c.setFillColor(INK)
+    c.setFont(FONT, 40)
+    c.drawCentredString(W / 2, H / 2 - 10, "The End")
+
+
+def _blank(c):
+    c.setFillColor(PAPER)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+
+
+def _story_page(c, p, images):
+    raw, zone = images[p["n"]]
+    if zone in BAND:
+        _full_page(c, raw, _curly(p["text"]), zone, p["n"])
+    else:
+        _below_page(c, raw, _curly(p["text"]), p["n"])
+
+
 def build_book(story, images, hero, book):
-    """images: {n: (jpeg_bytes, zone)}. Returns PDF bytes: cover, 20 story pages, About Me."""
-    with tempfile.TemporaryDirectory() as d:
+    """images: {n: (jpeg_bytes, zone)}. Returns PDF bytes: cover, copyright page, 20 story pages, About Me back
+    cover."""
+    with _geo_lock, tempfile.TemporaryDirectory() as d:
         _tls.dir, _tls.n = d, 0
         return _build(story, images, hero, book)
 
@@ -315,14 +407,123 @@ def _build(story, images, hero, book):
         raw, zone = images[0]
         _cover(c, raw, S.STORIES[story]["title"], book.get("child_name") or "", zone)
         c.showPage()
+    _copyright(c, story, book)
+    c.showPage()
     for p in S.STORIES[story]["pages"]:
-        raw, zone = images[p["n"]]
-        if zone in BAND:
-            _full_page(c, raw, _curly(p["text"]), zone, p["n"])
-        else:
-            _below_page(c, raw, _curly(p["text"]), p["n"])
+        _story_page(c, p, images)
         c.showPage()
     _about(c, book, hero)
     c.showPage()
     c.save()
     return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------------------------------------
+# Print files (Lulu). Trim 11 x 8.5 in landscape; every page gets 1/8 inch (9 pt) bleed on each side.
+# The on-screen pages are 3:2; the printed page is 11 x 8.5. Rather than crop the art (and risk cutting a face at
+# the edge), each inside page is drawn at full printed width and centred on cream paper: the art bleeds off the
+# sides, with a cream band top and bottom. Every word stays at least half an inch inside the trim.
+# ---------------------------------------------------------------------------------------------------------
+TRIM_W, TRIM_H, BLEED = 11 * 72, 8.5 * 72, 9
+PW, PH = TRIM_W + 2 * BLEED, TRIM_H + 2 * BLEED
+_geo_lock = threading.RLock()   # every build holds it, so no build ever sees another's page size
+
+
+@contextmanager
+def _geometry(w, h):
+    """Draw with the page functions at another page size (they read the module's W and H)."""
+    global W, H
+    with _geo_lock:
+        old = W, H
+        W, H = w, h
+        try:
+            yield
+        finally:
+            W, H = old
+
+
+def _placed(c, draw, x0, area_w, area_h):
+    """Draw a 792x528 page design scaled to area_w wide, centred vertically on cream paper."""
+    c.setFillColor(PAPER)
+    c.rect(x0, 0, area_w, area_h, stroke=0, fill=1)
+    k = area_w / W
+    c.saveState()
+    c.translate(x0, (area_h - H * k) / 2)
+    c.scale(k, k)
+    draw()
+    c.restoreState()
+
+
+def interior_page_count():
+    n = 2 + len(S.TEMPLATE) + 1                      # title, copyright, story, The End
+    return n + (-n) % 4                              # saddle stitch / casewrap want a multiple of 4
+
+
+def build_print_interior(story, images, hero, book):
+    with _geo_lock, tempfile.TemporaryDirectory() as d:
+        _tls.dir, _tls.n = d, 0
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(PW, PH))
+        c.setTitle(f"{S.STORIES[story]['title']} (interior)")
+        pages = [lambda: _title_page(c, story, book), lambda: _copyright(c, story, book)]
+        pages += [(lambda p=p: _story_page(c, p, images)) for p in S.STORIES[story]["pages"]]
+        pages.append(lambda: _the_end(c))
+        while len(pages) < interior_page_count():
+            pages.append(lambda: _blank(c))
+        for draw in pages:
+            _placed(c, draw, 0, PW, PH)
+            c.showPage()
+        c.save()
+        return buf.getvalue()
+
+
+def build_print_cover(story, images, hero, book, spread_w=None, spread_h=None):
+    """One page: back cover (About Me) on the left, the spine (none for a saddle-stitched book), the front cover on
+    the right. spread_w/h come from the printer's cover-dimensions API when available."""
+    sw = spread_w or (2 * TRIM_W + 2 * BLEED)
+    sh = spread_h or PH
+    half = sw / 2
+    with _geo_lock, tempfile.TemporaryDirectory() as d:
+        _tls.dir, _tls.n = d, 0
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(sw, sh))
+        c.setTitle(f"{S.STORIES[story]['title']} (cover)")
+        _placed(c, lambda: _about(c, book, hero), 0, half, sh)
+        raw, zone = images[0]
+        c.saveState()
+        c.translate(half, 0)
+        with _geometry(half, sh):                    # the front cover fills its half, the art cropped to fit
+            _cover(c, raw, S.STORIES[story]["title"], book.get("child_name") or "", zone)
+        c.restoreState()
+        c.showPage()
+        c.save()
+        return buf.getvalue()
+
+
+def build_print_preview(story, images, hero, book):
+    """What the customer approves: the printed book page by page, at its printed size (front cover, the 24 inside
+    pages, back cover), with the same drawing code as the files sent to the printer."""
+    half = TRIM_W + BLEED
+    with _geo_lock, tempfile.TemporaryDirectory() as d:
+        _tls.dir, _tls.n = d, 0
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(half, PH))
+        c.setTitle(f"{S.STORIES[story]['title']}, starring {book.get('child_name') or ''} (print proof)")
+        raw, zone = images[0]
+        with _geometry(half, PH):
+            _cover(c, raw, S.STORIES[story]["title"], book.get("child_name") or "", zone)
+        c.showPage()
+        pages = [lambda: _title_page(c, story, book), lambda: _copyright(c, story, book)]
+        pages += [(lambda p=p: _story_page(c, p, images)) for p in S.STORIES[story]["pages"]]
+        pages.append(lambda: _the_end(c))
+        while len(pages) < interior_page_count():
+            pages.append(lambda: _blank(c))
+        for draw in pages:
+            c.setPageSize((PW, PH))
+            _placed(c, draw, 0, PW, PH)
+            c.showPage()
+        c.setPageSize((half, PH))
+        _placed(c, lambda: _about(c, book, hero), 0, half, PH)
+        c.showPage()
+        c.save()
+        return buf.getvalue()

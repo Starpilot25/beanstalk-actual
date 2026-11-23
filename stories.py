@@ -134,8 +134,11 @@ HERO = {
     },
 }
 
-BEANS = ("exactly five plump, glossy magic beans, each a different color: one red, one yellow, one green, "
-         "one blue and one purple")
+# Testers (AI personas p02, p04, p06, p08, p10) all said the bright beans "look like jellybeans": real bean shapes and
+# earthy speckled skins, with the magic shown as a faint glow instead of candy colors.
+BEANS = ("exactly five magic beans that look like real dried beans: kidney-shaped, matte natural bean skins in earthy "
+         "speckled colors (deep red, mottled cream, dark purple, olive green, golden brown), each with a faint golden "
+         "shimmer of magic around it; they must not look like candy or jellybeans")
 
 # ---------------------------------------------------------------------------------------------------------
 # The stories. Each page: text (printed by the PDF, never drawn), the scene (pre-generated, without the

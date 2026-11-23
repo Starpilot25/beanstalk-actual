@@ -14,8 +14,11 @@ environment only. See stories.py for how a book is made, pipeline.py for the gen
 
 import hmac
 import io
+import json
 import logging
 import os
+import re
+import secrets
 import threading
 import time
 from collections import defaultdict, deque
@@ -27,7 +30,10 @@ from PIL import Image
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import billing
+import book_pdf
+import checks
 import db
+import lulu
 import pipeline
 import stories as S
 
@@ -401,6 +407,10 @@ def book_create():
     except Exception:
         return error("That file isn't a readable image. Use a JPG, PNG or WEBP photo.")
     details = clean_details(request.form)
+    try:
+        checks.check_details(details, uid)      # before any charge: nothing unprintable gets made
+    except checks.Refused as e:
+        return error(str(e), field="details")
     if db.balance(uid) < billing.BOOK_PRICE:
         return error(f"A book costs {billing.money(billing.BOOK_PRICE)} and your balance is "
                      f"{billing.money(db.balance(uid))}. Add funds to make this book.", 402, need_funds=True)
@@ -422,6 +432,17 @@ def book_create():
     pipeline.start_book(book_id, uid, photo)
     log.info("book %s started story=%s user=%s", book_id, story, uid)
     return jsonify({"id": book_id, "balance": billing.money(db.balance(uid))})
+
+
+@app.post("/api/check-details")
+@login_required
+def check_details_api():
+    """The page asks as soon as the name and details are typed, so the answer is ready (and cached) before upload."""
+    try:
+        checks.check_details(clean_details(request.get_json(silent=True) or {}), current_user_id())
+    except checks.Refused as e:
+        return jsonify({"ok": False, "message": str(e)})
+    return jsonify({"ok": True})
 
 
 @app.delete("/api/books/<int:book_id>")
@@ -544,6 +565,177 @@ def refund_process(refund_id):
     except ValueError as e:
         return error(str(e))
     return jsonify({"ok": True, "amount": billing.money(amount), "balance": billing.money(db.balance(current_user_id()))})
+
+
+# ---------------------------------------------------------------------------
+# Printed copies (Lulu Print API, sandbox): proof -> approve -> address -> price -> order
+# ---------------------------------------------------------------------------
+PRINT_MARGIN = int(os.environ.get("PRINT_MARGIN_CENTS", "800"))      # what we keep per printed book
+US_STATES = set("AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY "
+                "NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY".split())
+
+
+def _print_book(uid, book_id):
+    """The book and its pictures, if it's finished and belongs to this user."""
+    b = db.get_book(uid, book_id)
+    if not b or b["status"] != "done":
+        return None, None, None
+    full = db.get_book_internal(book_id)
+    return full, db.page_images_internal(book_id), db.get_blob(uid, book_id, "hero")
+
+
+def _clean_address(d):
+    a = {k: " ".join(str(d.get(k, "")).split())[:80] for k in
+         ("name", "street1", "street2", "city", "state_code", "postcode", "phone_number")}
+    a["state_code"] = a["state_code"].upper()
+    a["country_code"] = "US"
+    missing = [label for k, label in (("name", "the name"), ("street1", "the street address"), ("city", "the city"),
+                                      ("state_code", "the state"), ("postcode", "the ZIP code"),
+                                      ("phone_number", "a phone number (the carrier needs one)")) if not a[k]]
+    if missing:
+        raise ValueError("Add " + ", ".join(missing) + ".")
+    if a["state_code"] not in US_STATES:
+        raise ValueError("Use the two-letter state code, like NY. We ship within the US for now.")
+    if not re.fullmatch(r"\d{5}(-\d{4})?", a["postcode"]):
+        raise ValueError("The ZIP code should be 5 digits.")
+    if len(re.sub(r"\D", "", a["phone_number"])) < 10:
+        raise ValueError("The phone number needs at least 10 digits.")
+    return a
+
+
+def _price(quote_total_usd):
+    """Our price: the printer's full cost (printing, shipping, fulfillment, tax) plus our margin, rounded up to
+    the next $x.99."""
+    cents = int(round(quote_total_usd * 100)) + PRINT_MARGIN
+    return cents + (99 - cents % 100) % 100
+
+
+def _quote_token(uid, book_id, a, level, price):
+    msg = json.dumps([uid, book_id, a, level, price, int(time.time() // 1800)], sort_keys=True).encode()
+    key = app.secret_key if isinstance(app.secret_key, bytes) else app.secret_key.encode()
+    return hmac.new(key, msg, "sha256").hexdigest()
+
+
+@app.get("/api/books/<int:book_id>/print-proof.pdf")
+@login_required
+def print_proof(book_id):
+    b, images, hero = _print_book(current_user_id(), book_id)
+    if not b:
+        return error("That book isn't finished.", 404)
+    raw = book_pdf.build_print_preview(b["story"], images, hero, b)
+    return Response(raw, mimetype="application/pdf", headers={"Content-Disposition": "inline; filename=proof.pdf"})
+
+
+@app.post("/api/books/<int:book_id>/print/quote")
+@login_required
+def print_quote(book_id):
+    uid = current_user_id()
+    if not lulu.configured():
+        return error("Printed copies aren't switched on yet.", 503)
+    b, _, _ = _print_book(uid, book_id)
+    if not b:
+        return error("That book isn't finished.", 404)
+    d = request.get_json(silent=True) or {}
+    level = d.get("shipping_level", "MAIL")
+    if level not in lulu.SHIPPING_LEVELS:
+        return error("Choose a shipping speed.")
+    try:
+        a = _clean_address(d.get("address") or {})
+        checks.check_details({k: b[k] or "" for k in ("child_name", "age", "likes", "about")}, uid)
+        q = lulu.cost(book_pdf.interior_page_count(), a, level)
+    except (ValueError, checks.Refused) as e:
+        return error(str(e))
+    except lulu.LuluError as e:
+        log.warning("lulu quote FAIL %s", e)
+        return error("The printer couldn't price that address. Check it and try again.", 502)
+    price = _price(q["total"])
+    return jsonify({"address": a, "shipping_level": level, "printer": {k: q[k] for k in
+                    ("print", "shipping", "fulfillment", "tax", "total")}, "margin": billing.money(price - round(q["total"] * 100)),
+                    "price_cents": price, "price": billing.money(price), "balance": billing.money(db.balance(uid)),
+                    "token": _quote_token(uid, book_id, a, level, price)})
+
+
+@app.post("/api/books/<int:book_id>/print/order")
+@login_required
+def print_order(book_id):
+    uid = current_user_id()
+    user = current_user()
+    d = request.get_json(silent=True) or {}
+    if d.get("approved") is not True:
+        return error("Look through the proof and tick “I've checked every page” before ordering.")
+    b, images, hero = _print_book(uid, book_id)
+    if not b:
+        return error("That book isn't finished.", 404)
+    a, level, price = d.get("address") or {}, d.get("shipping_level"), int(d.get("price_cents") or 0)
+    if not hmac.compare_digest(_quote_token(uid, book_id, a, level, price), str(d.get("token", ""))):
+        return error("That price has expired. Get a new price and order again.", 409)
+    charge = db.post(uid, "print", -price, f"Printed copy of book #{book_id}, shipped ({lulu.SHIPPING_LEVELS[level]})",
+                     book_id=book_id, need_funds=True)
+    if charge is None:
+        return error(f"A printed copy is {billing.money(price)} and your balance is "
+                     f"{billing.money(db.balance(uid))}. Add funds to order it.", 402, need_funds=True)
+    token = secrets.token_urlsafe(32)
+    order_id = db.create_order(user_id=uid, book_id=book_id, status="placing", shipping_level=level,
+                               address=json.dumps(a), quote=json.dumps(d.get("quote") or {}), price_cents=price,
+                               ledger_id=charge, file_token=token, approved_at=time.time())
+    try:
+        pages = book_pdf.interior_page_count()
+        size = lulu.cover_size(pages)
+        interior = book_pdf.build_print_interior(b["story"], images, hero, b)
+        cover = book_pdf.build_print_cover(b["story"], images, hero, b, *(size or ()))
+        db.update_order(order_id, interior=interior, cover=cover)
+        base = request.host_url.rstrip("/")
+        job = lulu.create_job(order_id, f"{S.STORIES[b['story']]['title']}, starring {b['child_name']}",
+                              f"{base}/print-files/{order_id}/{token}/interior.pdf",
+                              f"{base}/print-files/{order_id}/{token}/cover.pdf", a, level,
+                              (user or {}).get("email") or "orders@example.com")
+        db.update_order(order_id, lulu_id=str(job.get("id")), status=(job.get("status") or {}).get("name", "CREATED"))
+        log.info("print order %s placed lulu=%s book=%s user=%s", order_id, job.get("id"), book_id, uid)
+    except Exception as e:
+        log.exception("print order %s failed", order_id)
+        db.update_order(order_id, status="failed", error=str(e)[:400])
+        db.post(uid, "reversal", price, f"Refund: printed copy of book #{book_id} could not be ordered",
+                book_id=book_id, ref=f"print-reversal-{order_id}")
+        return error("The printer didn't accept the order, so nothing was charged. Please try again later.", 502)
+    return jsonify({"id": order_id, "balance": billing.money(db.balance(uid))})
+
+
+@app.get("/api/print-orders")
+@login_required
+def print_orders():
+    uid = current_user_id()
+    out = []
+    for o in db.list_orders(uid):
+        final = o["status"] in ("SHIPPED", "CANCELED", "REJECTED", "failed")
+        if o["lulu_id"] and not final and time.time() - (o["updated_at"] or 0) > 60:
+            try:                                         # refresh from the printer at most once a minute
+                st = lulu.job_status(o["lulu_id"])
+                if st.get("name") and st["name"] != o["status"]:
+                    db.update_order(o["id"], status=st["name"])
+                    o["status"] = st["name"]
+                else:
+                    db.update_order(o["id"])
+            except Exception as e:
+                log.warning("lulu status %s: %s", o["lulu_id"], e)
+        a = json.loads(o["address"] or "{}")
+        out.append({"id": o["id"], "book_id": o["book_id"], "status": o["status"], "lulu_id": o["lulu_id"],
+                    "shipping": lulu.SHIPPING_LEVELS.get(o["shipping_level"], o["shipping_level"]),
+                    "price": billing.money(o["price_cents"] or 0), "error": o["error"],
+                    "to": f"{a.get('name', '')}, {a.get('city', '')} {a.get('state_code', '')}",
+                    "at": o["created_at"]})
+    return jsonify(out)
+
+
+@app.get("/print-files/<int:order_id>/<token>/<kind>.pdf")
+def print_file(order_id, token, kind):
+    """Where the printer downloads the files: no login, the order's secret token is the key."""
+    if kind not in ("interior", "cover"):
+        abort(404)
+    raw = db.order_file(order_id, token, kind)
+    if raw is None:
+        abort(404)
+    log.info("print file %s %s downloaded by %s", order_id, kind, request.headers.get("User-Agent", "")[:60])
+    return Response(raw, mimetype="application/pdf")
 
 
 # ---------------------------------------------------------------------------

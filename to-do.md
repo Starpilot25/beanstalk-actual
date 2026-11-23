@@ -31,6 +31,18 @@ What's still wrong or unproven, most important first. Updated after each review 
   fall back to `gpt-image-1.5` / `gpt-image-1`, so they can look slightly different from the rest.
 - The hero is still called Jack or Red in the story; only the cover and About Me page use the child's name.
 
+## From the feedback (see `FEEDBACK.md`)
+- **Accessories drift:** glasses, earrings, a nose stud come and go between pages. Name them in the hero sheet and
+  check them on every page.
+- **The wolf is too scary for preschoolers** on Red pp. 11–15 (three personas). I made him scarier on purpose; a
+  gentler option for younger children is worth considering.
+- **Writing:** "BIG TEETH" in capitals on Red p. 13 reads as shouting; the woodcutter's rescue on p. 15 is abrupt.
+- **Typography:** words on full-bleed pages sit in a plain band; an illustrator called it "pasted on".
+- **Ask real people the full questions:** the form never asked "Does the story ring true?" or "What isn't good?",
+  and friends and family are kind. Next time, ask both, and ask strangers.
+- Fixed from the feedback: the beans no longer look like jellybeans, and Jack scenes 1 and 20 no longer contain a
+  leftover boy (redrawn).
+
 ## Money
 - Asking for a refund and processing it are two clicks by the same person; there's no separate store owner in
   this sandbox.
