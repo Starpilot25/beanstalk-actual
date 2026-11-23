@@ -647,7 +647,8 @@ def print_quote(book_id):
         return error(str(e))
     except lulu.LuluError as e:
         log.warning("lulu quote FAIL %s", e)
-        return error("The printer couldn't price that address. Check it and try again.", 502)
+        extra = {"detail": str(e)[:400]} if is_admin(current_user()) else {}     # the owner sees Lulu's reason
+        return error("The printer couldn't price that address. Check it and try again.", 502, **extra)
     price = _price(q["total"])
     return jsonify({"address": a, "shipping_level": level, "printer": {k: q[k] for k in
                     ("print", "shipping", "fulfillment", "tax", "total")}, "margin": billing.money(price - round(q["total"] * 100)),
@@ -698,6 +699,26 @@ def print_order(book_id):
                 book_id=book_id, ref=f"print-reversal-{order_id}")
         return error("The printer didn't accept the order, so nothing was charged. Please try again later.", 502)
     return jsonify({"id": order_id, "balance": billing.money(db.balance(uid))})
+
+
+@app.get("/api/admin/lulu-check")
+@admin_required
+def lulu_check():
+    """Owner's check that the Lulu keys work and the product id is accepted: prices one copy to a test address."""
+    a = {"name": "Test", "street1": "1 Main St", "city": "Brooklyn", "state_code": "NY", "postcode": "11201",
+         "country_code": "US", "phone_number": "2125550100"}
+    pod = request.args.get("pod") or lulu.POD_PACKAGE
+    out = {"base": lulu.BASE, "configured": lulu.configured(), "pod": pod}
+    try:
+        old, lulu.POD_PACKAGE = lulu.POD_PACKAGE, pod
+        try:
+            q = lulu.cost(int(request.args.get("pages") or book_pdf.interior_page_count()), a, "MAIL")
+        finally:
+            lulu.POD_PACKAGE = old
+        out.update(ok=True, quote={k: q[k] for k in ("print", "shipping", "fulfillment", "tax", "total")})
+    except Exception as e:
+        out.update(ok=False, error=str(e)[:600])
+    return jsonify(out)
 
 
 @app.get("/api/print-orders")
