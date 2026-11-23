@@ -17,9 +17,10 @@ BASE = os.environ.get("LULU_API_BASE", "https://api.sandbox.lulu.com").rstrip("/
 KEY = os.environ.get("LULU_CLIENT_KEY", "")
 SECRET = os.environ.get("LULU_CLIENT_SECRET", "")
 FAKE = os.environ.get("LULU_FAKE") == "1"
-# 11 x 8.5 in landscape, full color, standard quality, saddle stitched (stapled), 80# coated white paper, gloss cover.
-# A saddle-stitched book is 4 to 48 pages in multiples of 4 and has no spine: right for a 24-page picture book.
-POD_PACKAGE = os.environ.get("LULU_POD_PACKAGE", "1100X0850FCSTDSS080CW444GXX")
+# 11 x 8.5 in landscape, full color, standard quality, hardcover (casewrap), 80# coated white paper, gloss cover.
+# Checked against the sandbox: Lulu has no stapled book at this size, a paperback needs 32+ pages, and a hardcover
+# takes 24 or more, which is what a picture book is anyway.
+POD_PACKAGE = os.environ.get("LULU_POD_PACKAGE", "1100X0850FCSTDCW080CW444GXX")
 SHIPPING_LEVELS = {"MAIL": "Standard mail", "GROUND": "Ground", "EXPEDITED": "Expedited", "EXPRESS": "Express"}
 
 _tok = {"value": None, "exp": 0}

@@ -478,23 +478,40 @@ def build_print_interior(story, images, hero, book):
 
 
 def build_print_cover(story, images, hero, book, spread_w=None, spread_h=None):
-    """One page: back cover (About Me) on the left, the spine (none for a saddle-stitched book), the front cover on
-    the right. spread_w/h come from the printer's cover-dimensions API when available."""
-    sw = spread_w or (2 * TRIM_W + 2 * BLEED)
+    """One page, laid flat: back cover (About Me) on the left, the spine, the front cover on the right.
+    spread_w/h come from the printer's cover-dimensions API. For a hardcover (casewrap) the sheet is bigger than the
+    two covers: a margin all round wraps around the boards, and the spine sits between them. Everything that must be
+    seen is drawn inside the trim of each cover; the wrap margin and the spine are the night-sky colour."""
     sh = spread_h or PH
-    half = sw / 2
+    margin = (sh - TRIM_H) / 2                       # bleed (paperback) or bleed + wrap (hardcover), each edge
+    sw = spread_w or (2 * TRIM_W + 2 * margin)
+    spine = max(0.0, sw - 2 * TRIM_W - 2 * margin)
+    back_x, front_x = margin, margin + TRIM_W + spine
     with _geo_lock, tempfile.TemporaryDirectory() as d:
         _tls.dir, _tls.n = d, 0
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(sw, sh))
-        c.setTitle(f"{S.STORIES[story]['title']} (cover)")
-        _placed(c, lambda: _about(c, book, hero), 0, half, sh)
+        c.setTitle(f"{S.STORIES[story]['title']}, starring {book.get('child_name') or ''} (cover)")
+        c.setFillColor(HexColor("#0e2a50"))          # the cloth-coloured wrap and spine
+        c.rect(0, 0, sw, sh, stroke=0, fill=1)
         raw, zone = images[0]
-        c.saveState()
-        c.translate(half, 0)
-        with _geometry(half, sh):                    # the front cover fills its half, the art cropped to fit
+        c.saveState()                                # front cover: the art fills the trim, title and name on it
+        c.translate(front_x, margin)
+        with _geometry(TRIM_W, TRIM_H):
             _cover(c, raw, S.STORIES[story]["title"], book.get("child_name") or "", zone)
         c.restoreState()
+        c.saveState()                                # back cover: About Me, on cream paper
+        c.translate(back_x, margin)
+        _placed(c, lambda: _about(c, book, hero), 0, TRIM_W, TRIM_H)
+        c.restoreState()
+        if spine >= 30:                              # wide enough to read: the title down the spine
+            c.saveState()
+            c.translate(front_x - spine / 2 + 4, sh / 2)
+            c.rotate(-90)
+            c.setFillColor(HexColor("#fff3cf"))
+            c.setFont(FONT, min(12, spine * 0.45))
+            c.drawCentredString(0, 0, S.STORIES[story]["title"])
+            c.restoreState()
         c.showPage()
         c.save()
         return buf.getvalue()

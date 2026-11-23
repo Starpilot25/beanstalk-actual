@@ -716,6 +716,8 @@ def lulu_check():
         finally:
             lulu.POD_PACKAGE = old
         out.update(ok=True, quote={k: q[k] for k in ("print", "shipping", "fulfillment", "tax", "total")})
+        if pod == lulu.POD_PACKAGE:
+            out["cover_size_pt"] = lulu.cover_size(book_pdf.interior_page_count())
     except Exception as e:
         out.update(ok=False, error=str(e)[:600])
     return jsonify(out)
