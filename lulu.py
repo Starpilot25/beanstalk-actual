@@ -92,8 +92,8 @@ def create_job(order_id, title, interior_url, cover_url, address, shipping_level
         "contact_email": email,
         "external_id": f"order-{order_id}",
         "line_items": [{"external_id": f"order-{order_id}-book", "title": title[:255], "quantity": 1,
-                        "pod_package_id": POD_PACKAGE,
-                        "printable_normalization": {"interior": {"source_url": interior_url},
+                        "printable_normalization": {"pod_package_id": POD_PACKAGE,      # Lulu wants it in here
+                                                    "interior": {"source_url": interior_url},
                                                     "cover": {"source_url": cover_url}}}],
         "shipping_address": _addr(address),
         "shipping_level": shipping_level,

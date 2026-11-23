@@ -637,6 +637,7 @@ $("orderBtn").addEventListener("click", async () => {
     quote = null; $("quoteBox").textContent = "Get the price first."; loadOrders();
   } catch (e) {
     msg($("printMsg"), esc(e.message) + (e.data && e.data.need_funds ? ` <a class="btn" href="/wallet">Add funds</a>` : ""), true);
+    loadOrders(); refreshBalance();
   } finally { syncOrderBtn(); }
 });
 const ORDER_WORDS = {placing: "Sending to the printer", CREATED: "Received by the printer", UNPAID: "Received by the printer",
