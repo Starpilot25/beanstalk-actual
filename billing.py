@@ -19,7 +19,8 @@ import time
 import db
 
 BOOK_PRICE = 99                      # cents
-AMOUNTS = (500, 1000, 2000)          # what "Add funds" offers, in cents
+AMOUNTS = (500, 1000, 2000)          # the quick "Add funds" buttons, in cents
+MIN_TOPUP, MAX_TOPUP = 100, 20000     # or any whole-cent amount from $1 to $200 (enough for a printed book)
 KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 FAKE = os.environ.get("STRIPE_FAKE") == "1" or not KEY
 if KEY and not KEY.startswith(("sk_test_", "rk_test_")):
@@ -43,8 +44,8 @@ def money(cents):
 # Add funds
 # ---------------------------------------------------------------------------
 def start_checkout(user, amount_cents, base_url):
-    if amount_cents not in AMOUNTS:
-        raise ValueError("Pick one of the amounts shown.")
+    if not MIN_TOPUP <= amount_cents <= MAX_TOPUP:
+        raise ValueError(f"Add between {money(MIN_TOPUP)} and {money(MAX_TOPUP)}.")
     if FAKE:
         sid = "fake_cs_" + secrets.token_hex(8)
         _fake_sessions[sid] = {"user_id": user["id"], "amount": amount_cents, "paid": False}

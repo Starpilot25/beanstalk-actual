@@ -21,7 +21,8 @@ FAKE = os.environ.get("LULU_FAKE") == "1"
 # Checked against the sandbox: Lulu has no stapled book at this size, a paperback needs 32+ pages, and a hardcover
 # takes 24 or more, which is what a picture book is anyway.
 POD_PACKAGE = os.environ.get("LULU_POD_PACKAGE", "1100X0850FCSTDCW080CW444GXX")
-SHIPPING_LEVELS = {"MAIL": "Standard mail", "GROUND": "Ground", "EXPEDITED": "Expedited", "EXPRESS": "Express"}
+# What Lulu offers for this hardcover to US addresses (GROUND is refused for this product: checked in the sandbox).
+SHIPPING_LEVELS = {"MAIL": "Standard mail", "EXPEDITED": "Expedited", "EXPRESS": "Express"}
 
 _tok = {"value": None, "exp": 0}
 _lock = threading.Lock()
@@ -59,9 +60,9 @@ def _call(method, path, json=None):
 def cost(page_count, address, shipping_level):
     """Lulu's price for one copy shipped to address: {'print', 'shipping', 'fulfillment', 'tax', 'total'} in USD."""
     if FAKE:
-        ship = {"MAIL": 4.29, "GROUND": 7.99, "EXPEDITED": 12.49, "EXPRESS": 24.99}[shipping_level]
-        sub = 6.80 + ship + 0.75
-        return {"print": 6.80, "shipping": ship, "fulfillment": 0.75, "tax": round(sub * 0.08, 2),
+        ship = {"MAIL": 5.69, "EXPEDITED": 20.74, "EXPRESS": 35.74}[shipping_level]
+        sub = 12.50 + ship + 0.75
+        return {"print": 12.50, "shipping": ship, "fulfillment": 0.75, "tax": round(sub * 0.08, 2),
                 "total": round(sub * 1.08, 2), "currency": "USD", "raw": {}}
     d = _call("POST", "/print-job-cost-calculations/", {
         "line_items": [{"page_count": page_count, "pod_package_id": POD_PACKAGE, "quantity": 1}],

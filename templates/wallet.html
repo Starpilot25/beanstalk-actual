@@ -9,6 +9,9 @@
   .k-deposit{background:#e3f3e6;color:#1d5c2f} .k-book{background:#eef0fb;color:#2c3a7a}
   .k-book_refund,.k-card_refund,.k-reversal{background:#fff1d6;color:#7a4b00}
   .st-requested{color:#7a4b00;font-weight:600} .st-processed{color:var(--ok);font-weight:600} .st-failed{color:var(--red);font-weight:600}
+  .funds.custom{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .dollar{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .dollar input{width:110px}
   .refform{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .refform input{flex:1;min-width:160px}
   .costs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0}
@@ -29,6 +32,11 @@
     <h3 style="margin-top:22px">Add funds</h3>
     <form class="funds" method="post" action="/billing/checkout">
       {% for a in amounts %}<button name="amount" value="{{ a }}" type="submit">Add {{ money(a) }}</button>{% endfor %}
+    </form>
+    <form class="funds custom" method="post" action="/billing/checkout" style="margin-top:12px">
+      <label for="custom" style="margin:0;align-self:center">Or another amount</label>
+      <span class="dollar"><span aria-hidden="true">$</span><input type="text" id="custom" name="custom" inputmode="decimal" placeholder="30.00" maxlength="7" required pattern="\$?[0-9]{1,3}(\.[0-9]{1,2})?" title="An amount from $1 to $200"></span>
+      <button type="submit" class="ghost">Add this amount</button>
     </form>
     <p class="muted small" style="margin:10px 0 0">
       {% if fake_stripe %}<b>Offline test mode:</b> Stripe isn't connected, so a pretend checkout page is used.

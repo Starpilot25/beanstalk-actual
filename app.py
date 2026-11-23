@@ -208,6 +208,8 @@ def wallet_page():
             bad = not got
         except Exception as e:
             note, bad = f"Couldn't confirm the payment with Stripe: {str(e)[:120]}", True
+    elif request.args.get("err"):
+        note, bad = request.args["err"][:160], True          # e.g. an amount outside $1-$200; escaped by Jinja
     elif request.args.get("cancelled"):
         note = "Payment cancelled. Nothing was charged."
     try:                                   # recover any paid checkout that wasn't credited
@@ -518,7 +520,14 @@ def wallet_api():
 def checkout():
     user = current_user()
     try:
-        amount = int(request.form.get("amount", "0"))
+        raw = (request.form.get("custom") or "").strip().lstrip("$").replace(",", "")
+        if raw:                                       # "Other amount" in dollars, e.g. 30 or 28.99
+            try:
+                amount = int(round(float(raw) * 100))
+            except ValueError:
+                raise ValueError("Type an amount in dollars, like 30 or 28.99.")
+        else:
+            amount = int(request.form.get("amount", "0"))
         url = billing.start_checkout(user, amount, request.host_url.rstrip("/"))
     except ValueError as e:
         return redirect(url_for("wallet_page", cancelled=1, err=str(e)))
