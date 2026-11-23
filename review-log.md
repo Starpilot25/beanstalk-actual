@@ -74,3 +74,69 @@ browsers; more than one user at once.
    that scene, or fall back to the framed layout when a full-bleed band's top row is marked busy anywhere.
 4. Milky-White spots on Jack scenes 3–4: redo those two scenes.
 5. Make the GitHub repo public before hand-in.
+
+## Run 2 — Mon Nov 23 2026 ("Print it and ship it")
+
+**Reviewer:** Claude, driving the Claude desktop app's built-in browser against https://beanstalk.autosignusa.com,
+signed in as the site owner. Funding and sign-in were done by the owner (the reviewer doesn't type card numbers or
+passwords). Lulu is the sandbox (`api.sandbox.lulu.com`); no real book was printed, shipped or paid for.
+**Name/age/likes used:** Sam, 7, "dinosaurs and pancakes"; About Me "wants to be a paleontologist".
+
+### Clocks (submit click → PDF ready)
+
+| Book | Story | Total | Result |
+|---|---|---|---|
+| #46 | Red | **58 s** | done, but a status check marked it "failed" a moment after it finished and refunded it. Fixed (`fail_if_running`: a book is failed only if it is still running in the same database step). |
+| #47 | Jack | **68 s** | done — **PDF reviewed** (still had jellybean-looking beans) |
+| #48 | Red | — | **failed: server restarted.** Most likely caused by the reviewer polling the site every second, which Cloudflare rate-limited (429) while the book ran. Charge refunded automatically. Reviewer switched to the page's own polling. |
+| #49 | Red | **72 s** (1 repaint) | done — **PDF reviewed** |
+| #50 | Jack | **≈61 s** | done after redrawing Jack scenes 5–6 — **PDF reviewed**, beans now plain brown beans |
+
+### The printed book (Lulu sandbox)
+
+- Product: 11 × 8.5 in landscape, full-colour hardcover (`1100X0850FCSTDCW080CW444GXX`), 24 inside pages. Checked in
+  the sandbox: no stapled book at this size; paperback needs 32+ pages; GROUND shipping refused for this product.
+- Proof: 26 pages (front cover, 24 inside, back cover), drawn by the same code as the print files. The order button
+  is refused by the server until "I've looked at every page" is ticked.
+- **Order #1:** refused by Lulu ("pod_package_id: This field is required"; it was in the wrong field). The charge was
+  reversed automatically. Fixed.
+- **Order #2: Lulu print job 368721** → *Created* → *Unpaid*. Lulu downloaded and accepted both files (interior and
+  1728 × 738 pt cover from Lulu's cover-dimensions API). Unpaid is where a sandbox job stops.
+- Quotes to New York: standard mail $28.99, expedited $44.99, express $61.99 (Lulu total + $8, rounded up to $x.99).
+
+### The PDFs (#47, #49, #50)
+
+All 23 pages: cover with the title and "starring Sam"; copyright page ("© 2026 Beanstalk Books… Published by
+Beanstalk Books, New York, NY", first edition, book number); story pages 1–20 starting on the next page; About Me back
+page with the portrait, age, likes and "paleontologist". Jack p. 16's words now sit under the picture, clear of the
+giant. Milky-White has no spots on pp. 1–4 and 20.
+
+### Name and About Me checks (live)
+
+Accepted: Sarah, Nkechi, Mary-Kate, Sam. Refused: Stinky, Dummy, Poopface (insults), Hitler (notorious person),
+asdfgh (not a name), an About Me with a street address and phone number, and "punching his stupid sister" (moderation).
+Checks run while typing, before any charge, and again when a print copy is ordered; if they can't run, the book is
+refused rather than made unchecked.
+
+### Scores
+
+| Section | Score | Evidence |
+|---|---|---|
+| Print API: proof, approval, address, price, order, status | **9/10** | Order #2 accepted by Lulu with our files; approval enforced on the server; signed price; failed order reversed. Sandbox stops at Unpaid, so printing itself is unproven. US addresses only. |
+| Looks like a real book | **9/10** | Cover "starring", copyright page with publisher, story on the next page, About Me on the back, in both the PDF and the print files. Print art is the 1536 px picture spread across 11 in (about 140 PPI): fine on screen, soft in print. |
+| Name / About Me checks | **9/10** | Every test above gave the right answer. Depends on OpenAI being up (fails closed). |
+| Pricing write-up | **9/10** | `WRITEUP.md`: cost per book from the app's own log + Lulu quotes; $8.53 margin (28%) on standard mail, ~$7.36 after card fees. |
+| Money (carried over) | **9/10** | Any-amount top-up added; print charges and reversals in the history; failed-book double refund fixed. |
+| Speed (carried over) | **7/10** | 58, 61, 68, 72 s: half under 60 s; a repaint still pushes a book over. First visit after idle is slow (free plan). |
+| Text placement / pictures | **9/10** | Run 1 defects fixed (giant's head, cow spots, beans, stray boy). |
+| UI | **9/10** | New design: night sky, castle and beanstalk, books as paper pages, shelf of covers; checked at 390 px with no sideways scroll. |
+
+**Total: 70/80 (88%)**, up from 60/80.
+
+### Fix first
+
+1. **Speed with repaints:** still 61–72 s when a page needs a repaint.
+2. **Print resolution:** upscale the page art (or paint at a larger size) before sending to Lulu.
+3. **One-worker server:** a book and heavy traffic share one gunicorn worker on 512 MB; a restart kills a book in
+   progress (#48). Refunds are automatic, but the book is lost.
+4. Ship outside the US; tell the customer when Lulu's status changes.

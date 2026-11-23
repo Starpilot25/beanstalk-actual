@@ -49,3 +49,15 @@ What's still wrong or unproven, most important first. Updated after each review 
 - A $5 card-refund request from Nov 12 is stuck at "Requested" (made before the fix that ties card refunds to
   their Stripe checkout); processing it fails harmlessly.
 - Hourly limits are kept in memory and reset on every deploy.
+
+## Printing (added in Run 2)
+- **Lulu sandbox only.** Orders stop at "Unpaid": the sandbox never prints. Real printing needs a production Lulu
+  account with a card on file, and that's a real charge per book.
+- **Print resolution:** the art is 1536 px wide spread over 11 in (about 140 PPI). Lulu recommends 300. Upscale or
+  paint larger before a real print run.
+- **US addresses only**, and no emails when Lulu's status changes; the customer has to look at "My printed orders".
+- **Reprints aren't handled:** a damaged or disliked book would be reprinted at our cost (~$21), which wipes out the
+  margin on two and a half books.
+- **Name checks need OpenAI.** If it's down, books are refused ("try again") rather than made unchecked.
+- **One server worker:** gunicorn runs 1 worker with 4 threads on 512 MB. A restart (as in Run 2, book #48) loses
+  the book in progress; the charge is refunded automatically.
