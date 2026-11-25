@@ -78,6 +78,32 @@ QUERIES = [
     ("How did {person} die, and how is {person} remembered?", "died death funeral buried grave epitaph memory remembered legacy"),
 ]
 
+# A second way to search for each question: a plain statement of the kind of passage that answers it (still about
+# the kind of fact, never about one person). Its embedding is ranked alongside the question's, which finds passages
+# that answer a question without using its words (a "first job" told as "taken home to help in his father's shop").
+ALT = [
+    "{person} was born on this date in this town, the child of these parents.",
+    "{person}'s father came from another country or town and worked at a trade; {person}'s mother was the daughter of a family from there.",
+    "When {person} was a little child, {person} played, read books and grew up at home with the family.",
+    "{person} had many brothers and sisters, and was the youngest son or the eldest daughter of the family.",
+    "{person} went to school for a few years, learned to read, write and do sums, and was taught by a master.",
+    "At a young age {person} was taken from school and began working, helping in the family business or bound as an apprentice.",
+    "{person} set out on a daring journey, ran away from home, sailed on a ship and had an adventure.",
+    "{person} was in great danger and nearly died, in a storm, a shipwreck, a fire, an illness or capture.",
+    "{person} made a witty remark or played a joke, and everyone laughed at the funny story.",
+    "{person} later admitted a great mistake and regretted what had been done; the plan failed.",
+    "{person} suffered a great sorrow: the death of a child or of a husband or wife, sickness, poverty or ruin.",
+    "{person} fell in love and was married; husband and wife lived together for many years.",
+    "The children of {person}: a son and a daughter were born, grew up, and some died young.",
+    "{person}'s dearest friend and teacher, who helped and advised {person} for many years.",
+    "{person}'s bitter enemies attacked, hated and quarrelled with {person}.",
+    "{person} became famous all over the world and is best known for this great work.",
+    "{person} invented a new device, made an experiment and discovered something new.",
+    "{person} sailed abroad and lived for years in other cities and countries, and moved to a new home.",
+    "{person} had a curious daily habit, a strict rule of life, or a favourite pastime.",
+    "{person} died at a great age after an illness, was buried, and is remembered today.",
+]
+
 STOP = set("""a an and are as at be been but by for from had has have he her hers him his i in into is it its me my
 not of on or our she so than that the their them then there these they this those to was we were what when where which
 who whom why will with you your did do does done how about after before over up out all any one""".split())
@@ -232,8 +258,19 @@ def _gutenberg_url(url):
 
 
 def fetch(url):
-    """-> (name, bytes, content_type)"""
-    url = _gutenberg_url(url.strip())
+    """-> (name, bytes, content_type). Project Gutenberg's main site refuses many cloud servers (503), so a Gutenberg
+    book that fails there is fetched from Gutenberg's own mirror instead."""
+    try:
+        return _fetch(_gutenberg_url(url.strip()))
+    except Refused:
+        m = re.match(r"https?://(www\.|m\.)?gutenberg\.org/(?:ebooks|etext|cache/epub)/(\d+)", url.strip())
+        if not m:
+            raise
+        n = m.group(2)
+        return _fetch(f"https://aleph.pglaf.org/cache/epub/{n}/pg{n}.txt")
+
+
+def _fetch(url):
     for _ in range(6):
         u = urlparse(url)
         if u.scheme not in ("http", "https") or not u.hostname:
@@ -474,21 +511,24 @@ def get_index(corpus_id):
         return ix
 
 
-def retrieve(corpus_id, question, keywords, person, k=TOP_K, qvec=None):
-    """Merge a meaning search and a word search (reciprocal rank fusion) -> [(chunk_id, info)]."""
+def retrieve(corpus_id, question, keywords, person, k=TOP_K, qvecs=None):
+    """Merge meaning searches (the question, and a plain statement of what answers it) and a word search
+    (reciprocal rank fusion) -> [(chunk_id, info)]."""
     ix = get_index(corpus_id)
     if ix.n == 0:
         return []
-    qv = qvec if qvec is not None else embed([question])[0]
-    cos = ix.M @ qv
+    qvecs = qvecs if qvecs is not None else [embed([question])[0]]
+    sims = [ix.M @ v for v in qvecs]
+    cos = np.max(np.vstack(sims), axis=0)
     name_words = set(_words(person))                     # the name is in nearly every chunk: it doesn't help rank
     bm = ix.bm25([w for w in _words(question + " " + keywords) if w not in name_words])
     depth = min(ix.n, 40)
     by_cos = np.argsort(-cos)[:depth]
     by_bm = np.argsort(-bm)[:depth]
     fused = {}
-    for rank, i in enumerate(by_cos):
-        fused[int(i)] = fused.get(int(i), 0) + 1 / (60 + rank)
+    for sim in sims:
+        for rank, i in enumerate(np.argsort(-sim)[:depth]):
+            fused[int(i)] = fused.get(int(i), 0) + 1 / (60 + rank)
     for rank, i in enumerate(by_bm):
         if bm[i] > 0:
             fused[int(i)] = fused.get(int(i), 0) + 1 / (60 + rank)
@@ -588,15 +628,23 @@ Reply with only JSON:
 STORY_SYSTEM = """You write a true life story of {person} for children aged 6 to 9, to be read aloud from a picture
 book. You may use ONLY the numbered facts the user gives you. They were taken from the user's documents and checked.
 
-Rules:
+What to include:
 - Every sentence must be built from one or more of the facts and must list the fact ids it uses.
 - Add nothing that isn't in the facts: no names, dates, places, numbers, feelings, reasons, descriptions or events
-  that the facts don't state, even if you know them. Simple words like "then", "later", "one day" are fine, and so
-  is saying the same thing more simply ("his father" for "his parent", "very young" for "a child").
-- Do not write sentences without a fact (no openings like "Let me tell you a story", no morals, no endings of your
-  own). The title must also come from the facts (for example "The Life of NAME").
-- Go in the order of the questions, which roughly follows a life. One paragraph per question that has facts; skip
-  questions without facts. Use short, warm, clear sentences a child can follow. Don't mention sources or facts.
+  that the facts don't state, even if you know them. Saying the same thing more simply is fine ("his father" for
+  "his parent", "very young" for "a child", "a long time ago" for a date).
+- No sentence may stand without a fact: no openings like "Let me tell you a story", no morals, no endings of your own.
+  The title must also come from the facts (for example "The Life of NAME").
+
+How to write it:
+- Tell it like a storybook, not a list. Use {person}'s name in the first sentence and often after that, so a child
+  always knows who "he" or "she" is. Join related facts into one smooth sentence, and leave out a fact that only
+  repeats another. Vary how sentences begin; use simple linking words ("When", "Then", "Years later", "One day").
+- If two facts disagree (two different dates, say), don't tell both as if both were true: say it the way a careful
+  storyteller would ("Some books say ..., and others say ..."), citing both.
+- Follow the order of the questions, which roughly follows a life. One short paragraph (2 to 5 sentences) for each
+  question that has facts; skip questions without facts. Short, warm, clear sentences a child can follow; explain an
+  unusual word in a few plain words only if a fact explains it. Don't mention sources, documents or facts.
 
 Reply with only JSON:
 {{"title": "...", "paragraphs": [{{"q": 1, "sentences": [{{"text": "...", "facts": ["f1", "f2"]}}]}}]}}"""
@@ -663,8 +711,8 @@ def _stage(sid, text, progress):
     db.update_life_story(sid, stage=text, progress=progress)
 
 
-def _answer(sid, corpus_id, person, qn, question, keywords, qvec, step="answer"):
-    hits = retrieve(corpus_id, question, keywords, person, qvec=qvec)
+def _answer(sid, corpus_id, person, qn, question, keywords, qvecs, step="answer"):
+    hits = retrieve(corpus_id, question, keywords, person, qvecs=qvecs)
     ids = [i for i, _ in hits]
     db.log_rag(sid, step="retrieve", qn=qn, query=question, chunk_ids=json.dumps(ids),
                scores=json.dumps({f"c{i}": s for i, s in hits}), prompt=None, response=None, model=EMBED_MODEL,
@@ -697,7 +745,11 @@ def _story_worker(sid, corpus_id, person, canary):
         canary_q = canary.replace("{person}", person) if canary else ""
         _stage(sid, "Searching the pages for each of the 20 questions", 5)
         texts = [q for _, q, _ in questions] + ([canary_q] if canary_q else [])
-        qvecs = embed(texts)
+        alts = [a.format(person=person) for a in ALT]
+        vecs = embed(texts + alts)
+        qvecs = {n: [vecs[n - 1], vecs[len(texts) + n - 1]] for n, _, _ in questions}
+        if canary_q:
+            qvecs[21] = [vecs[len(texts) - 1]]
         answers, done = {}, [0]
         lock = threading.Lock()
 
@@ -710,8 +762,8 @@ def _story_worker(sid, corpus_id, person, canary):
             return r
 
         with ThreadPoolExecutor(6) as pool:
-            futs = {n: pool.submit(one, n, q, kw, qvecs[n - 1]) for n, q, kw in questions}
-            cfut = pool.submit(one, 21, canary_q, "", qvecs[-1], "canary") if canary_q else None
+            futs = {n: pool.submit(one, n, q, kw, qvecs[n]) for n, q, kw in questions}
+            cfut = pool.submit(one, 21, canary_q, "", qvecs[21], "canary") if canary_q else None
             for n, f in futs.items():
                 answers[n] = f.result()
             canary_res = cfut.result() if cfut else None
