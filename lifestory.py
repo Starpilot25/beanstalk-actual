@@ -623,7 +623,8 @@ Reply with only JSON:
 {{"found": true/false,
   "facts": [{{"fact": "...", "chunk": "c123", "quote": "exact words from c123"}}],
   "answer": "2-4 plain sentences answering the question from the facts, or Not in the sources.",
-  "missing": "what part of the question the snippets don't answer, or empty"}}"""
+  "missing": "a part the question itself asks for that the snippets don't give (it asks where and when, and they
+              give only where), or empty. Don't list extra details the question didn't ask for."}}"""
 
 STORY_SYSTEM = """You write a true life story of {person} for children aged 6 to 9, to be read aloud from a picture
 book. You may use ONLY the numbered facts the user gives you. They were taken from the user's documents and checked.
@@ -642,6 +643,10 @@ How to write it:
   repeats another. Vary how sentences begin; use simple linking words ("When", "Then", "Years later", "One day").
 - If two facts disagree (two different dates, say), don't tell both as if both were true: say it the way a careful
   storyteller would ("Some books say ..., and others say ..."), citing both.
+- Tell each event once. If a fact belongs to another question's paragraph too, use it in only one of them.
+- Keep sentences under about 20 words and name at most three people in one sentence; split longer ones.
+- It is for young children: leave out facts about affairs, children born outside a marriage, cruelty or gore. You
+  may skip any fact; you may never add one.
 - Follow the order of the questions, which roughly follows a life. One short paragraph (2 to 5 sentences) for each
   question that has facts; skip questions without facts. Short, warm, clear sentences a child can follow; explain an
   unusual word in a few plain words only if a fact explains it. Don't mention sources, documents or facts.
