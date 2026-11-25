@@ -33,6 +33,7 @@ import billing
 import book_pdf
 import checks
 import db
+import lifestory
 import lulu
 import pipeline
 import stories as S
@@ -44,7 +45,7 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)   # Render terminates HTTPS
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)        # set SECRET_KEY on Render!
 app.config.update(
-    MAX_CONTENT_LENGTH=20 * 1024 * 1024,
+    MAX_CONTENT_LENGTH=100 * 1024 * 1024,          # life-story uploads; a book photo is held to 20 MB below
     MAX_FORM_MEMORY_SIZE=20 * 1024 * 1024,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER")),
@@ -176,6 +177,7 @@ def _drop_text_only_portraits():
 try:
     _drop_text_only_portraits()
     _recover()
+    db.stale_life_work(time.time() + 1)
 except Exception as e:  # never block startup
     log.warning("recover FAIL %s", e)
 
@@ -401,6 +403,8 @@ def book_create():
         return error("Choose a story first.")
     if not scenes_ready().get(story):
         return error("This story's pictures are still being prepared. Please try the other story, or come back soon.", 503)
+    if (request.content_length or 0) > 20 * 1024 * 1024:
+        return error("That photo is too large. Try a smaller one (under 20 MB).", 413)
     f = request.files.get("photo")
     if not f:
         return error("Add a photo first.")
@@ -841,9 +845,227 @@ def admin_pregen():
     return jsonify({"ok": True})
 
 
+# ---------------------------------------------------------------------------
+# Life stories (RAG): pages about one person -> chunks -> 20 questions -> a story told only from the chunks
+# ---------------------------------------------------------------------------
+stories_per_user = Limiter(int(os.environ.get("LIFE_STORIES_PER_HOUR", "12")))
+uploads_per_user = Limiter(int(os.environ.get("LIFE_UPLOADS_PER_HOUR", "40")))
+
+
+def _owner_is_admin(c):
+    u = db.get_user(c["user_id"])
+    return bool(u and u["email"].lower() in ADMINS)
+
+
+def _corpus_for(corpus_id, write=False):
+    """The collection if this user may see it (their own, or an example made by the site owner); 404 otherwise."""
+    c = db.get_corpus(corpus_id)
+    uid = current_user_id()
+    if not c:
+        abort(404)
+    if c["user_id"] == uid:
+        return c
+    if not write and _owner_is_admin(c):
+        return c
+    abort(404)
+
+
+def corpus_json(c):
+    docs = c["docs"]
+    done = [d for d in docs if d["status"] == "done"]
+    return {"id": c["id"], "person": c["person"], "status": c["status"], "stage": c["stage"],
+            "mine": c["user_id"] == current_user_id(), "chunks": c["chunks"],
+            "pages": sum(d["pages"] or 0 for d in done),
+            "docs": [{"id": d["id"], "name": d["name"], "kind": d["kind"], "pages": d["pages"],
+                      "real_pages": bool(d["real_pages"]), "chunks": d["chunks"], "status": d["status"],
+                      "error": d["error"]} for d in docs],
+            "stories": [{"slug": s["slug"], "status": s["status"], "stage": s["stage"],
+                         "seconds": round(s["done_at"] - s["started_at"]) if s["done_at"] else None,
+                         "started_at": s["started_at"]} for s in db.list_life_stories(c["id"])]}
+
+
+@app.get("/life")
+def life_page():
+    user = current_user()
+    if not user:
+        return redirect(url_for("index"))
+    return render_template("life.html", user=user, admin=is_admin(user), queries=[q for q, _ in lifestory.QUERIES],
+                           balance=billing.money(db.balance(user["id"])))
+
+
+@app.get("/api/life/corpora")
+@login_required
+def life_corpora():
+    uid = current_user_id()
+    mine = db.list_corpora(uid)
+    examples = [c for c in db.list_corpora() if c["user_id"] != uid and _owner_is_admin(c)]
+    return jsonify({"mine": [{"id": c["id"], "person": c["person"], "status": c["status"]} for c in mine],
+                    "examples": [{"id": c["id"], "person": c["person"], "status": c["status"]} for c in examples]})
+
+
+@app.post("/api/life/corpora")
+@login_required
+def life_corpus_create():
+    person = re.sub(r"\s+", " ", ((request.get_json(silent=True) or {}).get("person") or "")).strip()
+    if not 2 <= len(person) <= 120:
+        return error("Type the person's name (2 to 120 characters).")
+    if len(db.list_corpora(current_user_id())) >= 20:
+        return error("You have 20 collections. Delete one first.")
+    cid = db.create_corpus(current_user_id(), person)
+    return jsonify(corpus_json(db.get_corpus(cid)))
+
+
+@app.get("/api/life/corpora/<int:corpus_id>")
+@login_required
+def life_corpus_get(corpus_id):
+    return jsonify(corpus_json(_corpus_for(corpus_id)))
+
+
+@app.delete("/api/life/corpora/<int:corpus_id>")
+@login_required
+def life_corpus_delete(corpus_id):
+    c = _corpus_for(corpus_id, write=True)
+    if c["status"] == "adding":
+        return error("Pages are still being added. Wait until they're done.", 409)
+    db.delete_corpus(corpus_id)
+    lifestory._index.pop(corpus_id, None)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/life/corpora/<int:corpus_id>/sources")
+@login_required
+def life_sources(corpus_id):
+    c = _corpus_for(corpus_id, write=True)
+    if c["status"] == "adding":
+        return error("Pages are still being added. Wait until they're done.", 409)
+    files = []
+    for f in request.files.getlist("files"):
+        if not f or not f.filename:
+            continue
+        data = f.read()
+        if not data:
+            continue
+        if len(data) > lifestory.MAX_FILE:
+            return error(f"{f.filename} is over {lifestory.MAX_FILE // 2**20} MB.")
+        files.append((f.filename, data, f.mimetype or ""))
+    urls = [u.strip() for u in (request.form.get("urls") or "").split() if u.strip()]
+    if not files and not urls:
+        return error("Choose files or paste links first.")
+    if len(files) + len(urls) > 60:
+        return error("Up to 60 documents at a time.")
+    ok, _, wait = uploads_per_user.take(current_user_id())
+    if not ok:
+        return error(f"That's a lot of uploads this hour. Try again in {minutes(wait)}.", 429)
+    lifestory.add_sources(corpus_id, current_user_id(), files, urls)
+    return jsonify(corpus_json(db.get_corpus(corpus_id)))
+
+
+@app.delete("/api/life/corpora/<int:corpus_id>/docs/<int:doc_id>")
+@login_required
+def life_doc_delete(corpus_id, doc_id):
+    c = _corpus_for(corpus_id, write=True)
+    if c["status"] == "adding":
+        return error("Pages are still being added. Wait until they're done.", 409)
+    db.delete_doc(corpus_id, doc_id)
+    lifestory._index.pop(corpus_id, None)
+    c = db.get_corpus(corpus_id)
+    if not c["chunks"]:
+        db.update_corpus(corpus_id, status="empty", stage="")
+    return jsonify(corpus_json(db.get_corpus(corpus_id)))
+
+
+@app.get("/api/life/corpora/<int:corpus_id>/grep")
+@login_required
+def life_grep(corpus_id):
+    _corpus_for(corpus_id)
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 3:
+        return error("Search for at least 3 characters.")
+    return jsonify({"q": q, "hits": lifestory.grep(corpus_id, q)})
+
+
+@app.post("/api/life/corpora/<int:corpus_id>/stories")
+@login_required
+def life_story_start(corpus_id):
+    _corpus_for(corpus_id)
+    canary = ((request.get_json(silent=True) or {}).get("canary") or "").strip()
+    ok, _, wait = stories_per_user.take(current_user_id())
+    if not ok:
+        return error(f"That's the most stories for one hour. Try again in {minutes(wait)}.", 429)
+    try:
+        sid, slug = lifestory.start_story(corpus_id, current_user_id(), canary)
+    except lifestory.Refused as e:
+        stories_per_user.refund(current_user_id())
+        return error(str(e))
+    return jsonify({"slug": slug})
+
+
+def _life_story(slug):
+    s = db.get_life_story(slug=slug)
+    if not s:
+        abort(404)
+    s["result"] = json.loads(s["result"]) if s.get("result") else None
+    return s
+
+
+@app.get("/api/life/stories/<slug>")
+def life_story_get(slug):
+    s = _life_story(slug)
+    out = {k: s[k] for k in ("slug", "person", "status", "stage", "progress", "error", "canary")}
+    out["seconds"] = round((s["done_at"] or time.time()) - s["started_at"])
+    if s["status"] == "done" and request.args.get("full"):
+        out["result"] = s["result"]
+    return jsonify(out)
+
+
+@app.get("/life/s/<slug>")
+def life_story_page(slug):
+    s = _life_story(slug)
+    user = current_user()
+    return render_template("life_story.html", s=s, r=s["result"], user=user, admin=is_admin(user),
+                           paragraphs=lifestory.paragraphs(s["result"]) if s["result"] else [],
+                           balance=billing.money(db.balance(user["id"])) if user else None)
+
+
+def _log_rows(s):
+    rows = db.rag_logs(s["id"])
+    for r in rows:
+        r["chunk_ids"] = json.loads(r["chunk_ids"] or "[]")
+        r["scores"] = json.loads(r["scores"]) if r["scores"] else None
+    return rows
+
+
+@app.get("/life/s/<slug>/log.json")
+def life_story_log_json(slug):
+    s = _life_story(slug)
+    return Response(json.dumps({"story": {k: s[k] for k in ("slug", "person", "canary", "status", "started_at",
+                                                             "done_at")},
+                                "result": s["result"], "log": _log_rows(s)}, indent=1, default=str),
+                    mimetype="application/json",
+                    headers={"Content-Disposition": f'inline; filename="life-story-{slug}-log.json"'})
+
+
+@app.get("/life/s/<slug>/log")
+def life_story_log(slug):
+    s = _life_story(slug)
+    user = current_user()
+    return render_template("life_log.html", s=s, r=s["result"], rows=_log_rows(s), user=user, admin=is_admin(user),
+                           balance=billing.money(db.balance(user["id"])) if user else None)
+
+
+@app.get("/life/s/<slug>/story.md")
+def life_story_md(slug):
+    s = _life_story(slug)
+    r = s["result"]
+    if not r:
+        abort(404)
+    return Response(lifestory.story_markdown(r, s), mimetype="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'inline; filename="life-story-{slug}.md"'})
+
+
 @app.errorhandler(413)
 def too_big(_):
-    return error("That photo is too large. Try a smaller one (under 20 MB).", 413)
+    return error("That's too large: up to 100 MB in one go. Add the files in smaller batches.", 413)
 
 
 if __name__ == "__main__":

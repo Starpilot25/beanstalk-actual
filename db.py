@@ -212,6 +212,80 @@ print_orders = Table(              # printed copies ordered through the print AP
     Column("updated_at", Float),
 )
 
+# --- Life stories (RAG): pages about one person, chunked and embedded; stories written only from retrieved chunks.
+corpora = Table(                   # one collection of pages about one person
+    "corpora", meta,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False),
+    Column("person", String(120), nullable=False),
+    Column("status", String(20), default="empty"),   # empty | adding | ready | failed
+    Column("stage", String(300), default=""),
+    Column("created_at", Float),
+    Column("updated_at", Float),
+)
+
+corpus_docs = Table(               # one uploaded file or fetched link
+    "corpus_docs", meta,
+    Column("id", Integer, primary_key=True),
+    Column("corpus_id", Integer, ForeignKey("corpora.id", ondelete="CASCADE"), index=True, nullable=False),
+    Column("name", String(300)),
+    Column("source", String(600)),
+    Column("kind", String(10)),          # pdf | html | text | epub | docx
+    Column("chars", Integer, default=0),
+    Column("pages", Integer, default=0),
+    Column("real_pages", Integer, default=0),   # 1 if pages are the document's own (PDF), 0 if estimated
+    Column("chunks", Integer, default=0),
+    Column("status", String(20)),        # reading | done | failed
+    Column("error", String(400)),
+    Column("created_at", Float),
+)
+
+chunks = Table(                    # the chunk id shown everywhere is "c" + id
+    "chunks", meta,
+    Column("id", Integer, primary_key=True),
+    Column("corpus_id", Integer, ForeignKey("corpora.id", ondelete="CASCADE"), index=True, nullable=False),
+    Column("doc_id", Integer, ForeignKey("corpus_docs.id", ondelete="CASCADE"), index=True, nullable=False),
+    Column("seq", Integer),
+    Column("page", Integer),
+    Column("text", Text, nullable=False),
+    Column("embedding", LargeBinary),    # float32, unit length
+)
+
+life_stories = Table(
+    "life_stories", meta,
+    Column("id", Integer, primary_key=True),
+    Column("corpus_id", Integer, ForeignKey("corpora.id", ondelete="CASCADE"), index=True, nullable=False),
+    Column("user_id", Integer, index=True),
+    Column("slug", String(24), unique=True),   # the public link
+    Column("person", String(120)),
+    Column("canary", Text),
+    Column("status", String(20)),        # running | done | failed
+    Column("stage", String(300)),
+    Column("progress", Integer, default=0),
+    Column("result", Text),              # JSON: answers, story, review, canary
+    Column("error", Text),
+    Column("started_at", Float),
+    Column("done_at", Float),
+)
+
+rag_log = Table(                   # every query, the chunk ids it retrieved, and every prompt sent and reply received
+    "rag_log", meta,
+    Column("id", Integer, primary_key=True),
+    Column("story_id", Integer, ForeignKey("life_stories.id", ondelete="CASCADE"), index=True, nullable=False),
+    Column("at", Float),
+    Column("step", String(20)),          # retrieve | answer | canary | story | verify | repair
+    Column("qn", Integer),
+    Column("query", Text),
+    Column("chunk_ids", Text),           # JSON list of chunk ids
+    Column("scores", Text),              # JSON
+    Column("prompt", Text),
+    Column("response", Text),
+    Column("model", String(60)),
+    Column("ms", Integer),
+    Column("input_tokens", Integer),
+    Column("output_tokens", Integer),
+)
+
 meta.create_all(engine)
 
 
@@ -625,3 +699,146 @@ def order_file(order_id, token, kind):
     if not r or not r[1] or not _hmac.compare_digest(r[1], token):
         return None
     return r[0]
+
+
+# ---------------------------------------------------------------------------
+# Life stories (RAG)
+# ---------------------------------------------------------------------------
+def _row(r):
+    return dict(r._mapping) if r is not None else None
+
+
+def create_corpus(user_id, person):
+    t = time.time()
+    with engine.begin() as c:
+        return c.execute(insert(corpora).values(user_id=user_id, person=person, status="empty", stage="",
+                                                created_at=t, updated_at=t)).inserted_primary_key[0]
+
+
+def update_corpus(corpus_id, **vals):
+    vals["updated_at"] = time.time()
+    with engine.begin() as c:
+        c.execute(update(corpora).where(corpora.c.id == corpus_id).values(**vals))
+
+
+def get_corpus(corpus_id):
+    with engine.connect() as c:
+        r = _row(c.execute(select(corpora).where(corpora.c.id == corpus_id)).first())
+        if not r:
+            return None
+        r["docs"] = [_row(d) for d in c.execute(select(corpus_docs).where(corpus_docs.c.corpus_id == corpus_id)
+                                                .order_by(corpus_docs.c.id))]
+        r["chunks"] = c.execute(select(func.count()).select_from(chunks)
+                                .where(chunks.c.corpus_id == corpus_id)).scalar()
+        return r
+
+
+def list_corpora(user_id=None):
+    q = select(corpora).order_by(corpora.c.id.desc())
+    if user_id is not None:
+        q = q.where(corpora.c.user_id == user_id)
+    with engine.connect() as c:
+        return [_row(r) for r in c.execute(q)]
+
+
+def delete_corpus(corpus_id):
+    with engine.begin() as c:
+        sids = [r.id for r in c.execute(select(life_stories.c.id).where(life_stories.c.corpus_id == corpus_id))]
+        if sids:
+            c.execute(delete(rag_log).where(rag_log.c.story_id.in_(sids)))
+            c.execute(delete(life_stories).where(life_stories.c.id.in_(sids)))
+        c.execute(delete(chunks).where(chunks.c.corpus_id == corpus_id))
+        c.execute(delete(corpus_docs).where(corpus_docs.c.corpus_id == corpus_id))
+        c.execute(delete(corpora).where(corpora.c.id == corpus_id))
+
+
+def add_doc(corpus_id, **vals):
+    with engine.begin() as c:
+        return c.execute(insert(corpus_docs).values(corpus_id=corpus_id, created_at=time.time(), **vals)
+                         ).inserted_primary_key[0]
+
+
+def update_doc(doc_id, **vals):
+    with engine.begin() as c:
+        c.execute(update(corpus_docs).where(corpus_docs.c.id == doc_id).values(**vals))
+
+
+def delete_doc(corpus_id, doc_id):
+    with engine.begin() as c:
+        c.execute(delete(chunks).where(chunks.c.doc_id == doc_id, chunks.c.corpus_id == corpus_id))
+        c.execute(delete(corpus_docs).where(corpus_docs.c.id == doc_id, corpus_docs.c.corpus_id == corpus_id))
+
+
+def add_chunks(corpus_id, doc_id, rows):
+    """rows: [(seq, page, text, embedding_bytes)]"""
+    with engine.begin() as c:
+        c.execute(insert(chunks), [dict(corpus_id=corpus_id, doc_id=doc_id, seq=s, page=p, text=t, embedding=e)
+                                   for s, p, t, e in rows])
+
+
+def corpus_chunks(corpus_id, with_embeddings=True):
+    cols = [chunks.c.id, chunks.c.doc_id, chunks.c.page, chunks.c.text]
+    if with_embeddings:
+        cols.append(chunks.c.embedding)
+    with engine.connect() as c:
+        return c.execute(select(*cols).where(chunks.c.corpus_id == corpus_id).order_by(chunks.c.id)).all()
+
+
+def get_chunks(ids):
+    if not ids:
+        return {}
+    with engine.connect() as c:
+        rows = c.execute(select(chunks.c.id, chunks.c.corpus_id, chunks.c.doc_id, chunks.c.page, chunks.c.text,
+                                corpus_docs.c.name)
+                         .join(corpus_docs, corpus_docs.c.id == chunks.c.doc_id)
+                         .where(chunks.c.id.in_(list(ids)))).all()
+    return {r.id: {"id": r.id, "corpus_id": r.corpus_id, "doc": r.name, "page": r.page, "text": r.text}
+            for r in rows}
+
+
+def create_life_story(**vals):
+    with engine.begin() as c:
+        return c.execute(insert(life_stories).values(**vals)).inserted_primary_key[0]
+
+
+def update_life_story(story_id, **vals):
+    with engine.begin() as c:
+        c.execute(update(life_stories).where(life_stories.c.id == story_id).values(**vals))
+
+
+def get_life_story(story_id=None, slug=None):
+    q = select(life_stories)
+    q = q.where(life_stories.c.id == story_id) if story_id is not None else q.where(life_stories.c.slug == slug)
+    with engine.connect() as c:
+        return _row(c.execute(q).first())
+
+
+def list_life_stories(corpus_id):
+    with engine.connect() as c:
+        return [_row(r) for r in c.execute(
+            select(life_stories.c.id, life_stories.c.slug, life_stories.c.status, life_stories.c.stage,
+                   life_stories.c.started_at, life_stories.c.done_at, life_stories.c.person)
+            .where(life_stories.c.corpus_id == corpus_id).order_by(life_stories.c.id.desc()))]
+
+
+def stale_life_work(older_than):
+    """Anything left half-done by a restart: stories still running, collections still adding pages."""
+    with engine.begin() as c:
+        c.execute(update(life_stories).where(life_stories.c.status == "running",
+                                             life_stories.c.started_at < older_than)
+                  .values(status="failed", error="The server restarted while this story was being written."))
+        c.execute(update(corpus_docs).where(corpus_docs.c.status == "reading", corpus_docs.c.created_at < older_than)
+                  .values(status="failed", error="The server restarted while reading this. Add it again."))
+        c.execute(update(corpora).where(corpora.c.status == "adding", corpora.c.updated_at < older_than)
+                  .values(status="ready", stage="The server restarted while adding pages; some may be missing."))
+
+
+def log_rag(story_id, **vals):
+    with engine.begin() as c:
+        c.execute(insert(rag_log).values(story_id=story_id, at=time.time(), **vals))
+
+
+def rag_logs(story_id):
+    with engine.connect() as c:
+        return [_row(r) for r in c.execute(select(rag_log).where(rag_log.c.story_id == story_id)
+                                           .order_by(rag_log.c.id))]

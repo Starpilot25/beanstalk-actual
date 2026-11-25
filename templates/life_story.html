@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ r.title if r else "Life story" }} · Beanstalk Books{% endblock %}
+{% block style %}
+  .storyhead{padding:14px 0 26px}
+  .storyhead a{color:#fff3cf}
+  .tale{max-width:780px;margin:0 auto 36px;padding:56px 64px}
+  .tale h1{font-size:clamp(2rem,4vw,2.8rem);text-align:center;margin:0 0 6px}
+  .tale .by{text-align:center;color:var(--soft);font-size:.92rem;margin:0 0 34px}
+  .tale p{font:400 1.2rem/1.85 var(--story);margin:0 0 1.1em;color:#26332c}
+  .s{border-radius:4px;transition:background .15s}
+  .s.fixed{background:linear-gradient(transparent 62%,#fff1bf 62%)}
+  .cite{font:600 .62rem var(--ui);vertical-align:.55em;margin:0 1px;padding:1px 5px;border-radius:6px;border:0;min-height:0;
+    background:#e9f2ea;color:var(--leaf-d);cursor:pointer;letter-spacing:.02em}
+  .cite:hover,.cite:focus-visible{background:var(--leaf);color:#fff}
+  .s.hl{background:#fff4d6}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:6px 0 22px}
+  .stats div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stats b{display:block;font:400 1.7rem var(--story);color:var(--leaf-d)}
+  .stats span{font-size:.88rem;color:var(--soft)}
+  .flag{border-left:4px solid #e3b341;background:#fffaf0;padding:10px 14px;border-radius:0 10px 10px 0;margin:0 0 10px;font-size:.95rem}
+  .flag.gone{border-color:var(--red);background:#fdf3f2}
+  .flag del{color:#8a6d6a}
+  .verdict{font-weight:600}
+  .canary{padding:16px 18px;border-radius:12px;margin:0 0 8px}
+  .canary.pass{background:#eef6ef;border:1px solid #cfe5d4}
+  .canary.fail{background:#fdf0ef;border:1px solid #f3c6c2}
+  .qa{border-top:1px solid var(--line);padding:12px 0}
+  .qa summary{display:flex;gap:10px;align-items:baseline;cursor:pointer;list-style:none}
+  .qa summary::-webkit-details-marker{display:none}
+  .qa summary b{font-weight:600;flex:1}
+  .qa .n{color:var(--soft);font-variant-numeric:tabular-nums;width:2.2em;flex:none}
+  .tag{font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+  .tag.yes{background:#eef5ef;color:var(--leaf-d)} .tag.no{background:#f1eee6;color:#6d6656}
+  .qa .body{padding:8px 0 4px 2.9em;font-size:.95rem}
+  .fact{margin:6px 0}
+  .fact q{color:var(--soft);font-style:italic}
+  .links{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0 0}
+  dialog{max-width:640px;width:calc(100% - 32px);border:0;border-radius:16px;padding:28px 30px;background:var(--paper);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  dialog::backdrop{background:rgba(6,20,43,.6)}
+  dialog h3{margin:0 0 4px}
+  dialog .src{color:var(--soft);font-size:.88rem;margin:0 0 14px}
+  dialog blockquote{margin:0;font:400 1.02rem/1.7 var(--story);color:#26332c;max-height:55vh;overflow:auto;white-space:pre-wrap}
+  @media (max-width:700px){ .tale{padding:34px 22px} .tale p{font-size:1.08rem} .qa .body{padding-left:0} }
+{% endblock %}
+{% block main %}
+<div class="storyhead"><a href="/life">← Life stories</a></div>
+{% if s.status != "done" %}
+<section class="card">
+  <h2>{{ "This story is still being written" if s.status == "running" else "This story couldn't be written" }}</h2>
+  <p class="muted">{{ s.error or s.stage }}</p>
+  {% if s.status == "running" %}<script>setTimeout(() => location.reload(), 3000)</script>{% endif %}
+</section>
+{% else %}
+{% set rv = r.review %}
+<article class="card tale">
+  <div class="ribbon"></div>
+  <h1>{{ r.title }}</h1>
+  <p class="by">A true story, told only from the pages about {{ r.person }}. Tap a number to see the passage it came from.</p>
+  {% for p in paragraphs %}
+  <p>{% for x in p %}<span class="s{{ ' fixed' if x.id in rv.repaired }}" id="{{ x.id }}">{{ x.text }}</span>{% for c in x.chunks %}<button class="cite" data-c="c{{ c }}" data-s="{{ x.id }}" aria-label="Source c{{ c }}">c{{ c }}</button>{% endfor %} {% endfor %}</p>
+  {% endfor %}
+</article>
+
+<section class="card">
+  <h2>How it was checked</h2>
+  <div class="stats">
+    <div><b>{{ rv.cited }} of {{ rv.kept }}</b><span>sentences cite a chunk</span></div>
+    <div><b>{{ rv.first_pass_supported }} of {{ rv.sentences }}</b><span>passed the source check first time</span></div>
+    <div><b>{{ rv.flagged|length }}</b><span>flagged as going beyond the sources</span></div>
+    <div><b>{{ 20 - rv.not_in_sources|length }} of 20</b><span>questions answered from the pages</span></div>
+  </div>
+  <p class="muted">Each sentence was sent back to the model with the text of the chunks it cites and checked: anything
+    the chunks don't say most likely came from the model's own training.
+    {% if rv.flagged %}Flagged sentences were rewritten from their chunks once and checked again; any that still
+    failed were taken out.{% endif %}
+    {% if rv.dropped_facts %}Before writing, {{ rv.dropped_facts }} fact(s) were thrown out because their quote wasn't
+    word for word in the chunk they cited.{% endif %}</p>
+  {% for x in r.sentences if x.id in rv.flagged %}
+  <div class="flag{{ ' gone' if x.removed }}">
+    <div><span class="verdict">{{ "Removed" if x.removed else "Rewritten" }}:</span> <del>{{ x.original }}</del></div>
+    <div class="small muted">Not in its chunks: {{ x.check.unsupported or "the main claim" }}</div>
+    {% if not x.removed %}<div class="small">Now: {{ x.text }}</div>{% endif %}
+  </div>
+  {% endfor %}
+
+  {% if r.canary %}
+  <h3 style="margin-top:26px">Canary</h3>
+  <div class="canary {{ 'pass' if r.canary.passed else 'fail' }}">
+    <div><b>{{ r.canary.question }}</b></div>
+    <div>Answer: {{ r.canary.answer }}</div>
+    <div class="small">{{ "Passed: the pages don't say, so the app didn't either." if r.canary.passed else "Answered from the pages. Check the cited chunks: if they really say it, choose a canary that isn't in the pages." }}
+      Retrieved: {% for c in r.canary.retrieved %}<button class="cite" data-c="c{{ c }}">c{{ c }}</button>{% endfor %}</div>
+  </div>
+  {% endif %}
+
+  <div class="links">
+    <a class="btn ghost" href="/life/s/{{ s.slug }}/log">The full log</a>
+    <a class="btn ghost" href="/life/s/{{ s.slug }}/log.json">Log as JSON</a>
+    <a class="btn ghost" href="/life/s/{{ s.slug }}/story.md">Story with sources (Markdown)</a>
+  </div>
+</section>
+
+<section class="card">
+  <h2>The 20 answers</h2>
+  <p class="muted">What the pages said for each question, the facts the story could use, and the chunks the search found.</p>
+  {% for a in r.answers %}
+  <details class="qa">
+    <summary><span class="n">{{ a.q }}.</span><b>{{ a.question }}</b><span class="tag {{ 'yes' if a.found else 'no' }}">{{ "answered" if a.found else "not in the sources" }}</span></summary>
+    <div class="body">
+      <p>{{ a.answer }}{% if a.missing %} <span class="muted">Not in the pages: {{ a.missing }}</span>{% endif %}</p>
+      {% for f in a.facts %}<div class="fact">{{ f.fact }} <button class="cite" data-c="c{{ f.chunk }}">c{{ f.chunk }}</button> <q>{{ f.quote }}</q></div>{% endfor %}
+      {% for f in a.dropped %}<div class="fact small" style="color:var(--red)">Thrown out ({{ f.reason }}): {{ f.fact }}</div>{% endfor %}
+      <p class="small muted">Retrieved: {% for c in a.retrieved %}<button class="cite" data-c="c{{ c }}">c{{ c }}</button>{% endfor %}</p>
+    </div>
+  </details>
+  {% endfor %}
+</section>
+
+<dialog id="dlg">
+  <h3 id="dTitle"></h3>
+  <p class="src" id="dSrc"></p>
+  <blockquote id="dText"></blockquote>
+  <form method="dialog" style="margin-top:18px"><button>Close</button></form>
+</dialog>
+<script id="chunks" type="application/json">{{ r.chunks|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block script %}
+{% if s.status == "done" %}
+<script>
+const chunks = JSON.parse(document.getElementById("chunks").textContent);
+const dlg = document.getElementById("dlg");
+document.addEventListener("click", async e => {
+  const b = e.target.closest(".cite");
+  if (!b) return;
+  const id = b.dataset.c;
+  let c = chunks[id];
+  document.querySelectorAll(".s.hl").forEach(x => x.classList.remove("hl"));
+  if (b.dataset.s) document.getElementById(b.dataset.s).classList.add("hl");
+  document.getElementById("dTitle").textContent = id;
+  document.getElementById("dSrc").textContent = c ? `${c.doc}, page ${c.page}` : "";
+  document.getElementById("dText").textContent = c ? c.text : "This chunk isn't stored with the story.";
+  dlg.showModal();
+});
+</script>
+{% endif %}
+{% endblock %}

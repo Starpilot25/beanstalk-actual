@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Log · {{ s.person }} · Beanstalk Books{% endblock %}
+{% block style %}
+  .loghead{padding:14px 0 22px;color:#c9d6ea}
+  .loghead a{color:#fff3cf}
+  .loghead h1{color:#fff3cf;margin:10px 0 8px}
+  .entry{border-top:1px solid var(--line);padding:14px 0}
+  .entry .ehead{display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;background:none}
+  .step{font-size:.78rem;font-weight:600;padding:2px 10px;border-radius:999px;background:#eef5ef;color:var(--leaf-d);text-transform:capitalize}
+  .step.verify,.step.reverify{background:#e8eefb;color:#23407a} .step.repair{background:#fff4d6;color:#7a5a00}
+  .step.story{background:#f6e9f3;color:#6b2a5a} .step.canary{background:#fdf0ef;color:var(--red)}
+  .ids{font:500 .85rem ui-monospace,Menlo,Consolas,monospace;color:var(--soft);word-break:break-word}
+  pre{white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+    font:.8rem/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:420px;overflow:auto;margin:8px 0 0}
+  details summary{cursor:pointer;font-weight:600;color:var(--leaf-d);font-size:.9rem;margin-top:6px}
+  .card{padding:30px 34px}
+  @media (max-width:700px){ .card{padding:24px 16px} }
+{% endblock %}
+{% block main %}
+<div class="loghead">
+  <a href="/life/s/{{ s.slug }}">← The story</a>
+  <h1>The log</h1>
+  <p>Every query, the chunk ids it retrieved (with their meaning and keyword scores), and every prompt sent to the model
+    with its reply, in order. Also as <a href="/life/s/{{ s.slug }}/log.json">JSON</a>.</p>
+</div>
+<section class="card">
+  {% for e in rows %}
+  <div class="entry">
+    <div class="ehead">
+      <span class="step {{ e.step }}">{{ e.step }}</span>
+      {% if e.qn %}<b>Q{{ e.qn }}</b>{% endif %}
+      {% if e.query %}<span>{{ e.query }}</span>{% endif %}
+      <span class="muted small">{{ e.model }}{% if e.ms %} · {{ (e.ms / 1000)|round(1) }} s{% endif %}{% if e.input_tokens %} · {{ e.input_tokens }} in / {{ e.output_tokens }} out tokens{% endif %}</span>
+    </div>
+    {% if e.chunk_ids %}<div class="ids">chunks: {% for c in e.chunk_ids %}c{{ c }}{% if e.scores and e.scores.get('c' ~ c) %} (cos {{ e.scores['c' ~ c].cos }}, bm25 {{ e.scores['c' ~ c].bm25 }}){% endif %}{{ ", " if not loop.last }}{% endfor %}</div>{% endif %}
+    {% if e.prompt %}<details><summary>Prompt sent</summary><pre>{{ e.prompt }}</pre></details>{% endif %}
+    {% if e.response %}<details><summary>Reply</summary><pre>{{ e.response }}</pre></details>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -170,6 +170,7 @@
       <a href="/" class="{{ 'on' if request.path == '/' }}">Make a book</a>
       <a href="/#library">My books</a>
       <a href="/wallet" class="{{ 'on' if request.path == '/wallet' }}">Wallet</a>
+      <a href="/life" class="{{ 'on' if request.path.startswith('/life') }}">Life stories</a>
       <a href="/characters" class="{{ 'on' if request.path == '/characters' }}">Characters</a>
       {% if admin %}<a href="/admin" class="{{ 'on' if request.path == '/admin' }}">Admin</a>{% endif %}
       <a href="/logout">Sign out</a>

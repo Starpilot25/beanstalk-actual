@@ -9,3 +9,5 @@ requests>=2.31
 sqlalchemy>=2.0
 psycopg[binary]>=3.2
 stripe>=11
+pypdf>=4.2
+beautifulsoup4>=4.12

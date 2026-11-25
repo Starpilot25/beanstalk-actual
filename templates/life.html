@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Life stories · Beanstalk Books{% endblock %}
+{% block style %}
+  .lifehead{padding:20px 0 30px;max-width:760px}
+  .lifehead h1{font-size:clamp(2.2rem,4.4vw,3.2rem);color:#fff3cf;margin:0 0 14px}
+  .lifehead p{color:#c9d6ea;font-size:1.08rem;margin:0;max-width:60ch}
+  .seal{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--red);color:#fff3cf;
+    font:400 1.05rem var(--story);margin-right:10px;vertical-align:4px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
+  .pick{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:0 0 18px}
+  .pick .field{flex:1 1 260px;margin:0}
+  .docs td.num{width:1%}
+  .docs .err{color:var(--red);font-size:.88rem}
+  .badge{display:inline-block;font-size:.8rem;font-weight:600;padding:2px 9px;border-radius:999px;background:#eef5ef;color:var(--leaf-d)}
+  .badge.fail{background:#fdf0ef;color:var(--red)}
+  .badge.wait{background:#fff4d6;color:#7a5a00}
+  .total{font:400 1.25rem var(--story);margin:14px 0 4px}
+  .add{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0 10px}
+  .add textarea{min-height:110px;font-size:.9rem}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;background:#fff;height:100%;display:flex;flex-direction:column;justify-content:center;gap:8px}
+  .drop.on{border-color:var(--leaf);background:#eef5ef}
+  .drop input{width:100%}
+  .prog{height:14px;border-radius:999px;background:#ece5d3;overflow:hidden;margin:12px 0 6px}
+  .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1f5135,#4fae58);border-radius:999px;transition:width .5s ease}
+  .qs{columns:2;column-gap:32px;margin:10px 0 0;padding-left:1.4em;font-size:.92rem;color:var(--soft)}
+  .qs li{break-inside:avoid;margin:0 0 4px}
+  details summary{cursor:pointer;font-weight:600;color:var(--leaf-d)}
+  .past{list-style:none;padding:0;margin:14px 0 0}
+  .past li{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .past a{font-weight:600}
+  @media (max-width:760px){ .add{grid-template-columns:1fr} .qs{columns:1} .card{padding:28px 20px} }
+{% endblock %}
+{% block main %}
+<section class="lifehead">
+  <h1>Life stories</h1>
+  <p>Upload pages about one real person. The app asks those pages 20 questions and writes a picture-book life story
+    from what it finds there, and nothing else. Every sentence shows the passages it came from.</p>
+</section>
+
+<section class="card" id="collect">
+  <div class="ribbon"></div>
+  <h2><span class="seal">1</span>The person and their pages</h2>
+  <div class="pick">
+    <div class="field">
+      <label for="corpusSel">Collection</label>
+      <select id="corpusSel"></select>
+    </div>
+    <button class="ghost danger" id="delCorpus" hidden>Delete collection</button>
+  </div>
+
+  <form id="newForm" hidden>
+    <div class="pick">
+      <div class="field">
+        <label for="person">Who are the pages about?</label>
+        <input id="person" maxlength="120" autocomplete="off" placeholder="Full name, e.g. Benjamin Franklin">
+      </div>
+      <button type="submit">Start a collection</button>
+    </div>
+  </form>
+
+  <div id="corpusBox" hidden>
+    <p class="total" id="total"></p>
+    <p class="muted small" id="stage"></p>
+    <div class="tablewrap"><table class="docs">
+      <thead><tr><th>Document</th><th class="num">Pages</th><th class="num">Chunks</th><th></th></tr></thead>
+      <tbody id="docRows"></tbody>
+    </table></div>
+
+    <form id="addForm">
+      <div class="add">
+        <label class="drop" id="drop" for="files">
+          <span><b>Choose files</b> or drop them here</span>
+          <span class="muted small">PDF, HTML, EPUB, Word or text. Up to 100 MB at a time; add more in batches.</span>
+          <input type="file" id="files" multiple accept=".pdf,.html,.htm,.xhtml,.epub,.docx,.txt,.md,text/*">
+        </label>
+        <div>
+          <label for="urls">Or paste links, one per line</label>
+          <textarea id="urls" spellcheck="false" placeholder="https://www.gutenberg.org/ebooks/20203"></textarea>
+          <p class="muted small" style="margin:6px 0 0">Web pages, PDFs and Project Gutenberg book pages.</p>
+        </div>
+      </div>
+      <button type="submit" id="addBtn">Add these pages</button>
+      <span class="muted small" id="addNote"></span>
+    </form>
+  </div>
+  <div id="collectMsg"></div>
+</section>
+
+<section class="card" id="writeSec" hidden>
+  <h2><span class="seal">2</span>Write the story</h2>
+  <p class="muted">The pages are searched once for each question. The answer comes from the passages found, or it is
+    “not in the sources” and the story leaves it out.</p>
+  <details><summary>The 20 questions</summary>
+    <ol class="qs">{% for q in queries %}<li>{{ q.replace("{person}", "the person") }}</li>{% endfor %}</ol>
+  </details>
+  <div class="field" style="margin-top:20px">
+    <label for="canary">Canary question <span class="muted small">(optional)</span></label>
+    <input id="canary" maxlength="300" autocomplete="off">
+    <p class="muted small" style="margin:6px 0 0">Ask something true about the person that these pages don't say.
+      If the app is honest, it answers “not in the sources”.</p>
+  </div>
+  <button class="big" id="writeBtn">Write the story</button>
+  <div id="run" hidden>
+    <div class="prog" role="progressbar" aria-label="Story progress"><i id="bar"></i></div>
+    <p class="small" id="runStage"></p>
+  </div>
+  <div id="writeMsg"></div>
+  <ul class="past" id="past"></ul>
+</section>
+{% endblock %}
+{% block script %}
+<script>
+const $ = id => document.getElementById(id);
+let cur = null, poll = null, runPoll = null;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const msg = (el, text, bad) => { $(el).innerHTML = text ? `<div class="msg ${bad ? "err" : ""}">${esc(text)}</div>` : ""; };
+async function api(url, opts = {}) {
+  const r = await fetch(url, opts);
+  let d = {};
+  try { d = await r.json(); } catch (e) { d = {error: r.status === 413 ? "That's more than 100 MB. Add the files in smaller batches." : `The server answered ${r.status}.`}; }
+  if (!r.ok) throw new Error(d.error || `The server answered ${r.status}.`);
+  return d;
+}
+
+async function loadList(select) {
+  const d = await api("/api/life/corpora");
+  const sel = $("corpusSel");
+  let html = "";
+  if (d.mine.length) html += `<optgroup label="Your collections">${d.mine.map(c => `<option value="${c.id}">${esc(c.person)}</option>`).join("")}</optgroup>`;
+  if (d.examples.length) html += `<optgroup label="Examples">${d.examples.map(c => `<option value="${c.id}">${esc(c.person)} (example)</option>`).join("")}</optgroup>`;
+  html += `<option value="new">New person…</option>`;
+  sel.innerHTML = html;
+  const want = select || localStorageGet("lifeCorpus");
+  if (want && [...sel.options].some(o => o.value == want)) sel.value = want;
+  else sel.value = (d.mine[0] || d.examples[0] || {id: "new"}).id;
+  choose();
+}
+function localStorageGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+function choose() {
+  const v = $("corpusSel").value;
+  clearTimeout(poll);
+  msg("collectMsg", "");
+  if (v === "new") {
+    cur = null;
+    $("newForm").hidden = false; $("corpusBox").hidden = true; $("writeSec").hidden = true; $("delCorpus").hidden = true;
+    $("person").focus();
+    return;
+  }
+  localStorageSet("lifeCorpus", v);
+  $("newForm").hidden = true;
+  refresh(v);
+}
+
+async function refresh(id) {
+  try {
+    const c = await api(`/api/life/corpora/${id}`);
+    cur = c;
+    render(c);
+    if (c.status === "adding") poll = setTimeout(() => refresh(id), 2500);
+  } catch (e) { msg("collectMsg", e.message, true); }
+}
+
+function render(c) {
+  $("corpusBox").hidden = false;
+  $("delCorpus").hidden = !c.mine;
+  $("addForm").hidden = !c.mine;
+  const done = c.docs.filter(d => d.status === "done");
+  $("total").textContent = done.length
+    ? `${c.person}: about ${c.pages.toLocaleString()} pages in ${done.length} document${done.length > 1 ? "s" : ""}, ${c.chunks.toLocaleString()} chunks`
+    : `${c.person}: no pages yet`;
+  $("stage").textContent = c.status === "adding" ? c.stage : (c.mine ? "" : "An example collection: you can write stories from it, but not change it.");
+  $("docRows").innerHTML = c.docs.map(d => `<tr>
+      <td>${/^https?:/.test(d.name) ? `<a href="${esc(d.name)}" rel="noopener" target="_blank">${esc(d.name)}</a>` : esc(d.name)}
+        ${d.status === "failed" ? `<div class="err">${esc(d.error)}</div>` : ""}</td>
+      <td class="num">${d.status === "done" ? (d.real_pages ? d.pages : "≈" + d.pages) : ""}</td>
+      <td class="num">${d.status === "done" ? d.chunks : ""}</td>
+      <td class="num">${d.status === "reading" ? '<span class="badge wait">reading…</span>' : d.status === "failed" ? '<span class="badge fail">not added</span>'
+        : c.mine && c.status !== "adding" ? `<button class="danger" style="min-height:32px;padding:4px 10px" data-doc="${d.id}">Remove</button>` : '<span class="badge">added</span>'}</td>
+    </tr>`).join("") || `<tr><td colspan="4" class="muted">Add files or links below.</td></tr>`;
+  $("addBtn").disabled = c.status === "adding";
+  $("writeSec").hidden = !c.chunks;
+  $("writeBtn").disabled = c.status === "adding" || !c.chunks;
+  $("past").innerHTML = c.stories.map(s => `<li>
+      <a href="/life/s/${s.slug}">${s.status === "done" ? "Story" : s.status === "running" ? "Being written" : "Failed"}, ${new Date(s.started_at * 1000).toLocaleString()}</a>
+      ${s.seconds ? `<span class="muted small">${s.seconds} s</span>` : ""}
+      ${s.status === "done" ? `<a class="small" href="/life/s/${s.slug}/log">log</a>` : ""}
+    </li>`).join("");
+  const running = c.stories.find(s => s.status === "running");
+  if (running && !runPoll) { $("run").hidden = false; $("writeBtn").disabled = true; watch(running.slug); }
+}
+
+$("corpusSel").addEventListener("change", choose);
+$("newForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  try {
+    const c = await api("/api/life/corpora", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({person: $("person").value})});
+    $("person").value = "";
+    await loadList(c.id);
+  } catch (err) { msg("collectMsg", err.message, true); }
+});
+$("delCorpus").addEventListener("click", async () => {
+  if (!cur || !confirm(`Delete the collection for ${cur.person}, with its pages and stories?`)) return;
+  try { await api(`/api/life/corpora/${cur.id}`, {method: "DELETE"}); await loadList(); } catch (e) { msg("collectMsg", e.message, true); }
+});
+$("docRows").addEventListener("click", async e => {
+  const b = e.target.closest("[data-doc]");
+  if (!b || !cur) return;
+  try { render(await api(`/api/life/corpora/${cur.id}/docs/${b.dataset.doc}`, {method: "DELETE"})); } catch (err) { msg("collectMsg", err.message, true); }
+});
+
+const drop = $("drop");
+["dragover", "dragenter"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("on"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, () => drop.classList.remove("on")));
+drop.addEventListener("drop", e => { e.preventDefault(); $("files").files = e.dataTransfer.files; noteFiles(); });
+$("files").addEventListener("change", noteFiles);
+function noteFiles() { const n = $("files").files.length; $("addNote").textContent = n ? `${n} file${n > 1 ? "s" : ""} chosen` : ""; }
+
+$("addForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!cur) return;
+  const fd = new FormData();
+  for (const f of $("files").files) fd.append("files", f);
+  fd.append("urls", $("urls").value);
+  $("addBtn").disabled = true;
+  $("addNote").textContent = "Uploading…";
+  msg("collectMsg", "");
+  try {
+    const c = await api(`/api/life/corpora/${cur.id}/sources`, {method: "POST", body: fd});
+    $("files").value = ""; $("urls").value = ""; $("addNote").textContent = "";
+    render(c);
+    poll = setTimeout(() => refresh(cur.id), 2000);
+  } catch (err) { msg("collectMsg", err.message, true); $("addNote").textContent = ""; $("addBtn").disabled = false; }
+});
+
+$("canary").addEventListener("input", () => { $("canary").dataset.touched = 1; });
+$("writeBtn").addEventListener("click", async () => {
+  if (!cur) return;
+  msg("writeMsg", "");
+  $("writeBtn").disabled = true;
+  try {
+    const d = await api(`/api/life/corpora/${cur.id}/stories`, {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({canary: $("canary").value})});
+    $("run").hidden = false;
+    watch(d.slug);
+  } catch (e) { msg("writeMsg", e.message, true); $("writeBtn").disabled = false; }
+});
+
+async function watch(slug) {
+  clearTimeout(runPoll);
+  try {
+    const s = await api(`/api/life/stories/${slug}`);
+    $("bar").style.width = s.progress + "%";
+    $("runStage").textContent = `${s.stage} · ${s.seconds} s`;
+    if (s.status === "done") { location.href = `/life/s/${slug}`; return; }
+    if (s.status === "failed") { $("run").hidden = true; msg("writeMsg", s.error || "It failed.", true); $("writeBtn").disabled = false; refresh(cur.id); return; }
+  } catch (e) { $("runStage").textContent = "Lost touch with the server; still trying…"; }
+  runPoll = setTimeout(() => watch(slug), 2000);
+}
+
+loadList().catch(e => msg("collectMsg", e.message, true));
+</script>
+{% endblock %}
